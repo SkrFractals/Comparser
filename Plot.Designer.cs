@@ -26,7 +26,7 @@ partial class Plot {
 	private void InitializeComponent() {
 		expBox = new TextBox();
 		plotBox = new PictureBox();
-		this.blBox = new TextBox();
+		blBox = new TextBox();
 		brBox = new TextBox();
 		splitContainer1 = new SplitContainer();
 		trBox = new TextBox();
@@ -68,7 +68,7 @@ partial class Plot {
 		blBox.Name = "blBox";
 		blBox.Size = new Size(184, 23);
 		blBox.TabIndex = 4;
-		blBox.TextChanged += this.blBox_TextChanged;
+		blBox.TextChanged += blBox_TextChanged;
 		// 
 		// brBox
 		// 
@@ -146,7 +146,7 @@ partial class Plot {
 		Controls.Add(plotBox);
 		Controls.Add(expBox);
 		Name = "Plot";
-		Text = "Plot";
+		Text = "Comparser - Plot";
 		((System.ComponentModel.ISupportInitialize)plotBox).EndInit();
 		splitContainer1.Panel1.ResumeLayout(false);
 		splitContainer1.Panel1.PerformLayout();

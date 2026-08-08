@@ -112,7 +112,7 @@
 			ClientSize = new Size(351, 158);
 			Controls.Add(outerPanel);
 			Name = "MainForm";
-			Text = "Complex Parser and Calculator";
+			Text = "Comparser - Complex Computer Parser";
 			innerPanel.ResumeLayout(false);
 			innerPanel.PerformLayout();
 			outerPanel.ResumeLayout(false);
