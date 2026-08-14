@@ -1,4 +1,4 @@
-﻿namespace Expressions
+﻿namespace Comparser
 {
     partial class MainForm
     {
@@ -97,7 +97,7 @@
 			// 
 			outerPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 			outerPanel.AutoScroll = true;
-			outerPanel.BackColor = Color.Black;
+			outerPanel.BackColor = Color.White;
 			outerPanel.Controls.Add(innerPanel);
 			outerPanel.Location = new Point(12, 12);
 			outerPanel.Name = "outerPanel";
@@ -108,7 +108,7 @@
 			// 
 			AutoScaleDimensions = new SizeF(7F, 15F);
 			AutoScaleMode = AutoScaleMode.Font;
-			BackColor = Color.FromArgb(224, 224, 224);
+			BackColor = Color.FromArgb(64, 64, 64);
 			ClientSize = new Size(351, 158);
 			Controls.Add(outerPanel);
 			Name = "MainForm";
