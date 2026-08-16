@@ -1,11 +1,13 @@
 ﻿
+using Comparser;
+
 namespace Expressions;
 public partial class Plot : Form {
-	private readonly MainForm m;
+	private readonly ComparserForm m;
 
-	private Complex TL, TR, BL, BR, E;
+	private Comparser.Numbers.Complex TL, TR, BL, BR, E;
 
-	public Plot(MainForm main) {
+	public Plot(ComparserForm main) {
 		InitializeComponent();
 		m = main;
 	}
