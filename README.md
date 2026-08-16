@@ -140,5 +140,4 @@ Adding strings concatenates them.
 Subtracting removes occurrences of the operand
 
 Comments:
-/* */
 /* begins a comment and lasts until the end of line or */
