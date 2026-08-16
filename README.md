@@ -85,7 +85,7 @@ Operator-less multiply
 1 if more, 0 if not
 <expression> >= <expression>
 1 if more or equal, 0 if not
-Logic is done numerically. Any number with a norm < 1 is false. Use true(<expression>) to convert the number into its boolean value of 0 or 1. Use * as AND, + as OR, true(a) != true(b) as XOR
+Logic is done numerically. Any number with a norm < 1 is false. Use true(<expression>) to convert the number into its boolean value of 0 or 1 (unary ">= 1" operator). Use * as AND, + as OR, true(a) != true(b) as XOR
 Works recursively on nested vectors, and if their structures/lengths do not match, the smaller one gets modularly cycled, and the deeper layers will re-access the previous levels of the other operand.
 Example: (1,2,3) + (4,5) = (1+4,2+5,3+4)
 Example: ((1,2),(3,4,5),6,13) + ((7,8,9),10,(11,12)) = ((1+7,2+8,1+9),(3+10,4+10,5+10),(6+11,6+12),(13+7,13+8,13+9))
