@@ -1,6 +1,6 @@
 ﻿namespace Expressions;
 
-partial class Plot {
+partial class PlotForm {
 	/// <summary>
 	/// Required designer variable.
 	/// </summary>

@@ -1,4 +1,5 @@
-﻿using Comparser.Numbers;
+﻿using Comparser.Comparser;
+using Comparser.Comparser.Numbers;
 
 namespace Comparser;
 
@@ -14,46 +15,46 @@ public partial class ComparserForm : Form {
 		public Button Del = del;
 	}*/
 	public class ExpRow(Label index, TextBox expression, Label result, Button del) {
-		public object? Exp = null;
+		public object? Exp;
 		public string Text = "";
-		public Label Index = index;
-		public TextBox Expression = expression;
-		public Label Result = result; 
-		public Button Del = del;
+		public readonly Label Index = index;
+		public readonly TextBox Expression = expression;
+		public readonly Label Result = result; 
+		public readonly Button Del = del;
 	}
 
-	private const int rowHeight = 32, iSize = 64, pad = 2;
-	private int decimals;
-	int algebra = 1;
-	private readonly IComparser[] algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
+	private const int RowHeight = 32, InputSize = 64, Pad = 2;
+	private int _decimals;
+	private int _algebra = 1;
+	private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	private IComparser _context;
 	//private readonly List<FuncRow> CustomFunctions = [];
-	private readonly List<ExpRow> ExpressionRows = [];
-	private readonly List<Button> swaps = [];
+	private readonly List<ExpRow> _expressionRows = [];
+	private readonly List<Button> _swaps = [];
 	public ComparserForm() {
-		_context = algebras[algebra];
+		_context = _algebras[_algebra];
 		//FailedFunction = new(_context, "", [([], "")]);
 		InitializeComponent();
 		SetMinSize();
-		DecimalBox_TextChanged(decimalBox, new());
+		DecimalBox_TextChanged(decimalBox, EventArgs.Empty);
 	}
 	private void Eval(int index) {
-		if (innerPanel.Visible) {
-			var row = ExpressionRows[index];
-			object eval = algebra switch {
-				1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), "x")]),
-				2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), "x")]),
-				_ => new Comparser<Real>.Value([new(Real.MakeR(index), "x")])
-			};
-			var v = row.Exp != null && row.Text == row.Expression.Text && row.Text != "" 
-				? _context.Eval(row.Exp, eval) 
-				: _context.ParseEval(row.Text = row.Expression.Text = Clean(row.Expression.Text), out row.Exp, eval);
-			row.Result.Text = v.ToString();
-		}
+		if (!innerPanel.Visible)
+			return;
+		var row = _expressionRows[index];
+		object eval = _algebra switch {
+			1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), "x")]),
+			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), "x")]),
+			_ => new Comparser<Real>.Value([new(Real.MakeR(index), "x")])
+		};
+		var v = row.Exp != null && row.Text == row.Expression.Text && row.Text != "" 
+			? _context.Eval(row.Exp, eval) 
+			: _context.ParseEval(row.Text = row.Expression.Text = Clean(row.Expression.Text), out row.Exp, eval);
+		row.Result.Text = _context.ToString(v, _decimals);
 	}
 	private void CodeBox_TextChanged(object? sender, EventArgs e) {
 		logLabel.Text = _context.ReadCode(codeBox.Text);
-		for (int i = 0; i < ExpressionRows.Count; ++i)
+		for (int i = 0; i < _expressionRows.Count; ++i)
 			Eval(i);
 	}
 	private void CoreLayout() {
@@ -62,8 +63,8 @@ public partial class ComparserForm : Form {
 		c.Add(decLabel);
 		c.Add(decimalBox);
 		c.Add(expBox);
-		int y = expBox.Bottom + pad;
-		int tab = 1;
+		var y = expBox.Bottom + Pad;
+		var tab = 1;
 		/*for (int i = 0; i < CustomFunctions.Count; ++i, y += rowHeight + pad) {
 			var row = CustomFunctions[i];
 			row.Def.Top = row.Del.Top = y;
@@ -75,15 +76,15 @@ public partial class ComparserForm : Form {
 		expBox.Top = y;
 		expBox.TabIndex = ++tab;
 		y += rowHeight + pad;*/
-		for (int i = 0; i < ExpressionRows.Count; ++i, y += (rowHeight + pad) << 1) {
-			var row = ExpressionRows[i];
+		for (var i = 0; i < _expressionRows.Count; ++i, y += (RowHeight + Pad) << 1) {
+			var row = _expressionRows[i];
 			row.Index.Top = row.Expression.Top = row.Del.Top = y;
-			row.Result.Top = y + rowHeight + pad;
+			row.Result.Top = y + RowHeight + Pad;
 			row.Expression.TabIndex = ++tab;
 			row.Del.TabIndex = ++tab;
-			if (i < ExpressionRows.Count - 1) {
-				var s = swaps[i];
-				s.Top = y + rowHeight + (pad >> 1);
+			if (i < _expressionRows.Count - 1) {
+				var s = _swaps[i];
+				s.Top = y + RowHeight + (Pad >> 1);
 				s.TabIndex = ++tab;
 				c.Add(s);
 			}
@@ -92,7 +93,7 @@ public partial class ComparserForm : Form {
 			c.Add(row.Result);
 			c.Add(row.Del);
 		}
-		logPanel.Height = codeBox.Height = innerPanel.Height - (logPanel.Top = codeBox.Top = y) - pad;
+		logPanel.Height = codeBox.Height = innerPanel.Height - (logPanel.Top = codeBox.Top = y) - Pad;
 		/*var (fdelL, defW) = FuncDim();
 		for (int i = 0; i < CustomFunctions.Count; ++i) {
 			var row = CustomFunctions[i];
@@ -100,13 +101,13 @@ public partial class ComparserForm : Form {
 			row.Del.Left = fdelL;
 		}*/
 		var (expW, resW, edelL, swapL) = ExpDim();
-		for (int i = 0; i < ExpressionRows.Count; ++i) {
-			var row/*(_, exp, res, del)*/ = ExpressionRows[i];
+		for (var i = 0; i < _expressionRows.Count; ++i) {
+			var row/*(_, exp, res, del)*/ = _expressionRows[i];
 			row.Expression.Width = expW;
 			row.Result.Width = resW;
 			row.Del.Left = edelL;
-			if (i < ExpressionRows.Count - 1)
-				swaps[i].Left = swapL;
+			if (i < _expressionRows.Count - 1)
+				_swaps[i].Left = swapL;
 		}
 		c.Add(codeBox);
 		codeBox.TabIndex = ++tab;
@@ -152,41 +153,40 @@ public partial class ComparserForm : Form {
 		MakeLayout();
 	}*/
 	private (int expW, int resW, int delL, int swapL) ExpDim() => (
-		innerPanel.Width - iSize - (rowHeight << 1) - (pad << 2) - pad,
-		innerPanel.Width - (rowHeight << 1) - (((pad << 1) + pad) << 1),//innerPanel.Width - rSize - (rowHeight << 1) - pad - (pad << 1),
-		innerPanel.Width - ((rowHeight + pad) << 1),
-		innerPanel.Width - rowHeight - pad);
+		innerPanel.Width - InputSize - (RowHeight << 1) - (Pad << 2) - Pad,
+		innerPanel.Width - (RowHeight << 1) - (((Pad << 1) + Pad) << 1),//innerPanel.Width - rSize - (rowHeight << 1) - pad - (pad << 1),
+		innerPanel.Width - ((RowHeight + Pad) << 1),
+		innerPanel.Width - RowHeight - Pad);
 	private void ExpAdd(object? sender, EventArgs e) {
-		var i = ExpressionRows.Count;
+		var i = _expressionRows.Count;
 		string si = i.ToString();
-		int expt = 5 + 3 + i;
 		var a = AnchorStyles.Top;
 		ExpRow row = new(
 			new() {
 				Name = "index" + si,
-				Text = "x=" + si.ToString() + ":",
+				Text = "x=" + si + ":",
 				AutoSize = true,
 				ForeColor = Color.White,
-				Font = new Font("Consolas", rowHeight >> 1),
+				Font = new Font("Consolas", RowHeight >> 1),
 				Anchor = a | AnchorStyles.Left,
-				Location = new(pad, 0),
-				Size = new(20, rowHeight)
+				Location = new(Pad, 0),
+				Size = new(20, RowHeight)
 			},
 			new() {
 				Name = "exp" + si, Text = "1+2x",
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
 				Tag = i,
-				Location = new(iSize + 2 * pad, 0),
-				Size = new(0, rowHeight)
+				Location = new(InputSize + 2 * Pad, 0),
+				Size = new(0, RowHeight)
 			},
 			new() {
 				Name = "result" + si,
 				AutoSize = true,
 				ForeColor = Color.White,
-				Font = new Font("Consolas", rowHeight >> 1),
+				Font = new Font("Consolas", RowHeight >> 1),
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
-				Location = new(pad, 0),
-				Size = new(0, rowHeight)
+				Location = new(Pad, 0),
+				Size = new(0, RowHeight)
 			},
 			new() {
 				Name = "delexp" + si,
@@ -195,7 +195,7 @@ public partial class ComparserForm : Form {
 				Anchor = a | AnchorStyles.Right,
 				Tag = i,
 				Location = new(0, 0),
-				Size = new(rowHeight, (rowHeight << 1) + pad)
+				Size = new(RowHeight, (RowHeight << 1) + Pad)
 			});
 		if (i > 0) {
 			Button swap = new() {
@@ -205,15 +205,16 @@ public partial class ComparserForm : Form {
 				Anchor = a | AnchorStyles.Right,
 				Tag = i - 1,
 				Location = new(0, 0),
-				Size = new(rowHeight, (rowHeight << 1) + pad)
+				Size = new(RowHeight, (RowHeight << 1) + Pad)
 			};
 			swap.Click += ExpSwapped;
-			swaps.Add(swap);
+			_swaps.Add(swap);
 		}
 		row.Expression.TextChanged += ExpChanged;
 		row.Del.Click += ExpDeleted;
-		ExpressionRows.Add(row);
+		_expressionRows.Add(row);
 		MakeLayout();
+		Eval(i);
 	}
 	/*private void FuncChanged(object? sender, EventArgs e) {
 		if (innerPanel.Visible)
@@ -225,8 +226,8 @@ public partial class ComparserForm : Form {
 		int s = ((int?)((Control?)sender)?.Tag) ?? 0;
 		// swap with invisible panel, so they don't trigger reevaluations mid-swap
 		innerPanel.Visible = false;
-		var rowA = ExpressionRows[s];
-		var rowB = ExpressionRows[s + 1];
+		var rowA = _expressionRows[s];
+		var rowB = _expressionRows[s + 1];
 		(rowA.Expression.Text, rowA.Result.Text, rowA.Exp, rowA.Text, rowB.Expression.Text, rowB.Result.Text, rowB.Exp, rowB.Text) 
 			= (rowB.Expression.Text, rowB.Result.Text, rowB.Exp,rowB.Text, rowA.Expression.Text, rowA.Result.Text, rowA.Exp, rowA.Text);
 		innerPanel.Visible = true;
@@ -241,18 +242,18 @@ public partial class ComparserForm : Form {
 		innerPanel.SuspendLayout();
 		//outerPanel.SuspendLayout();
 		// shake down texts
-		for (int i = d + 1; i < ExpressionRows.Count; ++i) {
-			var rowTo = ExpressionRows[i - 1];
-			var row = ExpressionRows[i];
+		for (int i = d + 1; i < _expressionRows.Count; ++i) {
+			var rowTo = _expressionRows[i - 1];
+			var row = _expressionRows[i];
 			rowTo.Text = row.Text;
 			rowTo.Expression.Text = row.Expression.Text;
 			rowTo.Result.Text = row.Result.Text;
 			rowTo.Exp = row.Exp;
 		}
 		// remove controls
-		ExpressionRows.RemoveAt(ExpressionRows.Count - 1);
-		if (ExpressionRows.Count > 0)
-			swaps.RemoveAt(ExpressionRows.Count - 1);
+		_expressionRows.RemoveAt(_expressionRows.Count - 1);
+		if (_expressionRows.Count > 0)
+			_swaps.RemoveAt(_expressionRows.Count - 1);
 		// remake layout without re-evaluation:
 		SetMinSize();
 		CoreLayout();
@@ -280,19 +281,19 @@ public partial class ComparserForm : Form {
 		=> t.ToLower()//.Replace(":", "").Replace(";", "").Replace("|", "")
 		.Replace("\t", "").Replace("\r", "").Replace("\n", "");
 	private void SetMinSize() => outerPanel.AutoScrollMinSize = (innerPanel.MinimumSize = new Size(
-		Math.Max((pad << 2) + pad + 48 + (rowHeight << 1) + iSize, 320),
-		pad + (3 + (ExpressionRows.Count << 1)) * (rowHeight + pad))
+		Math.Max((Pad << 2) + Pad + 48 + (RowHeight << 1) + InputSize, 320),
+		Pad + (3 + (_expressionRows.Count << 1)) * (RowHeight + Pad))
 		) + new Size(6, 6); // account for the padding between the two panels
 
 	private void DecimalBox_TextChanged(object? sender, EventArgs e) {
-		var old = decimals;
-		_ = int.TryParse(decimalBox.Text, out decimals);
-		if (old != decimals)
-			for (int i = 0; i < ExpressionRows.Count; ++i)
+		var old = _decimals;
+		_ = int.TryParse(decimalBox.Text, out _decimals);
+		if (old != _decimals)
+			for (int i = 0; i < _expressionRows.Count; ++i)
 				Eval(i);
 	}
 	private void AlgebraBox_SelectedIndexChanged(object? sender, EventArgs e) {
-		algebra = algebraBox.SelectedIndex;
-		_context = algebras[algebra];
+		_algebra = algebraBox.SelectedIndex;
+		_context = _algebras[_algebra];
 	}
 }
