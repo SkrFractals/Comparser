@@ -6,6 +6,7 @@ Comparser has two distinct stages:
 Parser stage (COMMANDS) — read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage.
 Evaluation stage (EXPRESSIONS) — after parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.
 The only exception is local commands, aka pre-calculations/redefinitions, but those only happen locally for a single expression call, and don't mutate the global parsed code.
+Case-insensitive - all uppercase letters are internally converted to lowercase.
 
 COMMANDS:
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.
@@ -13,16 +14,22 @@ You can and re-define functions and constants (so they can be mutated while this
   
 Function definition:
 (<expressionCacheSize>)functionName(<expressionArguments>) = <expressionDefinition>
--cacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.
--cacheSize is optional. It will only get read if the definition begins with parentheses
--you define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value
--example of a pattern-matching multi-defition: factorial(0) = 1; factorial(x)=xfactorial(x-1)
+CacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.
+CacheSize is optional. It will only get read if the definition begins with parentheses. The default cache size is 1 for any function where it is not specified.
+You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value
+Multiple definitions of a function are tested in definition order. The first matching pattern/condition is used.
+Each expression has its own cache, if you define a function with multiple argument patterns, each definition will have it's separate cache, with separate evaluation memory.
+Example of a pattern-matching multi-defition:
+factorial(0) = 1; factorial(x)=xfactorial(x-1)
+Example of cacheSize:
+(0)function(x,y)=x+y^x /* this will ahve chace disablled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.
+function()
 
 Ternary function definition:
 (<expressionCacheSize>)function(<expressionArguments>) = <expressionCondition> ? <expressionTrueDefinition> : <expressionFalseDefinition>
--works like argument pattern matching, except the condition can be complex instead of matching an argument exactly
--Example: factorial(x)=x<=1?1:xfactorial(x-1)
--This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it.
+Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly
+Example: factorial(x)=x<=1?1:xfactorial(x-1)
+This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it.
 
 Separators:
 ;
@@ -126,7 +133,8 @@ They return the first element unchanged if it doesn't have a second operand.
 Unary operations are applied to each element in the nested vector individually.
 
 eval(<expression>)
-attempts to parse and evaluate every Text in the input
+Attempts to parse and evaluate every Text in the input
+Evaluates strings as expressions. The strings are parsed using the expression parser, but cannot execute parser-stage commands.
 Example: eval("1+2","e^(ipi)")=3,-1
 
 count(<expression>)
@@ -139,6 +147,10 @@ Un-nests the vector and concatenates all the elements next to each other on the 
 sum(<expressionIndex>,<expressionFrom>,<expressionTo>,<expression>)
 iterative sum: sum(<index>,from,to,expression(k<index>))
 Example: sum(0,1,4,k0) = 1+2+3+4 = 10
+Can also iterate backwards, unlike the same iterators in math.
+If you want them to return empty sums like backwards math sums, or negatives like backwards integrals, you can define that with a  ternary definition:
+DiodeSum(x,from,to,expression) = from > to ? 0 : sum(x,from,to,expression)
+IntegralLikeSum(x,from,to,expression) = from > to ? -sum(x,from,to,expression) : sum(x,from,to,expression)
 There is also "prod" function that functions the same way as an iterated product
 and there is also "vec" function, which doesn't add or multiply the terms, but puts them all directly into a vector.
 
