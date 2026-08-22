@@ -2,7 +2,9 @@
 Complex Computer Parser
 
 COMMANDS:
-
+Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.
+You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)
+  
 Function definition:
 (<expressionCacheSize>)functionName(<expressionArguments>) = <expressionDefinition>
 -cacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.
@@ -17,7 +19,8 @@ Ternary function definition:
 -This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it.
 
 Separators:
-; | \n
+;
+\n
 Works very much like in other languages, but it is optional, as new lines also work like separators.
 
 Variable definition:
@@ -49,6 +52,7 @@ Can have an else branch like if. It would get called only if the condition is no
 
 
 EXPRESSIONS:
+The evaluation stage. After the initial code was read, you can only call pure expressions without any of the non-expression syntax that was described above.
 Written in a simple functional/mathematical way. Evaluates into a vector. Supports this syntax:
 
 Parentheses:
