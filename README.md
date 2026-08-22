@@ -177,3 +177,15 @@ Comments:
 Local commands:
 [<command1>;<command2>;<morecommands>]<expression>
 This is the only place where you can put more commands in the evaluation stage. Any expression can accept some of its own extra commands prefixed to it. Those can also mutate the original code from this expression's point of view (even een for subexpressions called within it). But once it evaluates and returns outside, those commands are "undone". They technically only compile into one exta separate definition struct. The only thing this evaluation can see is prefixed to the global parsed code, and only that evaluation tree will see it.
+
+Core evaluation rules
+-Expressions evaluate to values or vectors.
+-One-element vectors are always collapsed.
+-Operators recursively broadcast over vectors.
+-Mismatched vector dimensions are cyclically broadcast.
+-Unary functions recursively apply to vector elements.
+-Multi-argument binary functions reduce their arguments from left to right.
+-Function definitions are selected by ordered pattern matching and conditions.
+-Evaluation is pure; definitions cannot be modified during evaluation.
+-Parser-stage commands are unavailable during evaluation.
+-Values are generic and may represent real, complex, quaternion, or other supported numeric types.
