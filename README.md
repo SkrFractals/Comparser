@@ -25,7 +25,7 @@ Works very much like in other languages, but it is optional, as new lines also w
 
 Variable definition:
 variableName=<expressionValue>
--they can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.
+-They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.
 Example: x=1; print = x, ","; x=2; print=x; /* prints 1,2
 
 Print:
@@ -63,6 +63,9 @@ Vectors:
 <expression>,<expression>,<expression>
 Each expression gets evaluated, and you get back a vector with each result in the same order
 You can nest vectors with parentheses to make more complex structures.
+But any nested vector layer that has 1 element will get collapsed into the layer above.
+For example 1,(2,3),4,(5,(6,7)),8,(9),(((10),11)) will get collapsed into: 1,(2,3),4,(5,(6,7)),8,9,(10,11).
+This is to keep the actual structure that matters, and for any size 1 nests that coul appears to be cleared out.
 
 Binary operators:
 <expression> + <expression>
