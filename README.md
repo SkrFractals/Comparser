@@ -186,6 +186,6 @@ Core evaluation rules
 -Unary functions recursively apply to vector elements.
 -Multi-argument binary functions reduce their arguments from left to right.
 -Function definitions are selected by ordered pattern matching and conditions.
--Evaluation is pure; definitions cannot be modified during evaluation.
+-Evaluation is pure; definitions cannot be modified during evaluation, except for the temporary local commands.
 -Parser-stage commands are unavailable during evaluation.
 -Values are generic and may represent real, complex, quaternion, or other supported numeric types.
