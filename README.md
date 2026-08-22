@@ -1,6 +1,12 @@
 # Comparser
 Complex Computer Parser
 
+EXECUTION STAGES:
+Comparser has two distinct stages:
+Parser stage (COMMANDS) — read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage.
+Evaluation stage (EXPRESSIONS) — after parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.
+The only exception is local commands, aka pre-calculations/redefinitions, but those only happen locally for a single expression call, and don't mutate the global parsed code.
+
 COMMANDS:
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.
 You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)
@@ -53,7 +59,9 @@ Can have an else branch like if. It would get called only if the condition is no
 
 EXPRESSIONS:
 The evaluation stage. After the initial code was read, you can only call pure expressions without any of the non-expression syntax that was described above.
-Written in a simple functional/mathematical way. Evaluates into a vector. Supports this syntax:
+Written in a simple functional/mathematical way. Evaluates into a nestable vector.
+Outside local commands, it doesn't support any of the syntax from above. There are no do, if/else, while, print, function/variable definitions, or even ternary operators.
+Supports this syntax:
 
 Parentheses:
 (<expression>)
@@ -63,9 +71,9 @@ Vectors:
 <expression>,<expression>,<expression>
 Each expression gets evaluated, and you get back a vector with each result in the same order
 You can nest vectors with parentheses to make more complex structures.
-But any nested vector layer that has 1 element will get collapsed into the layer above.
+Invariant: vectors containing exactly one element are always collapsed into their containing level. The evaluator does not preserve one-element vector nesting.
 For example 1,(2,3),4,(5,(6,7)),8,(9),(((10),11)) will get collapsed into: 1,(2,3),4,(5,(6,7)),8,9,(10,11).
-This is to keep the actual structure that matters, and for any size 1 nests that coul appears to be cleared out.
+This is to keep the actual structure that matters, and for any size 1 nests that could appears to be cleared out.
 
 Binary operators:
 <expression> + <expression>
@@ -93,9 +101,12 @@ Operator-less multiply
 <expression> >= <expression>
 1 if more or equal, 0 if not
 Logic is done numerically. Any number with a norm < 1 is false. Use true(<expression>) to convert the number into its boolean value of 0 or 1 (unary "sqrabs(x) >= 1" operator). Use * as AND, + as OR, true(a) != true(b) as XOR
-Works recursively on nested vectors, and if their structures/lengths do not match, the smaller one gets modularly cycled, and the deeper layers will re-access the previous levels of the other operand.
+Operations are recursively broadcast over vectors. When vectors have different shapes, the shorter dimension is cyclically reused, and the deeper layers will re-access the previous levels of the other operand.
+Scalar values therefore naturally broadcast into vectors, and vectors may contain vectors of arbitrary depth.
 Example: (1,2,3) + (4,5) = (1+4,2+5,3+4)
 Example: ((1,2),(3,4,5),6,13) + ((7,8,9),10,(11,12)) = ((1+7,2+8,1+9),(3+10,4+10,5+10),(6+11,6+12),(13+7,13+8,13+9))
+
+
 
 Factorial:
 <expresion>!
@@ -109,8 +120,10 @@ Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] = (30d,31e),2c,(5,1,(30d,31e))
 Functions:
 min, max, clamp, exp, ln, log10, sin, cosh, re, im, frac, floor, round, sgn, abs, conj, sqrt, cub, gauss, softmax, gamma, zeta...
 All elementary and component-wise operations and then some.
-Binary operations will get chain-applied if there are more than 2 terms in the argument vector
-Unary operations get applied to every term in the vector, recursively
+Binary operations are chain-applied to the first and second element, then to the result and the third element, and so on.
+So a binary operation like Min can take the minimum for any size vector.
+They return the first element unchanged if it doesn't have a second operand.
+Unary operations are applied to each element in the nested vector individually.
 
 eval(<expression>)
 attempts to parse and evaluate every Text in the input
@@ -148,3 +161,7 @@ Subtracting removes occurrences of the operand
 
 Comments:
 /* begins a comment and lasts until the end of line or */
+
+Local commands:
+[<command1>;<command2>;<morecommands>]<expression>
+This is the only place where you can put more commands in the evaluation stage. Any expression can accept some of its own extra commands prefixed to it. Those can also mutate the original code from this expression's point of view (even een for subexpressions called within it). But once it evaluates and returns outside, those commands are "undone". They technically only compile into one exta separate definition struct. The only thing this evaluation can see is prefixed to the global parsed code, and only that evaluation tree will see it.
