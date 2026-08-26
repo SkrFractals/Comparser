@@ -123,9 +123,6 @@ Operator-less multiply
 1 if more, 0 if not  
 <expression> >= <expression>  
 1 if more or equal, 0 if not  
-<expression>[indices]
-Extracts a structure made of top layer picks from the expression
-((1,2),3,4,5)[1,2,(2,3),0] = 3,4,(4,5),(1,2)
 
 Logic is done numerically. Any number with a norm < 1 is false.
 Use true(<expression>) to convert the number into its boolean value of 0 or 1
@@ -145,8 +142,8 @@ Factorial:
 Vector Extractor:  
 <expression>[<expression>]  
 Extracts terms from a vector using indices in: [expression].  
-Example: (a,b,c,d,e)[2] = c  
-Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] = (30d,31e),2c,(5,1,(30d,31e))  
+Example: (a,b,c,d,e)[2] : c  
+Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] : (30d,31e),2c,(5,1,(30d,31e))  
   
 Functions:  
 min, max, clamp, exp, ln, log10, sin, cosh, re, im, frac, floor, round, sgn, abs, conj, sqrt, cub, gauss, softmax, gamma, zeta...  
@@ -159,22 +156,22 @@ Unary operations are applied to each element in the nested vector individually.
 eval(<expression>)  
 Attempts to parse and evaluate every Text in the input  
 Evaluates strings as expressions. The strings are parsed using the expression parser, but cannot execute parser-stage commands.  
-Example: eval("1+2","e^(ipi)")=3,-1  
+Example: eval("1+2","e^(ipi)"):3,-1  
   
 count(<expression>)  
 counts the number of elements in the vector  
-Example: count(0,1,2)=3  
+Example: count(0,1,2):3  
   
 cat(<expression>)  
 Un-nests the vector and concatenates all the elements next to each other on the top-level of the result vector  
   
 sum(<expressionIndex>,<expressionFrom>,<expressionTo>,<expression>)  
 iterative sum: sum(<index>,from,to,expression(k<index>))  
-Example: sum(0,1,4,k0) = 1+2+3+4 = 10  
+Example: sum(0, 1, 4, k0) : 1 + 2 + 3 + 4 = 10  
 Can also iterate backwards, unlike the same iterators in math.  
 If you want them to return empty sums like backwards math sums, or negatives like backwards integrals, you can define that with a  ternary definition:  
 DiodeSum(x,from,to,expression) = from > to ? 0 : sum(x,from,to,expression)  
-IntegralLikeSum(x,from,to,expression) = from > to ? -sum(x,from,to,expression) : sum(x,from,to,expression)  
+IntegralLikeSum(x,from,to,expression) : from > to ? -sum(x,from,to,expression) : sum(x,from,to,expression)  
 There is also "prod" function that functions the same way as an iterated product  
 and there is also "vec" function, which doesn't add or multiply the terms, but puts them all directly into a vector.  
   
