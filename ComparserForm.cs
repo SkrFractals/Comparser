@@ -38,7 +38,7 @@ public partial class ComparserForm : Form {
 		SetMinSize();
 		DecimalBox_TextChanged(decimalBox, EventArgs.Empty);
 	}
-	private void Eval(int index) {
+	private void Eval(int index, bool cachedParse = true) {
 		if (!innerPanel.Visible)
 			return;
 		var row = _expressionRows[index];
@@ -47,7 +47,7 @@ public partial class ComparserForm : Form {
 			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), "x")]),
 			_ => new Comparser<Real>.Value([new(Real.MakeR(index), "x")])
 		};
-		var v = row.Exp != null && row.Text == row.Expression.Text && row.Text != "" 
+		var v = cachedParse && row.Exp != null && row.Text == row.Expression.Text && row.Text != "" 
 			? _context.Eval(row.Exp, eval) 
 			: _context.ParseEval(row.Text = row.Expression.Text = Clean(row.Expression.Text), out row.Exp, eval);
 		row.Result.Text = _context.ToString(v, _decimals);
@@ -55,7 +55,7 @@ public partial class ComparserForm : Form {
 	private void CodeBox_TextChanged(object? sender, EventArgs e) {
 		logLabel.Text = _context.ReadCode(codeBox.Text);
 		for (int i = 0; i < _expressionRows.Count; ++i)
-			Eval(i);
+			Eval(i, false);
 	}
 	private void CoreLayout() {
 		var c = innerPanel.Controls;

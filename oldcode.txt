@@ -1,0 +1,302 @@
+/*public void SetValue(T value) {
+			Values = [];
+			Value = value;
+		}
+		public void SetValue() {
+			Values = [];
+			Value = T.NaN();
+		}
+		public void SetValues(Value[] values) {
+			Values = values;
+			Value = T.NaN();
+		}
+		public static Value[] CopyValues(Value[] v) {
+			var a = new Value[v.Length];
+			for (int i = 0; i < v.Length; ++i)
+				a[i] = v[i].Copy();
+			return a;
+		}*/
+		/* rest of the initializer
+		new Ce("count", typeof(FuncCount), 0), // counts the number of elements in the vector
+		new Ce("concat", typeof(FuncCat), 0), // Un-nests the vectors: concat((1,2),3,((4,5),6)) = (1,2,3,4,5,6)
+		new Ce("cat", typeof(FuncCat), 0), // Un-nests the vectors: concat((1,2),3,((4,5),6)) = (1,2,3,4,5,6)
+		new Cf("true", (x) => T.MakeR(T.Re(INumber<T>.Sqrabs(x)) >= 1 ? 1 : 0)), // = size >= 1
+		new Cf("false",  (x) => T.MakeR(T.Re(INumber<T>.Sqrabs(x)) < 1 ? 1 : 0)), // = size < 1
+
+		// double arguments:
+		new Cf2("minimum", T.Min),	// component-wise minimum: min(1+4i,3+2i)=1+2i
+		new Cf2("maximum", T.Max),	// component-wise maximum
+		new Cf2("min", T.Min),		// component-wise minimum: min(1+4i,3+2i)=1+2i
+		new Cf2("max", T.Max),		// component-wise maximum
+		new Cf3("clamp", T.Clamp),	// component-wise clamp: clamp(5+4i,3+6i,4+7i)=4+6i
+
+		// quadruple arguments
+		new Ce("product", typeof(Product), 0),	// iterative product: product(<index>,from,to,expression(k<index>)); Ex: product(0,1,4,k0) = 1*2*3*4 = 24
+		new Ce("prod", typeof(Product), 0),		// iterative product
+		new Ce("sum", typeof(Sum), 0),			// iterative sum: sum(<index>,from,to,expression(k<index>)); Ex: sum(0,1,4,k0) = 1+2+3+4 = 10
+		new Ce("vector", typeof(Vector), 0),	// iterative vector builder: vector(<index>,from,to,expression(k<index>)); Ex: vector(0,1,3,2^k0) = (2,4,8)
+		new Ce("vec", typeof(Vector), 0),		// iterative vector builder
+
+		// exp/log
+		new Cf("exp10", INumber<T>.Exp10),	// Decimal exponential: 10^x
+		new Cf("exp2", INumber<T>.Exp2),	// Binary exponential: 2^x
+		new Cf("exp", T.Exp),				// Exponential: e^x = (cos(b)+isin(b))e^a
+		new Cf("log10", INumber<T>.Log10),	// Decimal logarithm: log_10(x) = ln(x)/ln(2)
+		new Cf("log2", INumber<T>.Log2),	// Binary logarithm: log_2(x) = ln(x)/ln(10)
+		new Cf("log", T.Log),				// Natural logarithm: ln(x)
+		new Cf("ln", T.Log),				// Natural logarithm: ln(x)
+
+		// sincs
+		new Cf("nsinhc", INumber<T>.Nsinhc),// sinhc(x*pi)
+		new Cf("sinchpi", INumber<T>.Nsinhc),// sinhc(x*pi)
+		new Cf("sinhc", INumber<T>.Sinhc),	// sinhc(x) = sinh(x)/x
+		new Cf("nsinc", INumber<T>.Nsinc),	// sinc(x*pi)
+		new Cf("sincpi", INumber<T>.Nsinc),	// sinc(x*pi)
+		new Cf("sinc", INumber<T>.Sinc),	// sinc(x) = sin(x)/x
+		new Cf("sinc", INumber<T>.Cosc),	// cosc(x) = (1-cos(x))/x
+
+		// arc hyperbolics
+		new Cf("acosh", T.Acosh),			// acosh(x)
+		new Cf("asinh", T.Asinh),			// asinh(x)
+		new Cf("atanh", T.Atanh),			// atanh(x)
+		new Cf("asech", INumber<T>.Asech),	// asech(x)
+		new Cf("acsch", INumber<T>.Acsch),	// acsch(x)
+		new Cf("acoth", T.Acoth),			// acoth(x)
+
+		// hyperbolics
+		new Cf("cosh", T.Cosh),			// cosh(x)
+		new Cf("sinh", T.Sinh),			// sinh(x)
+		new Cf("tanh", T.Tanh),			// tanh(x)
+		new Cf("sech", INumber<T>.Sech),// sech(x)
+		new Cf("csch", INumber<T>.Csch),// csch(x)
+		new Cf("coth", T.Coth),			// coth(x)
+
+		// arc trigs
+		new Cf("acos", T.Acos),			// acos(x)
+		new Cf("asin", T.Asin),			// asin(x)
+		new Cf("atan", T.Atan),			// atan(x)
+		new Cf("asec", INumber<T>.Asec),// asec(x)
+		new Cf("acsc", INumber<T>.Acsc),// acsc(x)
+		new Cf("acot", T.Acot),			// acot(x)
+
+		// trigs
+		new Cf("cos", T.Cos),			// cos(x)
+		new Cf("sin", T.Sin),			// sin(x)
+		new Cf("tan", T.Tan),			// tan(x)
+		new Cf("sec", INumber<T>.Sec),	// sec(x)
+		new Cf("csc", INumber<T>.Csc),	// csc(x)
+		new Cf("cot", T.Cot),			// cot(x)
+
+		// basics/components
+		new Cf("real", INumber<T>.TRe),			// Real part: Re(x) = a
+		new Cf("re", INumber<T>.TRe),			// Real part: Re(x) = a
+		new Cf("imag", INumber<T>.TI),			// Imaginary part: Im(x) = b (or sqrt(bb+cc+dd) for quats)
+		new Cf("im", INumber<T>.TI),			// Imaginary part
+		new Cf("frac", T.Frac),					// Signed fractional part: Frac(x) = x - Trunc(x)
+		new Cf("trunc", T.Trunc),				// Whole part: Truncate(x)
+		new Cf("floor", T.Floor),				// Round down: Floor(x)
+		new Cf("round", T.Round),				// Round near: Round(x)
+		new Cf("ceil", T.Ceil),					// Round up: Ceiling(x)
+		new Cf("sign", INumber<T>.Sign),		// Sign(x) = x / |x|
+		new Cf("sgn", INumber<T>.Sign),			// Sign(x) = x / |x|
+		new Cf("negative", INumber<T>.Neg),		// Negation: -x
+		new Cf("neg", INumber<T>.Neg),			// Negation: -x
+		new Cf("inverse", T.Inv),				// Inverse: 1/x
+		new Cf("inv", T.Inv),					// Inverse: 1/x
+		new Cf("absri", T.AbsComp),				// Positive components: |a|+|b|i
+		new Cf("sqrabs", INumber<T>.Sqrabs),	// Squared absolute value: |x|^2 = a*a + b*b
+		new Cf("absolute", INumber<T>.TAbs),	// Absolute value: |x| = sqrt(a*a + b*b)
+		new Cf("abs", INumber<T>.TAbs),			// Absolute value: |x| = sqrt(a*a + b*b)
+		new Cf("arg", INumber<T>.TArg),			// Argument: Arg(x)
+		new Cf("conjugate", INumber<T>.Conj),	// Conjugate: Conj(x) = a - bi
+		new Cf("conj", INumber<T>.Conj),		// Conjugate: Conj(x) = a - bi
+
+		// powers
+		new Cf("sqrt", T.Sqrt),			// Square root: Sqrt(x)
+		new Cf("cbrt", INumber<T>.Cbrt),// Cube root: Cbrt(x)
+		new Cf("sqr", T.Sqr),			// Square: x*x
+		new Cf("cube", T.Cub),			// Cube: x*x*x
+		new Cf("cub", T.Cub),			// Cube: x*x*x
+		new Cf("quart", T.Quart),		// Quart: x*x*x*x
+
+		// specials
+		Fact,								// x!
+		new Cf("gauss", T.Gauss),				// e^(-x^2)
+		new Cf("softabs", INumber<T>.SoftAbs),	// ln(1+e^x)
+		new Cf("softneg", INumber<T>.SoftNeg),	// ln(1+e^x)
+		new Cf2("softmax", INumber<T>.SoftMax),	// ln(e^a+e^b+...)
+		new Cf2("softmin", INumber<T>.SoftMin),	// ln(a^a+e^b+...)
+		new Cf("gamma", T.Gamma),				// gamma(x)
+		new Cf("zeta", T.Zeta)					// zeta(x)*/
+		
+		/* old FuncIndex code, before OperateValue existed
+ public override Value Eval(ushort depth, Value args, string text = "") {
+	List<Value> r = [];
+	Operate(ref r, indices, base.Eval(depth, args, text));
+	return new([.. r]);
+}
+private static void Operate(ref List<Value> r, Value indices, Value v) {
+	v = CollapseScalar(v);
+	var iV = CollapseScalar(indices).Values;
+	int s = iV.Length;
+	for (var i = 0; i < s; ++i)
+		if (0 == (iV[i] = CollapseScalar(iV[i])).Values.Length) {
+			var index = T.Re(iV[i].Leaf);
+			int integer;
+			if (double.IsNaN(index) || (integer = (int)Math.Round(index)) < 0 || integer >= v.Values.Length)
+				r.Add(None);
+			else
+				r.Add(CollapseScalar(v.Values[integer]));
+		} else {
+			List<Value> nr = [];
+			Operate(ref nr, iV[i], v);
+			r.Add(new([.. nr]));
+		}
+}*/
+/*private static double[] MakeBernoullis() {
+	var B = new double[Bernoullis];
+	var maxIterations = Bernoullis << 1;
+	B[0] = 1.0 / 6;
+	// b[i] = sum[m=0..n]: sum[k=0..m]: (-1)^k * Comb(m k) * k^n * (m+1)^(-1)
+	for (var i = 2; i < Bernoullis; ++i) {
+		int e, o, m, tri, n = i << 1;
+		var powers = new double[n+1];
+		for (var k = 2; k <= n; ++k) { // prepare k^n
+			var power = powers[k] = k;
+			for(int j = n - 1; j > 0; j >>= 1, power *= power)
+				if((j & 1) == 1)
+					powers[k] *= power;
+		}
+		double nk, ns = (powers[2] - 3.5) / 3; // m=0 + m=1 + m=2 ...first 3 terms
+		var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
+		for (p[m = 2] = 1; (tri = m) < n; ) { // m-loop
+			while (tri > 2) p[tri] += p[--tri]; // add the non-edge pascal triangle terms
+			p[2] += m; // increment the 3rd column on the left edge of the pascal triangle
+			if (m % 2 == 0) (e, o) = (m, ++m); else (o, e) = (m, ++m); // odd and even loops
+			p[m] = 1; // add a new 1 at the end column on the right edge of the pascal triangle
+			var m1 = 1.0 + m; // 0th and 1st k-term
+			nk = -m;  // 1st term (and 0th is always zero for n>0)
+			do nk += p[e] * powers[e]; // k-loop: even k terms, p[e] = Combinations(n,e)
+			while (2 <= (e -= 2)); // decrement even k iterators down to 1
+			do nk -= p[o] * powers[o]; // k-loop: odd k terms, p[o] = Combinations(n,o)
+			while (2 <= (o -= 2)); // decrement odd k iterators down to 1
+			ns += nk / (1 + m);
+		}
+		B[i - 1] = ns;
+	}
+	return B;
+}*/
+/* this one was originally used for zeta reflection, but it combined intself with SinN1 into NISinI
+// i^c + i^(-c) = 2cos(πc/2) // is this faster than 2*T.Cos(qTau * c)? T.Cos(c) = new(Math.Cos(c.R) * Math.Cosh(c.I), Math.Sin(-c.R) * Math.Sinh(c.I));
+private static T CosI(T c) {
+	double i = c.I * qTau, r = c.R * qTau, cos = Math.Cos(r), sin = Math.Sin(r), e = Math.Exp(i), ie = 1 / e;
+	return new T((ie - e) * cos, (ie + e) * sin);
+}*/
+//var arg = new Comparser<Complex>.Value([new Comparser<Complex>.Value(new Complex(xd), "x")]);
+//plot_gamma[x] = ((Comparser<Complex>.Value)eval_gamma).Leaf;
+//plot_fact[x] = ((Comparser<Complex>.Value)eval_fact).Leaf;
+
+//var exp = 	new Comparser<Comparser.Numbers.Complex>.Expression(context, "x!", new Comparser<Complex>.Value([new(Complex.NaN(), "x")]));
+//var exp = 	new Comparser<Comparser.Numbers.Complex>.Expression(context, "gamma(x)", new Comparser<Complex>.Value([new(Complex.NaN(), "x")]));
+//var eval = context.ParseEval("gamma(x+1)", arg); //exp.Eval(0,);
+//var eval2 = context.ParseEval("x!", arg); //exp.Eval(0,);
+
+//["fac"] = new Cf(INumber<T>.Gamma_1), // testing
+//["gam5"] = new Cf(INumber<T>.Gamma_05), // testing
+//["gam0"] = new Cf(INumber<T>.Gamma0), // testing
+//["gam05"] = new Cf(INumber<T>.Gamma05), // testing
+//["gam1"] = new Cf(INumber<T>.Gamma1), // testing
+
+/*var evalF = context.ParseEval("fac(x)", arg);//exp.Eval(0,);
+var evalG_05 = context.ParseEval("gamneg(x+0.5)", arg);//exp.Eval(0,);
+var evalG0 = context.ParseEval("gamzero(x+1)", arg);//exp.Eval(0,);
+var evalG05 = context.ParseEval("gamhalf(x+1.5)", arg);//exp.Eval(0,);
+var evalG1 = context.ParseEval("gamone(x+2)", arg);//exp.Eval(0,);
+*/
+					/*double gam_05 = Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 1]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 2]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 3]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 4]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 5]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 6]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG_05[x * 8 + 7]));*/
+
+					/*double gam0 = Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 1]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 2]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 3]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 4]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 5]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 6]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG0[x * 8 + 7]));
+
+					double gam05 = Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 1]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 2]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 3]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 4]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 5]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 6]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG05[x * 8 + 7]));
+
+					double gam1 = Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 1]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 2]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 3]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 4]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 5]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 6]))
+						+ Math.Max(0, .25 - Math.Abs((yt * ye + ys * (1 - yt)) + plotG1[x * 8 + 7]));*/
+// Sin reflection: Γ(1-z)Γ(z)=π/sin(πz) => Γ(1.5+z)Γ(.5-z) = π/sin(π(.5+z)) => Γ(.5-z) = π/(Γ(1.5+z)sin(π(.5+z))); c = .5-z => z = .5-c
+//public static T I_Gamma_Stirling_Sin(T c) => T.Re(c) > .5 ? Gamma_Stirling_Positive(c) : Math.PI * T.Inv(Gamma_Stirling_Positive(2 - c) * T.Sin(Math.PI * c));
+/* not very precise, use Stirling instead:
+public static T Gamma_Weierstrass(T c, int n) {
+	var s = c - Log(1 + c);
+	do {
+		var r = c / n;
+		s += r - Log(1 + r);
+	} while (1 < --n);
+	return Exp(s - Log(c) - gamma * c);
+}
+[MethodImpl(MethodImplOptions.AggressiveInlining)]
+private static unsafe void Gamma_Stirling_Positive_Batched(T x, T* result, int unitPixels, int width, int off = 0, int corrections = 4, int shifts = 16)  {
+	T b = x + shifts;
+	int i = 0, ir = 0, r = width / unitPixels;
+	// shifts:
+	var t = T.MakeR(LnTh); // train (sliding sum window)
+	var s = new T[shifts]; // terms
+	// initial shifts:
+	for(var o = off; o < shifts; ++o)
+		t -= s[o] = T.Log(T.Sqr(x + o));
+	// running shifts:
+	for (Btc(); i < r; ++b, Btc(), ++i)
+		t += -s[i % shifts] + (s[i % shifts] = T.Log(T.Sqr(b)));
+
+	return;
+	void Btc() {
+		result[ir] = T.Exp(B() + t + C()); // base + train + corrections
+		ir += unitPixels;
+	}
+	T B() => (b - .5) * T.Log(b) - b; // base
+	T C() { // corrections
+		T k = T.Zero(), xp = b;
+		for (var i = 0; i < corrections; ++i)
+			k += B2G[i] * (xp /= T.Sqr(b)); // B2G[i] = B2[i]/(6ii+4i+2), B2[i] = B_2(i+1)
+		return k;
+	}
+}*/
+/*private Value EvalSingle(ushort depth, int arrayIndex, Value args) {
+			Value ee; var a = args.Values; var v = V.Values;
+			return arrayIndex < v.Length ? Value.Operate2(
+				(ee = v[arrayIndex]).Term?.Eval(depth, args) ?? new([ee.Arg == null ? ee : GetArg(ee.Arg, a)]),
+				ee.Operand?.Eval(depth, args) ?? None, ee, ee.Op.Op, ee.Op.SOp) : None;
+			Value GetArg(Nest arg, Value[] aa) {
+				for (; arg.V >= 0 && arg.V < aa.Length; arg = arg.Next) {
+					if (arg.Next == null)
+						return aa[arg.V];
+					aa = aa[arg.V].Values;
+				}
+				return ee;
+			}
+		}*/

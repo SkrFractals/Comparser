@@ -1,4 +1,5 @@
-﻿namespace Comparser.Comparser.Numbers;
+﻿using static Comparser.Comparser.Numbers.Static;
+namespace Comparser.Comparser.Numbers;
 public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, double k = 0) : INumber<Quaternion> {
 
 	public readonly double R = r, I = i, J = j, K = k;
@@ -22,7 +23,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 		var s = "";
 		var r = "";
 		var ci = -1;
-		string[] v = [INumber<Complex>._sr(R, d), INumber<Complex>._sr(I, d), INumber<Complex>._sr(J, d), INumber<Complex>._sr(K, d)];
+		string[] v = [_sr(R, d), _sr(I, d), _sr(J, d), _sr(K, d)];
 		while (4 > ++ci && ijk[0] != 'x') {
 			string l;
 			for (r += s, l = ijk[..1], ijk = ijk[1..]; ci < 4 && v[ci] == "0"; ++ci) {
@@ -34,7 +35,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 					r = "0";
 				break;
 			}
-			r += ci == 0 ? INumber<Complex>._i(v[ci], "") : INumber<Complex>._i(v[ci], l);
+			r += ci == 0 ? _i(v[ci], "") : _i(v[ci], l);
 			s = " ";
 		}
 		return r;
@@ -48,19 +49,20 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	#endregion
 
 	#region Helpers
+	public static double Mix(Quaternion c, Func<double, double, double> d) => d(d(c.R, c.I),d(c.J,c.K));
 	private static double I_Dot(Quaternion q) => q.I * q.I + q.J * q.J + q.K * q.K;
-	private static Quaternion D1(Quaternion a, Func<double, double> d) => new(d(a.R), d(a.I), d(a.J), d(a.K));
-	private static Quaternion D2(Quaternion a, Quaternion b, Func<double, double, double> d) => new(d(a.R, b.R), d(a.I, b.I), d(a.J, b.J), d(a.K, b.K));
-	private static Quaternion D3(Quaternion a, Quaternion b, Quaternion c, Func<double, double, double, double> d) => new(d(a.R, b.R, c.R), d(a.I, b.I, c.I), d(a.J, b.J, c.J), d(a.K, b.K, c.K));
+	public static Quaternion D1(Quaternion a, Func<double, double> d) => new(d(a.R), d(a.I), d(a.J), d(a.K));
+	public static Quaternion D2(Quaternion a, Quaternion b, Func<double, double, double> d) => new(d(a.R, b.R), d(a.I, b.I), d(a.J, b.J), d(a.K, b.K));
+	public static Quaternion D3(Quaternion a, Quaternion b, Quaternion c, Func<double, double, double, double> d) => new(d(a.R, b.R, c.R), d(a.I, b.I, c.I), d(a.J, b.J, c.J), d(a.K, b.K, c.K));
 	#endregion
 
 	#region Basics
-	public static bool Compare(Quaternion a, Quaternion b)
+	public static bool AreEqual(Quaternion a, Quaternion b)
 		=> Math.Abs(a.R - b.R) + Math.Abs(a.I - b.I) + Math.Abs(a.J - b.J) + Math.Abs(a.K - b.K) < 1e-8;
-	// conjugate: a - bi
 	public static double Re(Quaternion q) => q.R;
 	public static Quaternion MakeR(double r) => new(r);
-	public static double Im(Quaternion q) => Math.Sqrt(I_Dot(q));
+	public static double Im(Quaternion q) => q.I + q.J + q.K;
+	public static double ImMag(Quaternion q) => Math.Sqrt(I_Dot(q));
 	// conjugate: a - bi
 	public static Quaternion operator !(Quaternion q) => new(q.R, -q.I, -q.K, -q.K);
 	// negative: - a - bi
@@ -102,11 +104,11 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	// = iτ/c // using this in my Gamma_Stirling_Negative, maybe won't work for quaternions as it's only using i
 	//public static Quaternion InvITau(Quaternion c) => new Quaternion(c.I, c.R) * (Math.Tau / +c);
 	// Argument of quaternion
-	public static double Arg(Quaternion q) => Math.Atan2(Im(q), q.R);
+	public static double Arg(Quaternion q) => Math.Atan2(ImMag(q), q.R);
 	// from angle
 	public static Quaternion InvArg(double angle, Quaternion axis) { var s = Math.Sin(angle); return new(Math.Cos(angle), axis.I * s, axis.J * s, axis.K * s); }
 	public static Quaternion Axis(Quaternion q) {
-		var im = Im(q);
+		var im = ImMag(q);
 		return im == 0 ? i : new(0, q.I / im, q.J / im, q.K / im);
 	}
 	// square root
@@ -136,13 +138,15 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	}
 	// |a| + |b|i
 	public static Quaternion AbsComp(Quaternion q) => D1(q, Math.Abs);
-	public static Quaternion Min(Quaternion a, Quaternion b) => D2(a, b, INumber<Quaternion>.Min);
-	public static Quaternion Max(Quaternion a, Quaternion b) => D2(a, b, INumber<Quaternion>.Max);
-	public static Quaternion Clamp(Quaternion q, Quaternion min, Quaternion max) => D3(q, min, max, INumber<Quaternion>.Clamp);
+	public static double Dot(Quaternion a, Quaternion b) => a.R * b.R + a.I * b.I + a.J * b.J + a.K * b.K;
+	public static Quaternion Min(Quaternion a, Quaternion b) => D2(a, b, Static.Min);
+	public static Quaternion Max(Quaternion a, Quaternion b) => D2(a, b, Static.Max);
+	public static Quaternion Clamp(Quaternion q, Quaternion min, Quaternion max) => D3(q, min, max, Static.Clamp);
 	#endregion
 
 	#region Additions
-	public static Quaternion operator +(Quaternion a, Quaternion b) => D2(a, b, INumber<Quaternion>.Add);
+	public static Quaternion operator ++(Quaternion c) => c + 1;
+	public static Quaternion operator +(Quaternion a, Quaternion b) => D2(a, b, Static.Add);
 	// quaternion + real
 	public static Quaternion operator +(Quaternion q, double r) => new(q.R + r, q.I, q.J, q.K);
 	// real + quaternion
@@ -161,7 +165,8 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	#endregion
 
 	#region Subtractions
-	public static Quaternion operator -(Quaternion a, Quaternion b) => D2(a, b, INumber<Quaternion>.Sub);
+	public static Quaternion operator --(Quaternion c) => c - 1;
+	public static Quaternion operator -(Quaternion a, Quaternion b) => D2(a, b, Static.Sub);
 	// quaternion - real
 	public static Quaternion operator -(Quaternion q, double r) => new(q.R - r, q.I, q.J, q.K);
 	// real - quaternion
@@ -206,6 +211,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static Quaternion MulK(Quaternion q, double v) => new(-v * q.K, v * q.J, -v * q.I, v * q.R);
 	// imaginary * quaternion
 	public static Quaternion MulK(double v, Quaternion q) => new(-v * q.K, -v * q.J, v * q.I, v * q.R);
+	public static double operator |(Quaternion a, Quaternion b) => a.R * b.R + a.I * b.I + a.J * b.J + a.K * b.K;
 	#endregion
 
 	#region Divisions
@@ -215,7 +221,6 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	// real / quaternion
 	public static Quaternion operator /(double r, Quaternion q) => r * Inv(q);
 	public static Quaternion LDiv(Quaternion a, Quaternion b) => Inv(b) * a;
-	public static Quaternion operator %(Quaternion a, Quaternion b) => D2(a, b, INumber<Quaternion>.Mod);
 
 	// quaternion / imaginary (right division)
 	public static Quaternion DivI(Quaternion q, double v) => new(q.I / v, q.R / -v, q.K / -v, q.J / v);
@@ -226,6 +231,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	// imaginary / quaternion (left division)
 	public static Quaternion LDivI(double v, Quaternion q) => MulI(Inv(q), v);
 	// TODO DivJ, DivK
+	public static Quaternion operator %(Quaternion a, Quaternion b) => INumber<Quaternion>.NewMod(a, b);
 	#endregion
 
 	#region ExpLogs
@@ -239,11 +245,11 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static Quaternion LogH(Quaternion q) {
 		var idot = I_Dot(q);
 		return idot < 0 ? new(.25 * Math.Log(q.R * q.R + idot), (idot = Math.Atan2(idot = Math.Sqrt(idot), q.R) / (2 * idot)) * q.I, idot * q.J, idot * q.K)
-			: q.R < 0 ? new(.5 * Math.Log(-q.R), INumber<Quaternion>.QTau) : new(.5 * Math.Log(q.R));
+			: q.R < 0 ? new(.5 * Math.Log(-q.R), QTau) : new(.5 * Math.Log(q.R));
 	}
 	// e ^ quaternion
 	public static Quaternion Exp(Quaternion q) {
-		double e = Math.Exp(q.R), v = Im(q); // v=sqrt(idot(q))
+		double e = Math.Exp(q.R), v = ImMag(q); // v=sqrt(idot(q))
 		return v == 0 ? new Quaternion(e) : new Quaternion(e * Math.Cos(v), (e *= Math.Sin(v) / v) * q.I, e * q.J, e * q.K);
 	}
 	public static Quaternion operator ^(Quaternion a, Quaternion b) => Exp(Log(a) * b);
@@ -254,25 +260,25 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	// (-1) ^ quaternion
 	public static Quaternion PowN1(Quaternion c) => Exp(new(-c.I * Math.PI, c.R * Math.PI));
 	// i ^ quaternion
-	public static Quaternion PowI(Quaternion c) => Exp(new(-c.I * INumber<Quaternion>.QTau, c.R * INumber<Quaternion>.QTau));
+	public static Quaternion PowI(Quaternion c) => Exp(new(-c.I * QTau, c.R * QTau));
 	#endregion
 
 	#region Hyperbolics
 	public static Quaternion Cosh(Quaternion q) {
-		var v = Im(q);
+		var v = ImMag(q);
 		return new Quaternion(Math.Cos(v) * Math.Cosh(q.R), (v = Math.Sinh(q.R) * (v == 0 ? 0 : Math.Sin(v) / v)) * q.I, v * q.J, v * q.K);
 	}
 	public static Quaternion Sinh(Quaternion q) {
-		var v = Im(q);
+		var v = ImMag(q);
 		return new Quaternion(Math.Cos(v) * Math.Sinh(q.R), (v = Math.Cosh(q.R) * (v == 0 ? 0 : Math.Sin(v) / v)) * q.I, v * q.J, v * q.K);
 	}
 	public static Quaternion Tanh(Quaternion c) {
-		double im = Im(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = 1 + tt * hh, 
+		double im = ImMag(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = 1 + tt * hh, 
 			b = im == 0 ? 0 : t * (1 - hh) / (im * d);
 		return new Quaternion(h * (1 + tt) / d, b * c.I, b * c.J, b * c.K);
 	}
 	public static Quaternion Coth(Quaternion c) {
-		double im = Im(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = tt + hh, 
+		double im = ImMag(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = tt + hh, 
 			b = im == 0 ? 0 : t * (hh - 1) / (im * d);
 		return new Quaternion(h * (tt + 1) / d, b * c.I, b * c.J, b * c.K);
 	}
@@ -280,20 +286,20 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 
 	#region Trigonometrics
 	public static Quaternion Cos(Quaternion q) {
-		var v = Im(q);
+		var v = ImMag(q);
 		return new Quaternion(Math.Cos(q.R) * Math.Cosh(v), (v = -Math.Sin(q.R) * (v == 0 ? 0 : Math.Sinh(v) / v)) * q.I, v * q.J, v * q.K);
 	}
 	public static Quaternion Sin(Quaternion q) {
-		var v = Im(q);
+		var v = ImMag(q);
 		return new Quaternion(Math.Sin(q.R) * Math.Cosh(v), (v = Math.Cos(q.R) * (v == 0 ? 0 : Math.Sinh(v) / v)) * q.I, v * q.J, v * q.K);
 	}
 	public static Quaternion Tan(Quaternion c) {
-		double im = Im(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = 1 + tt * hh, 
+		double im = ImMag(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = 1 + tt * hh, 
 			b = im == 0 ? (1 + tt) / d : h * (1 + tt) / (im * d);
 		return new Quaternion(t * (1 - hh) / d, b * c.I, b * c.J, b * c.K);
 	}
 	public static Quaternion Cot(Quaternion c) {
-		double im = Im(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = tt + hh, 
+		double im = ImMag(c), t = Math.Tan(c.R), h = Math.Tanh(im), tt = t * t, hh = h * h, d = tt + hh, 
 			b = im == 0 ? (1 + tt) / -d : -h * (1 + tt) / (im * d);
 		return new Quaternion(t * (1 - hh) / d , b * c.I, b * c.J, b * c.K);
 	}
@@ -317,22 +323,27 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	// -i*((-1)^c - (-1)^(-c)) = 2sin(πc)
 	public static Quaternion Sin_P(Quaternion q) => 2 * Sin(Math.PI * q);
 	// -i * ((i)^c - (i)^(-c)) = 2sin(πc/2)
-	public static Quaternion Sin_2Q(Quaternion q) => 2 * Sin(INumber<Quaternion>.QTau * q);
+	public static Quaternion Sin_2Q(Quaternion q) => 2 * Sin(QTau * q);
 	#endregion
 
 	#region Special Functions
 	public static Quaternion Gauss(Quaternion q) { // optimized
-		double r = q.R, v = Im(q), e = Math.Exp(v * v - r * r), a = -2 * r * v, s = v == 0 ? 0 : e * Math.Sin(a) / v;
+		double r = q.R, v = ImMag(q), e = Math.Exp(v * v - r * r), a = -2 * r * v, s = v == 0 ? 0 : e * Math.Sin(a) / v;
 		return new(e * Math.Cos(a), s * q.I, s * q.J, s * q.K);
 	}
 	public static Quaternion Gamma(Quaternion q) => INumber<Quaternion>.ComplexOp(q, INumber<Complex>.I_Gamma); // = INumber<Quaternion>.IGamma(q);
 	public static Quaternion Factorial(Quaternion q) => INumber<Quaternion>.ComplexOp(q, INumber<Complex>.I_Factorial); // = INumber<Quaternion>.IFactorial(q);
 	public static Quaternion Zeta(Quaternion q) => INumber<Quaternion>.ComplexOp(q, INumber<Complex>.I_Zeta); // = INumber<Quaternion>.IZeta(q);
 	#endregion
+	public static void IndexAndAddToRgb(Color[] axis, Quaternion indices, Quaternion value) {
+		var a = axis[(int)indices.R];
+		if (indices.R >= 0 && indices.R < axis.Length)
+			axis[(int)indices.R] = Color.FromArgb(a.R + (int)value.R, a.G+ (int)value.R, a.B+ (int)value.R);
+		if (indices.I >= 0 && indices.I < axis.Length)
+			axis[(int)indices.I] = Color.FromArgb(a.R+(int)value.I, a.G, a.B);
+		if (indices.J >= 0 && indices.I < axis.Length)
+			axis[(int)indices.I] = Color.FromArgb(a.R, a.G+(int)value.J, a.B);
+		if (indices.K >= 0 && indices.I < axis.Length)
+			axis[(int)indices.I] = Color.FromArgb(a.R, a.G, a.B + (int)value.K);
+	}
 }
-/* this one was originally used for zeta reflection, but it combined intself with SinN1 into NISinI
-// i^c + i^(-c) = 2cos(πc/2) // is this faster than 2*T.Cos(qTau * c)? T.Cos(c) = new(Math.Cos(c.R) * Math.Cosh(c.I), Math.Sin(-c.R) * Math.Sinh(c.I));
-private static T CosI(T c) {
-	double i = c.I * qTau, r = c.R * qTau, cos = Math.Cos(r), sin = Math.Sin(r), e = Math.Exp(i), ie = 1 / e;
-	return new T((ie - e) * cos, (ie + e) * sin);
-}*/
