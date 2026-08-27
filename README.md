@@ -35,9 +35,13 @@ This example also generates two definitions. The first one will have the conditi
 Default Argument Expressions:
   
 f(x, y:2e^x, z:sin(y)) : 7z+5yz+2x
-Arguments can get an expression that evaluates them, if there is no value supplied to an argument by not writing it at all, or giving "_" (supplied values override it).
-The example above would only require 1 argument, which would set up y and z, and all of them will be used in the called function's body
-(Can use it even multiple times while computing  once, like a precomputed variable)
+Arguments can get an expression that evaluates them. If there is no value supplied to an argument by not writing it at all, or giving "_" (supplied values override it).  
+The example above would only require 1 argument, which would set up y and z, and all of them will be used in the called function's body  
+(Can use it even multiple times while computing  once, like a precomputed variable)  
+The expressions can even reference the other neighboring arguments, but only those to the left (as those to the right were not read yet, when this is binding).  
+So you can't do this: f(x:y+1,y)=x, but you can when you swap those arguments.  
+Examples:  
+f(x,y:2x+1):2^y; f(2) = 32; f(_, 4) = 16  
   
 Separators:  
 ;  
