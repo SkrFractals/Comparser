@@ -14,7 +14,7 @@ Parser stage, the "code". This one is read sequentially line by line, and works 
 You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
   
 Function definition:  
-(<expressionCacheSize>)functionName(<expressionArguments>) : <expressionDefinition>  
+(\<expressionCacheSize\>)functionName(\<expressionArguments\>) : \<expressionDefinition\>  
 CacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.  
 CacheSize is optional. It will only get read if the definition begins with parentheses. The default cache size is 1 for any function where it is not specified.  
 You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value  
@@ -27,9 +27,9 @@ Example of cacheSize:
 function()  
   
 Ternary function definition:  
-(<expressionCacheSize>)function(<expressionArguments>) : <expressionCondition> ? <expressionTrueDefinition> : <expressionFalseDefinition>  
+(\<expressionCacheSize\>)function(\<expressionArguments\>) : \<expressionCondition\> ? \<expressionTrueDefinition\> : \<expressionFalseDefinition\>  
 Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly  
-Example: factorial(x) : x <= 1 ? 1 : xfactorial(x - 1)  
+Example: factorial(x) : x \<= 1 ? 1 : xfactorial(x - 1)  
 This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it. 
    
 Default Argument Expressions:
