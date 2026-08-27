@@ -300,3 +300,15 @@ quart(_\<vector\>_) ...Fast hybercube. Also _\<vector\>_*_\<vector\>_*_\<vector\
 fact/factorial(_\<vector\>_) ...Complex factorial.  
 gauss(_\<vector\>_) ...Gauss function. Also equals to e^(-sqr(_\<vector\>_))  
 zeta(_\<vector\>_) ...Riemann Zeta function.  
+cosh,sinh,tanh,coth,sech,csch(_\<vector\>_) ...All the hyberbolic functions.  
+cos,sin,tan,cot,sec,csc(_\<vector\>_) ...All the trigonometric functions.  
+acosh,asinh,atanh,acoth,asech,acsch(_\<vector\>_) ...All the inverse hyberbolic functions.  
+acos,asin,atan,acot,asec,acsc(_\<vector\>_) ...All the inverse trigonometric functions.  
+sinc(_\<vector\>_) ...Also equals to sin(_\<vector\>_)/_\<vector\>_.  
+nsinc/sincpi(_\<vector\>_) ...Also equals to sinc(pi*_\<vector\>_).  
+sinch/sinhc(_\<vector\>_) ...Also equals to sinh(_\<vector\>_)/_\<vector\>_.  
+nsinch/nsinhc/sinchpi/sinhcpi(_\<vector\>_) ...Also equals to sinhc(pi*_\<vector\>_).  
+cosc(_\<vector\>_) ...Also equals to (1-cos(_\<vector\>_))/_\<vector\>_.  
+ncosc/coscpi(_\<vector\>_) ...Also equals to cosc(pi*_\<vector\>_).  
+coshc/cosch(_\<vector\>_) ...Also equals to (1-cosh(_\<vector\>_))/_\<vector\>_.  
+ncoshc/ncosch/coshcpi/coschpi(_\<vector\>_) ...Also equals to cosh(pi*_\<vector\>_).  
