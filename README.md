@@ -14,7 +14,7 @@ Parser stage, the "code". This one is read sequentially line by line, and works 
 You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
   
 Function definition:  
-(\<expressionCacheSize\>)functionName(\<expressionArguments\>) : \<expressionDefinition\>  
+(_\<expressionCacheSize\>_)functionName(_\<expressionArguments\>_) : _\<expressionDefinition\>_  
 CacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.  
 CacheSize is optional. It will only get read if the definition begins with parentheses. The default cache size is 1 for any function where it is not specified.  
 You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value  
@@ -27,7 +27,7 @@ Example of cacheSize:
 function()  
   
 Ternary function definition:  
-(\<expressionCacheSize\>)function(\<expressionArguments\>) : \<expressionCondition\> ? \<expressionTrueDefinition\> : \<expressionFalseDefinition\>  
+(_\<expressionCacheSize\>_)function(_\<expressionArguments\>_) : _\<expressionCondition\>_ ? _\<expressionTrueDefinition\>_ : _\<expressionFalseDefinition\>_  
 Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly  
 Example: factorial(x) : x \<= 1 ? 1 : xfactorial(x - 1)  
 This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it. 
@@ -49,29 +49,33 @@ Separators:
 Works very much like in other languages, but it is optional, as new lines also work like separators.  
   
 Variable definition:  
-variableName : \<expressionValue\>  
+variableName : _\<expressionValue\>_  
 -They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.  
 Example: x : 1; print : x, ","; x : 2; print=x; /* prints 1, 2  
   
 Print:  
-print : \<expressionArgument\>  
+print : _\<expressionArgument\>_  
 Takes all the elements in the evaluated vector from the expression and prints them into the log  
   
 Do:  
-do : \<expressionArgument\>  
+do : _\<expressionArgument\>_  
 Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
 Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
   
 If:  
-? \<expressionCondition\> { \<commands\> }  
+? _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like if in other languages, only the syntax is slightly different. The keyword "if" is just a question mark, and it doesn't require parentheses  
   
 Else:  
-: { \<commands\> }  
+: { _\<commands\>_ }  
 Functions just like else in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
+Elses can be chained. For example:  
+? _\<condition\>_ { _\<commandsA\>_ } : { _\<commandsB\>_ } : { _\<commandsC\>_ } : { _\<commandsD\>_ }  
+Will have the block A and C run if the condition is true, and B and D if false. Else is entered is the block before it was skipped.  
+I don't think this is particularly useful, but it's just how the parser works, so it's worth mentioning.  
   
 While:  
-! \<expressionCondition\> { \<commands\> }  
+! _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 
