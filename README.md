@@ -49,29 +49,29 @@ Separators:
 Works very much like in other languages, but it is optional, as new lines also work like separators.  
   
 Variable definition:  
-variableName : <expressionValue>  
+variableName : \<expressionValue\>  
 -They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.  
 Example: x : 1; print : x, ","; x : 2; print=x; /* prints 1, 2  
   
 Print:  
-print : <expressionArgument>  
+print : \<expressionArgument\>  
 Takes all the elements in the evaluated vector from the expression and prints them into the log  
   
 Do:  
-do : <expressionArgument>  
+do : \<expressionArgument\>  
 Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
 Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
   
 If:  
-? <expressionCondition> { <commands> }  
+? \<expressionCondition\> { \<commands\> }  
 Functions just like if in other languages, only the syntax is slightly different. The keyword "if" is just a question mark, and it doesn't require parentheses  
   
 Else:  
-: { <commands> }  
+: { \<commands\> }  
 Functions just like else in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
   
 While:  
-! <expressionCondition> { <commands> }  
+! \<expressionCondition\> { \<commands\> }  
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 
@@ -84,52 +84,52 @@ It doesn't support any of the syntax from above. There are no do, if/else, while
 Supports this syntax:  
   
 Parentheses:  
-(<expression>)  
+(\<expression\>)  
 Mathematical-like parentheses enforcing an order of operations. Without them, it uses the default order of operations of math (PEMDAS).  
   
 Vectors:  
-<expression>,<expression>,<expression>  
+\<expression\>, \<expression\>, \<expression\>  
 Each expression gets evaluated, and you get back a vector with each result in the same order  
 You can nest vectors with parentheses to make more complex structures.  
 Invariant: vectors containing exactly one element are always collapsed into their containing level. The evaluator does not preserve one-element vector nesting.  
-For example 1,(2,3),4,(5,(6,7)),8,(9),(((10),11)) will get collapsed into: 1,(2,3),4,(5,(6,7)),8,9,(10,11).  
+For example: 1, (2, 3), 4, (5, (6, 7)), 8, (9), (((10), 11)) will get collapsed into: 1, (2, 3), 4, (5, (6, 7)), 8, 9, (10, 11).  
 This is to keep the actual structure that matters, and for any size 1 nests that could appear to be cleared out.  
   
 Unary operations:
 
-<expression>!
+\<expression\>!
 Factorial
--<expression>
+-\<expression\>
 Negate
   
 Binary operators:  
-<expression> + <expression>  
+\<expression\> + \<expression\>  
 Add  
-<expression> - <expression>  
+\<expression\> - \<expression\>  
 Subtract  
-<expression> * <expression>  
+\<expression\> * \<expression\>  
 Multiply  
-<expression> / <expression>  
+\<expression\> / \<expression\>  
 Divide  
-<expression> ^ <expression>  
+\<expression\> ^ \<expression\>  
 Power  
-<expression><expression>  
+\<expression\>\<expression\>  
 Operator-less multiply  
-<expression> = <expression>  
+\<expression\> = \<expression\>  
 1 if equal, 0 if not  
-<expression> != <expression>  
+\<expression\> != \<expression\>  
 0 if equal, 1 if not  
-<expression> < <expression>  
+\<expression\> \< \<expression\>  
 1 if less, 0 if not  
-<expression> <= <expression>  
+\<expression\> \<= \<expression\>  
 1 if less or equal, 0 if not  
-<expression> > <expression>  
+\<expression\> \> \<expression\>  
 1 if more, 0 if not  
-<expression> >= <expression>  
+\<expression\> \>= \<expression\>  
 1 if more or equal, 0 if not  
 
-Logic is done numerically. Any number with a norm < 1 is false.
-Use true(<expression>) to convert the number into its boolean value of 0 or 1
+Logic is done numerically. Any number with a norm \< 1 is false.
+Use true(\<expression\>) to convert the number into its boolean value of 0 or 1
 (unary "sqrabs(x) >= 1" operator). Use * as AND, + as OR, true(a) != true(b) as XOR  
 Operations are recursively broadcast over vectors.
 When vectors have different shapes, the shorter dimension is cyclically reused...
@@ -141,42 +141,40 @@ Example: ((1, 2), (3, 4, 5), 6, 13) + ((7, 8, 9), 10, (11, 12))
 = ((1 + 7, 2 + 8, 1 + 9), (3 + 10, 4 + 10, 5 + 10), (6 + 11, 6 + 12), (13 + 7, 13 + 8, 13 + 9))  
   
   
-Factorial:  
-<expresion>!  
-  
 Vector Extractor:  
-<expression>[<expression>]  
+\<expression\>[\<expression\>]  
 Extracts terms from a vector using indices in: [expression].  
-Example: (a,b,c,d,e)[2] : c  
-Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] : (30d,31e),2c,(5,1,(30d,31e))  
+Example: (a, b, c, d, e)[2] : c  
+Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] : (30d, 31e), 2c, (5, 1, (30d, 31e))  
   
 Functions:  
 min, max, clamp, exp, ln, log10, sin, cosh, re, im, frac, floor, round, sgn, abs, conj, sqrt, cub, gauss, softmax, gamma, zeta...  
+(full list below)  
 All elementary and component-wise operations and then some.  
 Binary operations are chain-applied to the first and second element, then to the result and the third element, and so on.  
 So a binary operation like Min can take the minimum for any size vector.  
 They return the first element unchanged if it doesn't have a second operand.  
 Unary operations are applied to each element in the nested vector individually.  
   
-eval(<expression>)  
+eval(\<expression\>)  
 Attempts to parse and evaluate every Text in the input  
 Evaluates strings as expressions. The strings are parsed using the expression parser, but cannot execute parser-stage commands.  
-Example: eval("1+2","e^(ipi)"):3,-1  
+Example: eval("1+2", "e^(ipi)") = 3, -1  
   
-count(<expression>)  
+count(\<expression\>)  
 counts the number of elements in the vector  
 Example: count(0,1,2):3  
   
-cat(<expression>)  
+cat(\<expression\>)  
 Un-nests the vector and concatenates all the elements next to each other on the top-level of the result vector  
   
-sum(<expressionIndex>,<expressionFrom>,<expressionTo>,<expression>)  
-iterative sum: sum(<index>,from,to,expression(k<index>))  
+sum(\<expressionIndex\>,\<expressionFrom\>,\<expressionTo\>,\<expression\>)  
+iterative sum: sum(\<index\>,from,to,expression(k\<index\>))  
 Example: sum(0, 1, 4, k0) = 1 + 2 + 3 + 4 = 10  
 Can also iterate backwards, unlike the same iterators in math.  
 If you want them to return empty sums like backwards math sums, or negatives like backwards integrals, you can define that with a  ternary definition:  
 DiodeSum(x, from, to, expression) : from > to ? 0 : sum(x,from,to,expression)  
-IntegralLikeSum(x, from, to, expression) : from > to ? -sum(x, from, to, expression) : sum(x, from, to, expression)  
+IntegralLikeSum(x, from, to, expression) : from \> to ? -sum(x, from, to, expression) : sum(x, from, to, expression)  
 There is also "prod" function that functions the same way as an iterated product  
 and there is also "vec" function, which doesn't add or multiply the terms, but puts them all directly into a vector.  
   
