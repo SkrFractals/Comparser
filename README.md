@@ -23,15 +23,15 @@ Each expression has its own cache. If you define a function with multiple argume
 Example of a pattern-matching multi-defition:  
 factorial(0) : 1; factorial(x) : xfactorial(x - 1)  
 Example of cacheSize:  
-(0)function(x, y) : x + y^x /* this will have cache disabled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
-function()  
+(0)function(x, y) : x + y^x _/* this will have cache disabled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
+function()_  
   
 Ternary function definition:  
 (_\<expressionCacheSize\>_)function(_\<expressionArguments\>_) : _\<expressionCondition\>_ ? _\<expressionTrueDefinition\>_ : _\<expressionFalseDefinition\>_  
 Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly  
 Example: factorial(x) : x \<= 1 ? 1 : xfactorial(x - 1)  
 This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it. 
-Ternary definitons can be chained, but not nested.  
+Ternary definitions can be chained, but not nested.  
 Valid example: f(x) : _\<conditionA\>_ ? _\<ifA\>_ : _\<conditionB\>_ ? _\<elseIfB\>_ : _\<else\>_  
 Invalid nested example: f(x) : _\<conditionA\>_ ? _\<conditionB\>_ ? _\<ifAB\>_ : _\<ifAnotB\>_ : _\<ifnotA\>_   
 Valid alternatives to that nested ternary:  
@@ -59,7 +59,7 @@ Works very much like in other languages, but it is optional, as new lines also w
 Variable definition:  
 variableName : _\<expressionValue\>_  
 -They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.  
-Example: x : 1; print : x, ","; x : 2; print=x; /* prints 1, 2  
+Example: x : 1; print : x, ","; x : 2; print=x; _/* prints 1, 2_  
   
 Print:  
 print : _\<expressionArgument\>_  
@@ -79,7 +79,7 @@ Else:
 Functions just like else in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
 Elses can be chained. For example:  
 ? _\<condition\>_ { _\<commandsA\>_ } : { _\<commandsB\>_ } : { _\<commandsC\>_ } : { _\<commandsD\>_ }  
-Will have the block A and C run if the condition is true, and B and D if false. Else is entered is the block before it was skipped.  
+Will have the block A and C run if the condition is true, and B and D if false. Else is entered if the block before it was skipped.  
 I don't think this is particularly useful, but it's just how the parser works, so it's worth mentioning.  
   
 While:  
