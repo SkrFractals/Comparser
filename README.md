@@ -200,6 +200,11 @@ Numbers:
 Decimal notation: 123.456  
 Scientific notation could be ambiguously confused with multiplication by Euler's number, so just write it like: 1.234*10^2  
   
+NaN:  
+\_
+"Not a number" is a result of an undefined operation, or a wrongly parsed expression.  
+It can also be used as a discard argument, which would prompt it's efault expression if it has any.  
+  
 Strings:  
 "string"  
 Adding strings concatenates them.  
