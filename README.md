@@ -14,28 +14,28 @@ Parser stage, the "code". This one is read sequentially line by line, and works 
 You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
   
 Function definition:  
-(<expressionCacheSize>)functionName(<expressionArguments>) = <expressionDefinition>  
+(<expressionCacheSize>)functionName(<expressionArguments>) : <expressionDefinition>  
 CacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.  
 CacheSize is optional. It will only get read if the definition begins with parentheses. The default cache size is 1 for any function where it is not specified.  
 You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value  
 Multiple definitions of a function are tested in definition order. The first matching pattern/condition is used.  
-Each expression has its own cache, if you define a function with multiple argument patterns, each definition will have it's separate cache, with separate evaluation memory.  
+Each expression has its own cache. If you define a function with multiple argument patterns, each definition will have its separate cache, with separate evaluation memory.  
 Example of a pattern-matching multi-defition:  
-factorial(0) = 1; factorial(x) : xfactorial(x - 1)  
+factorial(0) : 1; factorial(x) : xfactorial(x - 1)  
 Example of cacheSize:  
-(0)function(x, y) : x + y^x /* this will ahve chace disablled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
+(0)function(x, y) : x + y^x /* this will have cache disabled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
 function()  
   
 Ternary function definition:  
-(<expressionCacheSize>)function(<expressionArguments>) = <expressionCondition> ? <expressionTrueDefinition> : <expressionFalseDefinition>  
+(<expressionCacheSize>)function(<expressionArguments>) : <expressionCondition> ? <expressionTrueDefinition> : <expressionFalseDefinition>  
 Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly  
-Example: factorial(x) : x <= 1 ? 1 : xfactorial(x-1)  
+Example: factorial(x) : x <= 1 ? 1 : xfactorial(x - 1)  
 This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it. 
    
 Default Argument Expressions:
   
 f(x, y:2e^x, z:sin(y)) : 7z+5yz+2x
-Arguments can get an expression that evaluates them. If there is no value supplied to an argument by not writing it at all, or giving "_" (supplied values override it).  
+Arguments can get an expression that evaluates them. If there is no value supplied to an argument by not writing it at all, or giving "\_" (supplied values override it).  
 The example above would only require 1 argument, which would set up y and z, and all of them will be used in the called function's body  
 (Can use it even multiple times while computing  once, like a precomputed variable)  
 The expressions can even reference the other neighboring arguments, but only those to the left (as those to the right were not read yet, when this is binding).  
@@ -55,7 +55,7 @@ Example: x : 1; print : x, ","; x : 2; print=x; /* prints 1, 2
   
 Print:  
 print : <expressionArgument>  
-Takes all the elements in the evaluated vector from the expression, and prints them into the log  
+Takes all the elements in the evaluated vector from the expression and prints them into the log  
   
 Do:  
 do : <expressionArgument>  
@@ -85,7 +85,7 @@ Supports this syntax:
   
 Parentheses:  
 (<expression>)  
-Mathematical-like parentheses enforcing an order of operations. Without it, it uses the default order of operations of math (PEMDAS).  
+Mathematical-like parentheses enforcing an order of operations. Without them, it uses the default order of operations of math (PEMDAS).  
   
 Vectors:  
 <expression>,<expression>,<expression>  
@@ -93,7 +93,7 @@ Each expression gets evaluated, and you get back a vector with each result in th
 You can nest vectors with parentheses to make more complex structures.  
 Invariant: vectors containing exactly one element are always collapsed into their containing level. The evaluator does not preserve one-element vector nesting.  
 For example 1,(2,3),4,(5,(6,7)),8,(9),(((10),11)) will get collapsed into: 1,(2,3),4,(5,(6,7)),8,9,(10,11).  
-This is to keep the actual structure that matters, and for any size 1 nests that could appears to be cleared out.  
+This is to keep the actual structure that matters, and for any size 1 nests that could appear to be cleared out.  
   
 Unary operations:
 
@@ -136,8 +136,9 @@ When vectors have different shapes, the shorter dimension is cyclically reused..
 ...and the deeper layers will re-access the previous levels of the other operand.  
 Scalar values therefore naturally broadcast into vectors. 
 And vectors may contain vectors of arbitrary depth.  
-Example: (1,2,3) + (4,5) = (1+4,2+5,3+4)  
-Example: ((1,2),(3,4,5),6,13) + ((7,8,9),10,(11,12)) = ((1+7,2+8,1+9),(3+10,4+10,5+10),(6+11,6+12),(13+7,13+8,13+9))  
+Example: (1, 2, 3) + (4, 5) = (1 + 4, 2 + 5, 3 + 4)  
+Example: ((1, 2), (3, 4, 5), 6, 13) + ((7, 8, 9), 10, (11, 12)) 
+= ((1 + 7, 2 + 8, 1 + 9), (3 + 10, 4 + 10, 5 + 10), (6 + 11, 6 + 12), (13 + 7, 13 + 8, 13 + 9))  
   
   
 Factorial:  
@@ -171,18 +172,18 @@ Un-nests the vector and concatenates all the elements next to each other on the 
   
 sum(<expressionIndex>,<expressionFrom>,<expressionTo>,<expression>)  
 iterative sum: sum(<index>,from,to,expression(k<index>))  
-Example: sum(0, 1, 4, k0) : 1 + 2 + 3 + 4 = 10  
+Example: sum(0, 1, 4, k0) = 1 + 2 + 3 + 4 = 10  
 Can also iterate backwards, unlike the same iterators in math.  
 If you want them to return empty sums like backwards math sums, or negatives like backwards integrals, you can define that with a  ternary definition:  
-DiodeSum(x,from,to,expression) = from > to ? 0 : sum(x,from,to,expression)  
-IntegralLikeSum(x,from,to,expression) : from > to ? -sum(x,from,to,expression) : sum(x,from,to,expression)  
+DiodeSum(x, from, to, expression) : from > to ? 0 : sum(x,from,to,expression)  
+IntegralLikeSum(x, from, to, expression) : from > to ? -sum(x, from, to, expression) : sum(x, from, to, expression)  
 There is also "prod" function that functions the same way as an iterated product  
 and there is also "vec" function, which doesn't add or multiply the terms, but puts them all directly into a vector.  
   
 Constants:  
 e | pi | tau | gamma | one  
 Get replaced by their associated mathematical constant value  
-Some algebras have their extra constants, like i in Complex numbers and i,j,k in Quaternions.  
+Some algebras have their extra constants, like i in Complex numbers and i, j, k in Quaternions.  
   
 Variables:  
 Work by simple value substitution just like constants, but you define their names and values  
