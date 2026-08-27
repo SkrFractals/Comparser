@@ -31,6 +31,9 @@ Ternary function definition:
 Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly  
 Example: factorial(x) : x \<= 1 ? 1 : xfactorial(x - 1)  
 This example also generates two definitions. The first one will have the condition, and the second one would assume the condition was false if it gets matched after it. 
+Ternary definitons can be chained, but not nested.  
+Valid example: f(x) : _\<conditionA\>_ ? _\<ifA\>_ : _\<conditionB\>_ ? _\<elseIfB\>_ : _\<else\>_  
+Invalid nested example: f(x) : _\<conditionA\>_ ? _\<conditionB\>_ ? _\<ifAB\>_ : _\<iAnotB\>_ : _\<ifNotB\>_   
    
 Default Argument Expressions:
   
