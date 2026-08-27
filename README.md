@@ -76,17 +76,13 @@ Functions just like if in other languages, only the syntax is slightly different
 Else:  
 : { _\<commands\>_ }  
 Functions just like else in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
-Elses can be chained. For example:  
-? _\<condition\>_ { _\<commandsA\>_ } : { _\<commandsB\>_ } : { _\<commandsC\>_ } : { _\<commandsD\>_ }  
-Will have the block A and C run if the condition is true, and B and D if false. Else is entered if the block before it was skipped.  
-I don't think this is particularly useful, but it's just how the parser works, so it's worth mentioning.  
   
 While:  
 ! _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 It can trigger a loop limit overflow if the condition is true too many times.  
-
+  
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
   
 EXPRESSIONS:  
@@ -123,6 +119,10 @@ Subtract
 Multiply  
 \<expression\> / \<expression\>  
 Divide  
+\<expression\> \ \<expression\>  
+Divide from left (only differs in non-commutative algebras like quaternions)  
+\<expression\> % \<expression\>  
+Complex division remainder  
 \<expression\> ^ \<expression\>  
 Power  
 \<expression\>\<expression\>  
@@ -234,3 +234,69 @@ Core evaluation rules
 -Evaluation is pure; definitions cannot be modified during evaluation.  
 -Parser-stage commands are unavailable during evaluation.  
 -Values are generic and may represent real, complex, quaternion, or other supported numeric types.  
+  
+------------------------------------------------------------------------------------------------------------------------------------------------------------  
+  
+Full default function list:  
+
+Vector/Meta functions:
+eval(_\<string\>_) ...parses a string as an expression and evaluates it (might not work properly yet). Example: eval("1+1") = 2  
+count(_\<vector\>_) ...counts the number of vector elements in the top layer. Example: count((1,2,3,4),5,6) = 3  
+cat/concat(_\<vector\>_) ...unpacks the nesting of the vector, puts all the elements to one top layer. Example: cat((1,2,(3,4)),5,6) = 1,2,3,4,5,6  
+  
+Binary operations (chainable/nestable):
+min/minimum(_\<vector\>_,_\<vector\>_,...) ...component-wise minimum.  
+max/maximum(_\<vector\>_,_\<vector\>_,...) ...component-wise maximum.  
+softmin(_\<vector\>_,_\<vector\>_,...) ...component-wise soft minimum. Equals to  ln(e^a+e^b)  
+softmax(_\<vector\>_,_\<vector\>_,...) ...component-wise soft maximum.  Equals to  -ln(e^(-a)+e^(-b))  
+add(_\<vector\>_,_\<vector\>_,...) ...adds all elements together.  
+mul/multiply(_\<vector\>_,_\<vector\>_,...) ...multiplies all elements together  
+imcoef(_\<value\>_,_\<coef\>_) ...attempts to return the selected imaginary coefficient. Also equal to re(-\<value\>\<coef\>).  
+cmod/compmod(_\<vector\>_) ...component-wise modulo (division remainder). If the divisor's component is 0, it will return 0 in that component. Example: cmod(5+10i,4+8i)=1+2i.  
+  
+Ternary operations:  
+clamp(_\<vector\>_,_\<min\>_,_\<max\>_) ...component-wise clamp. Also equal to min(\<max\>,max(\<min\>,\<vector\>).  
+
+Iterators:  
+vec/vector(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)  
+...evaluates the expression with an extra argument with the "variable" name from "from" to "to" (can go bidirectionally), and builds a vector from these evaluated results.  
+sum(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)  
+...evaluates the expression with an extra argument with the "variable" name from "from" to "to" (can go bidirectionally), and adds them all together. Also equal to add(vec(...)).   
+prod/product(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)  
+...evaluates the expression with an extra argument with the "variable" name from "from" to "to" (can go bidirectionally), and multiplies them all together. Also equal to mul(vec(...)).   
+  
+Unary operations (evaluate each nested element individually, and returns in a vector with the same structure):  
+sofabs(_\<vector\>_) ...Also equals softmax(0,_\<vector\>_), or ln(1+e^_\<vector\>_)  
+softneg(_\<vector\>_) ...Also equals softmin(0,_\<vector\>_), or -ln(1+e^(-_\<vector\>_))  
+true(_\<vector\>_) ...Turns magnitude under 1 into 0, and over 1 into 1. Example: true((.5,1.5),-1,1) = (0,1),1  
+false(_\<vector\>_) ...Turns magnitude under 1 into 1, and over 1 into 0. Example: true((.5,1.5),-1,1) = (1,0),0  
+exp(_\<vector\>_) ...Also equal to e^_\<vector\>_  
+exp2(_\<vector\>_) ...Also equal to 2^_\<vector\>_  
+exp10(_\<vector\>_) ...Also equal to 10^_\<vector\>_  
+ln/log(_\<vector\>_) ...Natural logarithm    
+log2(_\<vector\>_) ... Binary logarithm. Also equal to ln(_\<vector\>_)/ln(2)  
+log10(_\<vector\>_) ...Decimal logarithm. Also equal to ln(_\<vector\>_)/ln(10)  
+re/real(_\<vector\>_) ...returns the value with all imaginary parts zeroed.  
+im/imagl(_\<vector\>_) ...returns sum of all imaginary coefficients.  
+immg(_\<vector\>_) ...imaginary magnitude immg(r+ai+bj+ck) = sqrt(a^2+b^2+c^2)  
+frac(_\<vector\>_) ...fractional part. Also equals _\<vector\>_-trunc(_\<vector\>_)  
+trunc(_\<vector\>_) ...truncate  
+floor(_\<vector\>_) ...round down  
+round(_\<vector\>_) ...round  
+ceil/ceiling(_\<vector\>_) ...round up  
+sgn/sign(_\<vector\>_) ..._\<vector\>_/abs(_\<vector\>_)  
+neg/negative(_\<vector\>_) ...-_\<vector\>_  
+inv/inverse(_\<vector\>_) ...1/_\<vector\>_  
+cabs/compabs/absri(_\<vector\>_) ...component-wise absolute value (for example the difference between mandelbrot and burning ship)  
+sqrabs(_\<vector\>_) ...Square of the absolute value. Aka sqr(abs(_\<vector\>_)), or _\<vector\>_conj(_\<vector\>_)  
+norm/abs/absolute(_\<vector\>_) ...Absolute value (length of the complex number in the plane). Also square root of the sqrabs.  
+arg(_\<vector\>_) ...Argument. The radian angle of the value in the complex plane. Example arg(-1) = pi  
+conj/conjugate(_\<vector\>_) ...negates all the imaginary coefficients in the number.  
+sqrt(_\<vector\>_) ...Fast square root. Also _\<vector\>_^.5, but this should be slightly faster.  
+sqr(_\<vector\>_) ...Fast square. Also _\<vector\>_*_\<vector\>_, but this should be slightly faster.  
+cbrt(_\<vector\>_) ...Cube root.  
+cub/cube(_\<vector\>_) ...Fast square. Also _\<vector\>_*_\<vector\>_, but this should be slightly faster.  
+quart(_\<vector\>_) ...Fast hybercube. Also _\<vector\>_*_\<vector\>_*_\<vector\>_*_\<vector\>_, or sqr(sqr(*_\<vector\>_)), but this should be slightly faster.   
+fact/factorial(_\<vector\>_) ...Complex factorial.  
+gauss(_\<vector\>_) ...Gauss function. Also equals to e^(-sqr(_\<vector\>_))  
+zeta(_\<vector\>_) ...Riemann Zeta function.  
