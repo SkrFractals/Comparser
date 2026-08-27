@@ -15,7 +15,7 @@ You can and re-define functions and constants (so they can be mutated while this
   
 Function definition:  
 (_\<expressionCacheSize\>_)functionName(_\<expressionArguments\>_) : _\<expressionDefinition\>_  
-CacheSize is a limit number that will get assigned to that function, for how many different arguments it will remember its evaluation.  
+CacheSize is a limit that will get assigned to that function, for how many different arguments it will remember its evaluation.  
 CacheSize is optional. It will only get read if the definition begins with parentheses. The default cache size is 1 for any function where it is not specified.  
 You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value  
 Multiple definitions of a function are tested in definition order. The first matching pattern/condition is used.  
@@ -24,7 +24,6 @@ Example of a pattern-matching multi-defition:
 factorial(0) : 1; factorial(x) : xfactorial(x - 1)  
 Example of cacheSize:  
 (0)function(x, y) : x + y^x _/* this will have cache disabled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
-function()_  
   
 Ternary function definition:  
 (_\<expressionCacheSize\>_)function(_\<expressionArguments\>_) : _\<expressionCondition\>_ ? _\<expressionTrueDefinition\>_ : _\<expressionFalseDefinition\>_  
@@ -41,7 +40,6 @@ f2(x) : _\<conditionB\>_ = 0 ? _\<ifAB\>_ :  _\<ifAnotB\>_
 f(x) : _\<conditionA\>_ = 0 ? f2(x) : _\<ifNotA\>_   
    
 Default Argument Expressions:
-  
 f(x, y:2e^x, z:sin(y)) : 7z+5yz+2x
 Arguments can get an expression that evaluates them. If there is no value supplied to an argument by not writing it at all, or giving "\_" (supplied values override it).  
 The example above would only require 1 argument, which would set up y and z, and all of them will be used in the called function's body  
