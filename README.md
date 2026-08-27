@@ -67,6 +67,7 @@ Do:
 do : _\<expressionArgument\>_  
 Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
 Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
+It can trigger a stack overflow if it unpacks too many strings recursively.  
   
 If:  
 ? _\<expressionCondition\>_ { _\<commands\>_ }  
@@ -84,6 +85,7 @@ While:
 ! _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
+It can trigger a loop limit overflow if the condition is true too many times.  
 
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
   
@@ -104,13 +106,13 @@ You can nest vectors with parentheses to make more complex structures.
 Invariant: vectors containing exactly one element are always collapsed into their containing level. The evaluator does not preserve one-element vector nesting.  
 For example: 1, (2, 3), 4, (5, (6, 7)), 8, (9), (((10), 11)) will get collapsed into: 1, (2, 3), 4, (5, (6, 7)), 8, 9, (10, 11).  
 This is to keep the actual structure that matters, and for any size 1 nests that could appear to be cleared out.  
+   
+Unary operations:  
   
-Unary operations:
-
-\<expression\>!
-Factorial
--\<expression\>
-Negate
+\<expression\>!  
+Factorial  
+-\<expression\>  
+Negate  
   
 Binary operators:  
 \<expression\> + \<expression\>  
@@ -137,11 +139,11 @@ Operator-less multiply
 1 if more, 0 if not  
 \<expression\> \>= \<expression\>  
 1 if more or equal, 0 if not  
-
+  
 Logic is done numerically. Any number with a norm \< 1 is false.
 Use true(\<expression\>) to convert the number into its boolean value of 0 or 1
 (unary "sqrabs(x) >= 1" operator). Use * as AND, + as OR, true(a) != true(b) as XOR  
-Operations are recursively broadcast over vectors.
+Operations are recursively broadcast over vectors.  
 When vectors have different shapes, the shorter dimension is cyclically reused...
 ...and the deeper layers will re-access the previous levels of the other operand.  
 Scalar values therefore naturally broadcast into vectors. 
@@ -201,7 +203,7 @@ Decimal notation: 123.456
 Scientific notation could be ambiguously confused with multiplication by Euler's number, so just write it like: 1.234*10^2  
   
 NaN:  
-\_
+\_  
 "Not a number" is a result of an undefined operation, or a wrongly parsed expression.  
 It can also be used as a discard argument, which would prompt it's efault expression if it has any.  
   
