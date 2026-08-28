@@ -190,7 +190,6 @@ public abstract partial class Comparser<T>{
 						var yColor = _linesY[y];
 						for (var x = 0; x < _bmp.Width;  ++x, ++intPtr, p += 3) {
 							var c = Max(_linesX[x], yColor);
-							int value;
 							foreach (var o in OutputR) 
 								foreach (var prevV in o.Values[intPtr].GetValues()) 
 									c = Max(c, o.ProcessColor(prevV.GetLeaf()));

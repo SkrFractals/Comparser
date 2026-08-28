@@ -43,9 +43,9 @@ public partial class ComparserForm : Form {
 			return;
 		var row = _expressionRows[index];
 		object eval = _algebra switch {
-			1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), "x")]),
-			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), "x")]),
-			_ => new Comparser<Real>.Value([new(Real.MakeR(index), "x")])
+			1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), 0, "x")]),
+			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), 0, "x")]),
+			_ => new Comparser<Real>.Value([new(Real.MakeR(index), 0, "x")])
 		};
 		var v = cachedParse && row.Exp != null && row.Text == row.Expression.Text && row.Text != "" 
 			? _context.Eval(row.Exp, eval) 
@@ -53,7 +53,15 @@ public partial class ComparserForm : Form {
 		row.Result.Text = _context.ToString(v, _decimals);
 	}
 	private void CodeBox_TextChanged(object? sender, EventArgs e) {
-		logLabel.Text = _context.ReadCode(codeBox.Text);
+		var logs = _context.ReadCode(codeBox.Text);
+		logBox.SelectionStart = 0;
+		logBox.SelectionLength = 0;
+		logBox.Text = "";
+		foreach (var t in logs) {
+			logBox.SelectionColor = t.color;
+			logBox.AppendText(t.text + "\n");
+		}
+		
 		for (int i = 0; i < _expressionRows.Count; ++i)
 			Eval(i, false);
 	}
@@ -93,7 +101,7 @@ public partial class ComparserForm : Form {
 			c.Add(row.Result);
 			c.Add(row.Del);
 		}
-		logPanel.Height = codeBox.Height = innerPanel.Height - (logPanel.Top = codeBox.Top = y) - Pad;
+		codeBox.Height = Math.Max(codeBox.MinimumSize.Height, innerPanel.Height - (codeBox.Top = (logPanel.Top = y) + logPanel.Height + Pad) - Pad);
 		/*var (fdelL, defW) = FuncDim();
 		for (int i = 0; i < CustomFunctions.Count; ++i) {
 			var row = CustomFunctions[i];
@@ -119,9 +127,7 @@ public partial class ComparserForm : Form {
 		SetMinSize();
 		innerPanel.SuspendLayout();
 		CoreLayout();
-		var d = innerPanel.MinimumSize.Height - outerPanel.Height + 6;
-		if (d > 0) 
-			Height += d;
+		//var d = innerPanel.MinimumSize.Height - outerPanel.Height + 6;if (d > 0) Height += d; // this messes up the layout width
 		innerPanel.ResumeLayout(false);
 		innerPanel.Visible = true;
 	}
@@ -278,11 +284,11 @@ public partial class ComparserForm : Form {
 	}*/
 	//private void ScrollPanel_Resize(object sender, EventArgs e) => innerPanel.Size = new(outerPanel.Width - 6, outerPanel.Height - 6);
 	private static string Clean(string t) // forbidden symbols in expressions
-		=> t.ToLower()//.Replace(":", "").Replace(";", "").Replace("|", "")
-		.Replace("\t", "").Replace("\r", "").Replace("\n", "");
+		=> //t.ToLower()//.Replace(":", "").Replace(";", "").Replace("|", "")
+		t.Replace("\t", "").Replace("\r", "").Replace("\n", "");
 	private void SetMinSize() => outerPanel.AutoScrollMinSize = (innerPanel.MinimumSize = new Size(
 		Math.Max((Pad << 2) + Pad + 48 + (RowHeight << 1) + InputSize, 320),
-		Pad + (3 + (_expressionRows.Count << 1)) * (RowHeight + Pad))
+		(Pad << 2) + (2 + (_expressionRows.Count << 1)) * (RowHeight + Pad) + logPanel.Height + codeBox.MinimumSize.Height)
 		) + new Size(6, 6); // account for the padding between the two panels
 
 	private void DecimalBox_TextChanged(object? sender, EventArgs e) {

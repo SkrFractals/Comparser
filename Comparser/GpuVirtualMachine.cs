@@ -92,7 +92,16 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					if (!self.Leaf.IsNaN())
 						return a.Leaf.IsNaN() || T.AreEqual(self.Leaf, a.Leaf); // callArguments always starts with Values
 					if (self.Values.Length == 0) return true;
-					if (self.Values.Length > a.Values.Length) return false;
+					if (self.Values.Length < a.Values.Length) return false;
+					if (self.Values.Length > a.Values.Length) {
+						var newVal = new VmValue[self.Values.Length];
+						// copy missing arguments:
+						for (int i = 0; i < a.Values.Length; ++i)
+							newVal[i] = a.Values[i];
+						for (int i = a.Values.Length; i < self.Values.Length; ++i)
+							newVal[i] = self.Values[i];
+						a.Values = newVal;
+					}
 					var m = true;
 					for (var i = 0; i < self.Values.Length; ++i)
 						m &= Match(self.Values[i], a.Values[i]);
@@ -124,7 +133,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 							return new(arg.Leaf);
 						var argDef = _definitions[arg.Def][0];
 						var argPtr = argDef.definition;
-						return Eval(args, ref argPtr, (ushort)(1+depth));
+						return depth > _stackOverflow ? new() : Eval(args, ref argPtr, (ushort)(1 + depth));
 						//? EvalValue((ushort)(1 + depth), arg, args)
 					}
 			}

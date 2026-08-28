@@ -11,17 +11,24 @@ public abstract partial class Comparser<T>{
 		public Operator Op = new();
 		// Argument index binding (if non-negative, it will get replaced by the argument value with this Arg index)
 		public readonly Nest? Arg;
+		// 1 = stack overflow
+		public int Error;
+		// special type
+		public object Data;
+
+		// After parsing will contain the original parsed text, even if error occurs (this also naturally works with argument parsing and matching)
+		public string Text; // The original text that this input has been parsed from, even if it fails parsing
+		public List<(int start, byte color)> Colors;
+		
 		// Multiple functions:
 		// In constant/variable/argument bindings, this is the alias name that will get replaced with the Leaf value whenever it is detected
 		// In a string data type, it contains the string value
-		// After parsing will contain the original parsed text, even if error occurs (this also naturally works with argument parsing and matching)
-		public string Text; // The original text that this input has been parsed from, even if it fails parsing
 		public string String; // The original text that this input has been parsed from, even if it fails parsing
 		public override string ToString() => CollapseScalar(this).Pv(-1);
 		public string ToString(int decimals) => Text + " = " + CollapseScalar(this).Pv(decimals);
 		private string Pv(int decimals, string a = "", string b = "") {
 			if (Values.Length <= 0)
-				return Leaf.IsNaN() ? String : Leaf.ToString(decimals);
+				return Error > 0 ? PrintError() : Leaf.IsNaN() && Text != "" ? Text : Leaf.ToString(decimals);
 			var s = a;
 			for (var i = 0; i < Values.Length; ++i) {
 				Values[i] = CollapseScalar(Values[i]);
@@ -30,6 +37,7 @@ public abstract partial class Comparser<T>{
 			}
 			return s + b;
 		}
+		private string PrintError() => (Error & 1) > 0 ? "Stack Overflow." : "";
 		private string Tl() {
 			if (Values.Length <= 0)
 				return Text;
@@ -48,9 +56,9 @@ public abstract partial class Comparser<T>{
 		public Value(T value, Operator op, Nest? arg = null, Expression? term = null, Expression? operand = null, bool negative = false, string text = "") {
 			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg; String = Text = text;
 		}
-		public Value(T value, string text = "") { Leaf = value; String = Text = text;	}
-		public Value(string text = "") => String = Text = text;
-		public Value(Value[] values, string text = "") { Values = values; String = Text = text; }
+		public Value(T value, int error = 0, string text = "") { Error = error; Leaf = value; String = Text = text; }
+		public Value(int error = 0, string text = "") { Error = error; String = Text = text; }
+		public Value(Value[] values, int error = 0, string text = "") { Error = error; Values = values; String = Text = text; }
 		public Value(Nest? arg, string text = "") { Arg = arg; String = Text = text; }
 		public bool Match(Value a) => MatchP(UnCollapseScalar(a));
 		private bool MatchP(Value a) { // defArguments.Match(callArguments)
@@ -58,6 +66,15 @@ public abstract partial class Comparser<T>{
 				return a.Leaf.IsNaN() || T.AreEqual(Leaf, a.Leaf); 
 			if (Values.Length == 0) return true; // callArguments always starts with Values
 			if (Values.Length < a.Values.Length) return false;
+			if (Values.Length > a.Values.Length) {
+				var newVal = new Value[Values.Length];
+				// copy missing arguments:
+				for (int i = 0; i < a.Values.Length; ++i)
+					newVal[i] = a.Values[i];
+				for (int i = a.Values.Length; i < Values.Length; ++i)
+					newVal[i] = Values[i];
+				a.Values = newVal;
+			}
 			var m = true;
 			var to = Math.Min(Values.Length, a.Values.Length);
 			for (var i = 0; i < to; ++i)
@@ -79,53 +96,60 @@ public abstract partial class Comparser<T>{
 			var vA = (av = CollapseScalar(av)).Values;
 			var s = vA.Length;
 			Value vals = new(new Value[s]);
-			if (vA.Length == 0) vA = [new(av.Leaf, av.String)];
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String) { Error = av.Error } ];
 			for (int an, a = 0; a < s; ++a)
 				vals.Values[a] = (an = (vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 
 					? o(depth, vA[a].String) 
-					: OperateString(depth, an == 0 ? new([new(vA[a].Leaf)]) : vA[a], o);
+					: OperateString(depth, an == 0 ? new([new(vA[a].Leaf, vA[a].Error)]) : vA[a], o);
 			if (s != 0)
 				return vals;
 			vals.Leaf = CollapseScalar(o(depth, av.String)).Leaf;
 			vals.String = av.String;
+			vals.Error = av.Error;
 			return vals;
 		}
 		public static Value OperateValue(Value av, Func<Value, object?, Value> o, object? data) {
 			int s;
 			var vA = (av = CollapseScalar(av)).Values;
 			Value vals = new(new Value[s = vA.Length]);
-			if (vA.Length == 0) vA = [new(av.Leaf, av.String)];
-			for (int a = 0; a < s; ++a)
-				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? o(vA[a], data) : OperateValue(vA[a], o, data);
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
+			for (int a = 0; a < s; ++a) {
+				vals.Values[a] = ( /*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? o(vA[a], data) : OperateValue(vA[a], o, data);
+				vals.Values[a].Error |= vA[a].Error;
+			}
 			if (s != 0)
 				return vals;
 			vals.Values = [o(av, data)];
+			vals.Text = av.Text;
+			vals.Error = av.Error;
 			return vals;
 		}
 		public static Value OperateData(Value av, Func<T, object?, T> o, object? data = null) {
 			int s;
 			var vA = (av = CollapseScalar(av)).Values;
 			Value vals = new(new Value[s = vA.Length]);
-			if (vA.Length == 0) vA = [new(av.Leaf, av.String)];
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
 			for (int a = 0; a < s; ++a)
-				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? new(o(vA[a].Leaf, data)) : OperateData(vA[a], o, data);
+				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? new(o(vA[a].Leaf, data), vA[a].Error) : OperateData(vA[a], o, data);
 			if (s != 0)
 				return vals;
 			vals.Leaf = o(av.Leaf, data);
 			vals.String = av.String;
+			vals.Error = av.Error;
 			return vals;
 		}
 		public static Value Operate(Value av, Func<T, T> o) {
 			int s;
 			var vA = (av = CollapseScalar(av)).Values;
 			Value vals = new(new Value[s = vA.Length]);
-			if (vA.Length == 0) vA = [new(av.Leaf, av.String)];
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
 			for (int a = 0; a < s; ++a)
-				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? new(o(vA[a].Leaf)) : Operate(vA[a], o);
+				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? new(o(vA[a].Leaf), vA[a].Error) : Operate(vA[a], o);
 			if (s != 0)
 				return vals;
 			vals.Leaf = o(av.Leaf);
 			vals.String = av.String;
+			vals.Error = av.Error;
 			return vals;
 		}
 		public static Value Operate2(Value av, Value bv, Func<T, T, T> o, Func<string, string, string> so) {
@@ -144,16 +168,16 @@ public abstract partial class Comparser<T>{
 			Value[] vA = (av = CollapseScalar(av)).Values, vB = (bv = CollapseScalar(bv)).Values;
 			int a = 0, b = 0, s = Math.Max(vA.Length, vB.Length);
 			Value vals = new(new Value[s]);
-			if (vA.Length == 0) vA = [new(av.Leaf, av.String)];
-			if (vB.Length == 0) vB = [new(bv.Leaf, bv.String)];
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
+			if (vB.Length == 0) vB = [new(bv.Leaf, bv.Error, bv.String)];
 			for (var i = 0; i < s; ++i) {
 				int an, bn;
 				vals.Values[i] = (an = (vA[a] = CollapseScalar(vA[a])).Values.Length) 
 					+ (bn = (vB[b] = CollapseScalar(vB[b])).Values.Length) == 0
-					? new(o(vA[a].Leaf, vB[b].Leaf), so(vA[a].String, vB[b].String)) 
+					? new(o(vA[a].Leaf, vB[b].Leaf), vA[a].Error, so(vA[a].String, vB[b].String)) 
 					: Operate2(
-						an == 0 ? new([new(vA[a].Leaf)]) : vA[a],
-						bn == 0 ? new([new(vB[b].Leaf)]) : vB[b], o, so);
+						an == 0 ? new([new(vA[a].Leaf,vA[a].Error)]) : vA[a],
+						bn == 0 ? new([new(vB[b].Leaf,vA[a].Error)]) : vB[b], o, so);
 				a = (a + 1) % vA.Length;
 				b = (b + 1) % vB.Length;
 			}
@@ -161,25 +185,26 @@ public abstract partial class Comparser<T>{
 				return vals;
 			vals.Leaf = o(av.Leaf, bv.Leaf);
 			vals.String = so(av.String, bv.String);
+			vals.Error = av.Error | bv.Error;
 			return vals;
 		}
 		public static Value Operate3(Value av, Value bv, Value cv, Func<T, T, T, T> o) {
 			Value[] vA = (av = CollapseScalar(av)).Values, vB = (bv = CollapseScalar(bv)).Values, vC = (cv = CollapseScalar(cv)).Values;
 			int a = 0, b = 0, c = 0, s = Math.Max(vC.Length, Math.Max(vA.Length, vB.Length));
 			Value vals = new(new Value[s]);
-			if (vA.Length == 0) vA = [new(av.Leaf, av.String)];
-			if (vB.Length == 0) vB = [new(bv.Leaf, bv.String)];
-			if (vC.Length == 0) vC = [new(cv.Leaf, cv.String)];
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
+			if (vB.Length == 0) vB = [new(bv.Leaf, bv.Error, bv.String)];
+			if (vC.Length == 0) vC = [new(cv.Leaf, cv.Error, cv.String)];
 			for (int i = 0; i < s; ++i) {
 				int an, bn, cn;
 				vals.Values[i] = (an = (vA[a] = CollapseScalar(vA[a])).Values.Length) 
 					+ (bn = (vB[b] = CollapseScalar(vB[b])).Values.Length) 
 					+ (cn = (vC[c] = CollapseScalar(vC[c])).Values.Length) == 0 
-					? new(o(vA[a].Leaf, vB[b].Leaf, vC[c].Leaf)) 
+					? new(o(vA[a].Leaf, vB[b].Leaf, vC[c].Leaf), vA[a].Error | vB[b].Error | vC[c].Error) 
 					: Operate3(
-						an == 0 ? new([new(vA[a].Leaf)]) : vA[a],
-						bn == 0 ? new([new(vB[b].Leaf)]) : vB[b],
-						cn == 0 ? new([new(vC[c].Leaf)]) : vC[c], o);
+						an == 0 ? new([new(vA[a].Leaf, vA[a].Error)]) : vA[a],
+						bn == 0 ? new([new(vB[b].Leaf, vB[b].Error)]) : vB[b],
+						cn == 0 ? new([new(vC[c].Leaf, vC[c].Error)]) : vC[c], o);
 				a = (a + 1) % vA.Length;
 				b = (b + 1) % vB.Length;
 				c = (c + 1) % vC.Length;
@@ -188,6 +213,7 @@ public abstract partial class Comparser<T>{
 				return vals;
 			vals.Leaf = o(av.Leaf, bv.Leaf, cv.Leaf);
 			vals.String = av.String;
+			vals.Error = av.Error | bv.Error | cv.Error;
 			return vals;
 		}
 		public Value Copy() => new(Leaf, Op, Arg, Term, Operand, Op.Negative, Text) { Values = CopyValues(Values)/*, Terms = CopyValues(Terms)*/ };

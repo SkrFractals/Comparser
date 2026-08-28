@@ -33,7 +33,7 @@ public abstract partial class Comparser<T> {
 					return _plotXy;
 				}
 				changed = true;
-				Value args = new([new(T.NaN(), "x"), new(T.NaN(), "y"), new(_t2 = frame, "t")]);
+				Value args = new([new(T.NaN(), 0, "z"), new(_t2 = frame, 0, "t")]);
 				if (refresh) // refresh completely without trying to transfer anything from memory
 					return Rows(ay.length, Finish);
 				double dXs = +ax.d, dYs = +ay.d;
@@ -148,7 +148,7 @@ public abstract partial class Comparser<T> {
 				Value[] Rows(int ye, Action a) { for (; y < ye; a(), ++y) (x, yw) = (0, y * ax.length); return _plotXy; }
 				void Begin() { int e = Math.Min(ax.length, (int)bounds.R); for (x = 0, yw = y * ax.length; x < e; ++x) E(); } // to the left of the outer bounds
 				void Finish() { for (; x < ax.length; ++x) E(); } // to the right of the outer bounds
-				Value Eval() { var l = args.Values; l[0].Leaf = ax.Sample(x); l[1].Leaf = ay.Sample(y); return exp.Eval(0, args); }
+				Value Eval() { var l = args.Values; l[0].Leaf = ax.Sample(x) + ay.Sample(y); return exp.Eval(0, args); }
 				void E() => _plotXy[x + yw] = Eval();
 				bool FailAffineMap(T mS, double e) {
 					T s; double xx = +mDx, xy = mDx | mDy, yy = +mDy, d = xx * yy - xy * xy; // Gram matrix of the old plot's two basis vectors.
@@ -183,7 +183,8 @@ public abstract partial class Comparser<T> {
 
 				// remember this evaluated X axis
 				Remember(); // fetch a 
-				Value args = new([new(T.NaN(), "x"), new(_mY1 = yC, "y"), new(_t1 = frame, "t")]);
+				_mY1 = yC;
+				Value args = new([new(T.NaN(), 0, "z"), new(_t1 = frame, 0, "t")]);
 				_mY1 = yC;
 				_t1 = frame;
 				if (memYo < 0) return ReEval(); // no memory
@@ -252,7 +253,7 @@ public abstract partial class Comparser<T> {
 					return _plotX;
 				}
 				Value Eval(int x) {
-					args.Values[0].Leaf = ax.Sample(x);
+					args.Values[0].Leaf = ax.Sample(x) + yC;
 					return exp.Eval(0, args);
 				}
 			}

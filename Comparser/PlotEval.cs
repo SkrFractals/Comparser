@@ -8,7 +8,7 @@ public abstract partial class Comparser<T> {
 		private int _mLt;
 		private readonly Comparser<T> _context;
 
-		private static readonly Value Xyt = new([new(T.NaN(), "x"), new(T.NaN(), "y"), new(T.NaN(), "t")]);
+		private static readonly Value Xyt = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "t")]);
 		public PlotEval(Comparser<T> context, string text) => _exp = new(_context = context, _text = text, Xyt);
 		public void ReParse(string text) {
 			if (_text == (_text = text)) return;

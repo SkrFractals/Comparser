@@ -16,7 +16,7 @@ public abstract partial class Comparser<T> {
 			public Evaluated? Result;
 			public bool GetEval(Value args) {
 				for (var c = Result = _cache; c != null; Result = c, c = c.Next) {
-					if (args.Match(c.Args)) {
+					if (args.SameArg(c.Args)) {
 						if (Result != c) {
 							Result!.Next = c.Next;
 							c.Next = _cache;
@@ -75,8 +75,8 @@ public abstract partial class Comparser<T> {
 			: base(context, ref text, out _, args) => (_parent, _op) = (parent, op);
 		protected FunctionExpression(Comparser<T> context, CallFunction parent, OpCode op, Value input) 
 			: base(context, input) => (_parent, _op) = (parent, op);
-		public override Value Eval(ushort depth, Value args, string text = "") {
-			var v = base.Eval(depth, args, text);
+		public override Value Eval(ushort depth, Value args/*, string text = ""*/) {
+			var v = base.Eval(depth, args/*, text*/);
 			return _parent.Cache.GetEval(v) ? _parent.Cache.Result?.Eval! : _parent.Cache.Insert(v, EvalF(depth, v, args));
 		}
 		protected abstract Value EvalF(ushort depth, Value v, Value args);
@@ -86,7 +86,7 @@ public abstract partial class Comparser<T> {
 		override protected Value EvalF(ushort depth, Value v, Value args) => Value.OperateString(depth, v, del);
 	}
 	private class FuncEval(Comparser<T> context, CallFunction parent, ref string text, Value args, int cache = 0) 
-		: FuncTextOperator(context, parent, (d, x) => d < context._stackOverflow ? new Expression(context, x, args, cache).Eval((ushort)(1 + d), args) : None, ref text, args) { }
+		: FuncTextOperator(context, parent, (d, x) => d > context._stackOverflow ? StackOverflow : new Expression(context, x, args, cache).Eval((ushort)(1 + d), args), ref text, args) { }
 	private class FuncOperator : FunctionExpression {
 		private readonly Func<T, T> _del;
 		public FuncOperator(Comparser<T> context, CallFunction parent, Func<T, T> del, OpCode op, ref string text, Value args) : base(context, parent, op, ref text, args) => _del = del;
@@ -114,7 +114,8 @@ public abstract partial class Comparser<T> {
 	#region Function Expressions - Vectors
 	// extracts terms from a vector using indices in: [expression]. Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] = (30d,31e),2c,(5,1,(30d,31e))
 	private class FuncIndex(Comparser<T> context, Value input, Value indices) : Expression(context, input) {
-		public override Value Eval(ushort depth, Value args, string text = "") => Value.OperateValue(EvalValue((ushort)(1+depth), CollapseScalar(indices), args) ?? indices, Take, base.Eval(depth, args, text));
+		public override Value Eval(ushort depth, Value args/*, string text = ""*/) 
+			=> depth > Context._stackOverflow ? StackOverflow : Value.OperateValue(EvalValue((ushort)(1 + depth), CollapseScalar(indices), args) ?? indices, Take, base.Eval(depth, args/*, text*/));
 		private Value Take(Value from, object? i) {
 			if (i is not Value v)
 				return from;
@@ -149,8 +150,14 @@ public abstract partial class Comparser<T> {
 	private abstract class Iterator : FunctionExpression {
 		protected Iterator(Comparser<T> context, CallFunction parent, OpCode op, ref string text, Value args) : base(context, parent, op, ref text, args) {
 			var iteratorIndex = args.Values.Length;
+			if (V.Values.Length != 4) {
+				_expr = new(Context, "", _args = None);
+				return;
+			}
 			_args = new(new Value[iteratorIndex + 1]);
-			_expr = new(Context, V.Values[3].Text, _args);
+			Array.Copy(args.Values, _args.Values, iteratorIndex);
+			_args.Values[iteratorIndex] = new(T.NaN(), 0, V.Values[0].Text);
+			_expr =  new(Context, V.Values.Length == 4 ? V.Values[3].Text : "", _args);
 		}
 		private readonly Expression _expr;
 		private readonly Value _args;
@@ -164,7 +171,7 @@ public abstract partial class Comparser<T> {
 			var iteratorIndex = args.Values.Length;
 			//_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.NaN(), v.Values[0].Text);
+			_args.Values[iteratorIndex] = new(T.NaN(), v.Error, v.Values[0].Text);
 			//var exp = new Expression(Context, v.Values[3].Text, ni);
 			return Result(EvalK, from, to);
 			Value EvalK(int f) {
@@ -179,7 +186,7 @@ public abstract partial class Comparser<T> {
 			while (from < to) iter(++from);
 			while (from > to) iter(--from);
 		}
-		public override GpuValue GpuParse(ushort depth) => new(_op, base.GpuParse((ushort)(1 + depth)), new([(NaN(_args), _expr, null)]));
+		public override GpuValue GpuParse(ushort depth) => depth > Context._stackOverflow ? new() : new(_op, base.GpuParse((ushort)(1 + depth)), new([(NaN(_args), _expr, null)]));
 		private static Value NaN(Value a) {
 			if (a.Values.Length <= 0)
 				return a;
@@ -215,12 +222,12 @@ public abstract partial class Comparser<T> {
 	// example: exp(x) = (3x,2x,4x); vector(0,1,3,exp(k0)) => (3*1,3*2,3*3) => (3,6,9); // only took the first 3x term, evaluated with k0=1..3
 	private class Vector(Comparser<T> context, CallFunction parent, ref string text, Value args) : Iterator(context, parent, OpCode.Vec,ref text, args) {
 		override protected Value Result(Func<int, Value> eval, int from, int to) { 
-			var size = Math.Abs(from - to);
-			Value sum = new(new Value[size]) { Values = { [0] = eval(from).Values[0] } };
+			var size = 1 + Math.Abs(from - to);
+			Value sum = new(new Value[size]) { Values = { [0] = eval(from)/*.Values[0]*/ } };
 			var iteratorIndex = 0;
 			Iterate(IterK, from, to);
 			return sum;
-			void IterK(int f) => Op(ref sum.Values[++iteratorIndex], eval(f).Values[0]);
+			void IterK(int f) => Op(ref sum.Values[++iteratorIndex], eval(f)/*.Values[0]*/);
 		}
 	}
 	#endregion
@@ -234,10 +241,11 @@ public abstract partial class Comparser<T> {
 	private class CustomFunc(Comparser<T> context, CallCustom parent, ref string text, Value args) : FunctionExpression(context, parent, OpCode.Call, ref text, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args) {
 			if (depth > Context._stackOverflow)
-				return None;
+				return StackOverflow;
 			var match = -1; for (var m = 0; m < parent.Def.Length; ++m)
-				if (parent.Def[m].input.Match(v) && Cond((ushort)(1+depth), parent.Def[m].condition, v)) {
-					match = m; break;
+				if (parent.Def[m].input.Match(v) && Cond((ushort)(1 + depth), parent.Def[m].condition, v)) {
+					match = m;
+					break;
 				}
 				//var ok = true; for (var id = 0; id < parent.Def[m].input.Values.Length; ++id) ok &= parent.Def[m].input[id].Match(v[id]);if (ok) { match = m; break; }
 				return match == -1 ? None : parent.Def[match].def.EvalCopy((ushort)(1 + depth), v); // failed to match any available argument list ? else eval.
@@ -250,7 +258,7 @@ public abstract partial class Comparser<T> {
 				l = l.Values[0];
 			return INumber<T>.IsTrue(l.Leaf);
 		}
-		public override GpuValue GpuParse(ushort depth) => new(OpCode.Call, base.GpuParse((ushort)(1 + depth)), parent);
+		public override GpuValue GpuParse(ushort depth) => depth > Context._stackOverflow ? new() : new(OpCode.Call, base.GpuParse((ushort)(1 + depth)), parent);
 	}
 	#endregion
 }
