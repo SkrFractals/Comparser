@@ -22,7 +22,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			// replacement custom functions (those that branch or use the x argument multiple times):
 			Value x = new([new(T.NaN(), 0, "x")]), // passable argument x
 				x0 = new([new(T.Zero(), 0, "x")]); // pattern match x as 0
-			CallCustom sinc = new CallCustom([(x0, new(context, "1", None), null), 
+			CallCustom sinc = new([(x0, new(context, "1", None), null), 
 					(x, new(context, "sin(x)/x", x), null)]),
 				// alternative using condition instead of pattern matching: var sinc = new CallCustom([(x, new(context, "sin(x)/x", x), new(context, "x==0", x))]);
 				nsinc = new([(x0, new(context, "1", None), null), 
@@ -242,7 +242,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						b.Add((byte)OpCode.Argument); // OpCode ARGUMENT
 						WriteInt(v._arg.Length, b); // how many argument nests to expect
 						foreach (var i in v._arg)
-							b.Add(i); // nests // TODO maybe also convert to IntBytes i already have the vector itself possible to be longer than 255 elements, so it should also be possible to address them
+							WriteInt(i, b); // nests
 						return;
 					case 1: // CollapseScalar
 						v = v.Values[0];

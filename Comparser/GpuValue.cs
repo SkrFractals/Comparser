@@ -6,7 +6,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 		public readonly GpuValue[] Values = []; // Children tree links. For example if I am 1+2x, i will have an OpCode.Add, and Values=[GpuValue(OpCode.Constant, Leaf=1),GpuValue(OpCode.Mul, [GpuValue(OpCode.Constant,2),GpuValue(OpCode.Argument,[0])])]
 		public Expression? Operand;
 		private OpCode _op = OpCode.Nop; // OpCode that will get applied to my Values
-		private readonly byte[] _arg = []; // if this is an argument, it will have the nested indices which value from the arguments to pick, in this array
+		private readonly int[] _arg = []; // if this is an argument, it will have the nested indices which value from the arguments to pick, in this array
 		private CallCustom? _def; // if i am a custom function call, have a pointer to which one, the unique pointer will get collected and compiled into the Function library
 		//public virtual GpuProgram CompileGPU(GpuValue args) { TODO }
 		public static GpuValue CollapseScalar(GpuValue i) {
@@ -28,7 +28,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			_op = OpCode.Leaf;
 		}
 		public GpuValue() { }
-		public GpuValue(byte[] arg) {
+		public GpuValue(int[] arg) {
 			_arg = arg;
 			_op = OpCode.Argument;
 		}

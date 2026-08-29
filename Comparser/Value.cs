@@ -10,15 +10,13 @@ public abstract partial class Comparser<T>{
 		// Operator (eval = term <operator> operand), if it is a pure parent Operator, it only evaluates the term
 		public Operator Op = new();
 		// Argument index binding (if non-negative, it will get replaced by the argument value with this Arg index)
-		public readonly Nest? Arg;
+		public readonly int[] Arg = [];
 		// 1 = stack overflow
 		public int Error;
 		// special type
-		public object Data;
-
+		public object? Data;
 		// After parsing will contain the original parsed text, even if error occurs (this also naturally works with argument parsing and matching)
 		public string Text; // The original text that this input has been parsed from, even if it fails parsing
-		public List<(int start, byte color)> Colors;
 		
 		// Multiple functions:
 		// In constant/variable/argument bindings, this is the alias name that will get replaced with the Leaf value whenever it is detected
@@ -53,13 +51,17 @@ public abstract partial class Comparser<T>{
 			return c.Values.Length == 0 ? [new(c.Leaf)] : c.Values;
 		}
 		public string GetString() => Values.Length > 0 ? Values[0].GetString() : String;
-		public Value(T value, Operator op, Nest? arg = null, Expression? term = null, Expression? operand = null, bool negative = false, string text = "") {
-			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg; String = Text = text;
+		
+		#region Constructors
+		public Value(T value, Operator op, int[]? arg = null, Expression? term = null, Expression? operand = null, bool negative = false, string text = "") {
+			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg ?? []; String = Text = text;
 		}
 		public Value(T value, int error = 0, string text = "") { Error = error; Leaf = value; String = Text = text; }
 		public Value(int error = 0, string text = "") { Error = error; String = Text = text; }
 		public Value(Value[] values, int error = 0, string text = "") { Error = error; Values = values; String = Text = text; }
-		public Value(Nest? arg, string text = "") { Arg = arg; String = Text = text; }
+		public Value(string text, int[] arg) { Arg = arg; String = Text = text; }
+		#endregion
+		
 		public bool Match(Value a) => MatchP(UnCollapseScalar(a));
 		private bool MatchP(Value a) { // defArguments.Match(callArguments)
 			if (!Leaf.IsNaN())

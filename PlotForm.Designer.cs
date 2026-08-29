@@ -50,7 +50,6 @@ partial class PlotForm {
 		expBox.Name = "expBox";
 		expBox.Size = new Size(381, 23);
 		expBox.TabIndex = 0;
-		expBox.TextChanged += expBox_TextChanged;
 		// 
 		// plotBox
 		// 
@@ -68,7 +67,6 @@ partial class PlotForm {
 		blBox.Name = "blBox";
 		blBox.Size = new Size(184, 23);
 		blBox.TabIndex = 4;
-		blBox.TextChanged += blBox_TextChanged;
 		// 
 		// brBox
 		// 
@@ -77,7 +75,6 @@ partial class PlotForm {
 		brBox.Name = "brBox";
 		brBox.Size = new Size(181, 23);
 		brBox.TabIndex = 5;
-		brBox.TextChanged += brBox_TextChanged;
 		// 
 		// splitContainer1
 		// 
@@ -105,7 +102,6 @@ partial class PlotForm {
 		trBox.Name = "trBox";
 		trBox.Size = new Size(181, 23);
 		trBox.TabIndex = 2;
-		trBox.TextChanged += trBox_TextChanged;
 		// 
 		// tlBox
 		// 
@@ -114,7 +110,6 @@ partial class PlotForm {
 		tlBox.Name = "tlBox";
 		tlBox.Size = new Size(184, 23);
 		tlBox.TabIndex = 1;
-		tlBox.TextChanged += tlBox_TextChanged;
 		// 
 		// splitContainer2
 		// 
@@ -168,7 +163,6 @@ partial class PlotForm {
 
 	private TextBox expBox;
 	private PictureBox plotBox;
-	private TextBox textBox4;
 	private TextBox blBox;
 	private TextBox brBox;
 	private SplitContainer splitContainer1;

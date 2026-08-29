@@ -4,7 +4,7 @@ using Comparser.Comparser.Numbers;
 
 namespace Expressions;
 public partial class PlotForm : Form {
-	private readonly ComparserForm m;
+	/*private readonly ComparserForm m;
 
 	private Complex TL, TR, BL, BR, E;
 
@@ -31,5 +31,5 @@ public partial class PlotForm : Form {
 
 	private void brBox_TextChanged(object sender, EventArgs e) {
 
-	}
+	}*/
 }
