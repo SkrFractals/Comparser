@@ -136,40 +136,68 @@ This is to keep the actual structure that matters, and for any size 1 nests that
    
 Unary operations:  
   
-\<expression\>!  
+_\<expression\>_!  
 Factorial  
--\<expression\>  
+-_\<expression\>_  
 Negate  
+/_\<expression\>_  
+Inverse  
+\\_\<expression\>_  
+Left inverse  
+_\<expression\>_&  
+Square  
+_\<expression\>_~  
+Conjugate  
+_\<expression\>_@  
+Absolute value, norm  
+_\<expression\>_ @@  
+Squared norm. Square of the absolute value.  
+_\<expression\>_|  
+component-wise absolute value   
+Example (5+i)@@ = 26  
+_\<expression\>_#  
+Count top-level vector elements  
+Example: (1,2,3,(4,5,6))# = 4  
   
 Binary operators:  
-\<expression\> + \<expression\>  
+_\<expression\>_ + _\<expression\>_  
 Add  
-\<expression\> - \<expression\>  
+_\<expression\>_ - _\<expression\>_  
 Subtract  
-\<expression\> * \<expression\>  
+__\<expression\>_ * _\<expression\>_  
 Multiply  
-\<expression\> / \<expression\>  
+_\<expression\>_ / _\<expression\>_  
 Divide  
-\<expression\> \ \<expression\>  
+_\<expression\>_ \ _\<expression\>_  
 Divide from left (only differs in non-commutative algebras like quaternions)  
-\<expression\> % \<expression\>  
+_\<expression\>_ % _\<expression\>_  
 Complex division remainder  
-\<expression\> ^ \<expression\>  
+_\<expression\>_ %% _\<expression\>_  
+Component-wise remainder  
+_\<expression\>_ ^ _\<expression\>_  
 Power  
-\<expression\>\<expression\>  
+_\<expression\>_ $ _\<expression\>_  
+The root of a power  
+Example 1000 $$ 3 = 10  
+_\<expression\>_ $$ _\<expression\>_  
+Logarithm of operand's base.  
+Example 1000 $$ 10 = 3  
+_\<expression\>_  _\<expression\>_  
 Operator-less multiply  
-\<expression\> = \<expression\>  
+_\<expression\>_ = _\<expression\>  
 1 if equal, 0 if not  
-\<expression\> != \<expression\>  
+_\<expression\>_ != _\<expression\>  
 0 if equal, 1 if not  
-\<expression\> \< \<expression\>  
+_\<expression\>_ \\ _<\<expression\>  
 1 if less, 0 if not  
-\<expression\> \<= \<expression\>  
+_\<expression\>_ \<= _\<expression\>  
 1 if less or equal, 0 if not  
-\<expression\> \> \<expression\>  
+_\<expression\>_ \> _\<expression\>  
 1 if more, 0 if not  
-\<expression\> \>= \<expression\>  
+_\<expression\>_ \>= _\<expression\>  
 1 if more or equal, 0 if not  
+Count all of the nested vector elements  
+Example: (1,2,3,(4,5,6))## = 6  
   
 Logic is done numerically. Any number with a norm \< 1 is false.
 Use true(\<expression\>) to convert the number into its boolean value of 0 or 1
