@@ -58,17 +58,7 @@ Variable definition:
 variableName : _\<expressionValue\>_  
 -They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.  
 Example: x : 1; print : x, ","; x : 2; print=x; _/* prints 1, 2_  
-  
-Print:  
-print : _\<expressionArgument\>_  
-Takes all the elements in the evaluated vector from the expression and prints them into the log  
-  
-Do:  
-do : _\<expressionArgument\>_  
-Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
-Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
-It can trigger a stack overflow if it unpacks too many strings recursively.  
-  
+
 If:  
 ? _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like if in other languages, only the syntax is slightly different. The keyword "if" is just a question mark, and it doesn't require parentheses  
@@ -82,6 +72,37 @@ While:
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 It can trigger a loop limit overflow if the condition is true too many times.  
+
+ACTIONS:
+_\<actionName\>_ : _\<expressionArgument\>_  
+
+Return:  
+Breaks out of the specified number of blocks, treating all blocks the same, whether they are ifs or whiles.  
+Example ?1{?1{!1{return:2;printpure:1}printpure:2}printpure:3}printpure:4 /* Prints 3\n4  
+  
+Break:  
+Breaks out of the specified number of loop blocks, very similar to return, but it doesn't count if block endings.  
+Example ?1{!1{!1{?1{break:1;printpure:1}printpure:2}printpure:3}printpure:4}printpure:5 /* Prints 3\n4\n5  
+  
+Continue:  
+Breaks out of the specified number of loop blocks, and returns back to the last one to retest it.  
+Very similar to break, except it does that return back at the last break out, so it is not a break out on that one anymore.  
+Example a:0;?1{!a<2{a:a+1;printpure:a;!1{?1{continue:2;printpure:10}printpure:20}printpure:30}printpure:40}printpure:50 /* Prints 1\n2\n20\n30
+  
+Print:  
+Takes all the elements in the evaluated vector from the expression and prints them into the log as expression equations.  
+Example: f(0) : 1; f(x) : xf(x-1); print : f(5); /* Prints f(5) = 120  
+  
+PrintPure:  
+Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
+Example: f(0) : 1; f(x) : xf(x-1); print : f(5); /* Prints 120  
+  
+Do:  
+do : _\<expressionArgument\>_  
+Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
+Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
+It can trigger a stack overflow if it unpacks too many strings recursively.  
+  
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
   
