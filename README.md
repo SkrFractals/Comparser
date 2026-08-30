@@ -250,7 +250,7 @@ Errors:
 1. Stack Overflow - if the expression evaluation thinks it caught itself in an infinite loop (the default limit is 499, and can be adjusted in the Comparser constructor)  
 Examples of stack overflow:  
 f(x)=f(x) /* and call f(anything)  
-f(x,y:y):y / and call f with a single argument (a second argument would override the infinite loop with a supplied value). Also, the expression must contain y, so it asks the argument y to be evaluated.  
+f(x,y:y):y /* and call f with a single argument (a second argument would override the infinite loop with a supplied value). Also, the expression must contain y, so it asks the argument y to be evaluated.  
 There could be other ways, like with eval, etc.  
   
   
