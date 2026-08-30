@@ -343,3 +343,17 @@ cosc(_\<vector\>_) ...Also equals to (1-cos(_\<vector\>_))/_\<vector\>_.
 ncosc/coscpi(_\<vector\>_) ...Also equals to cosc(pi*_\<vector\>_).  
 coshc/cosch(_\<vector\>_) ...Also equals to (1-cosh(_\<vector\>_))/_\<vector\>_.  
 ncoshc/ncosch/coshcpi/coschpi(_\<vector\>_) ...Also equals to cosh(pi*_\<vector\>_).  
+  
+  
+PLOTTER:  
+The app comes with a plotter component. It lets you override a function plot(z,t), where z is the plot input, and t is animation time.  
+It will render a 1D or 2D plot of that function.  
+You can choose any coordinate bases you want.  
+And you can also override the coloring function like: rgb(z):hsvtorgb(loghsv(z))  
+This feature is still in development, but it's almost finished.  
+
+
+GPU ACCELERATION:  
+I'm also preparing a GPU shader that will be able to evaluate custom expressions called on the build.  
+This still has a while to be finished, but I've already prepared a translation of the build into the bytecode from the upcoming GPU shader, and a CPU virtual machine for simulating it.  
+Neither has been tested yet, though.  
