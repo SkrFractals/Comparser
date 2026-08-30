@@ -16,14 +16,19 @@ You can and re-define functions and constants (so they can be mutated while this
 Function definition:  
 (_\<expressionCacheSize\>_)functionName(_\<expressionArguments\>_) : _\<expressionDefinition\>_  
 CacheSize is a limit that will get assigned to that function, for how many different arguments it will remember its evaluation.  
-CacheSize is optional. It will only get read if the definition begins with parentheses. The default cache size is 1 for any function where it is not specified.  
-You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value  
+CacheSize is optional. It will only get read if the definition begins with parentheses.  
+The default built-in function cache is 1 for most simple functions.  
+The default custom function cache size is 0 for any function where it is not specified.  
+When cache size is 0, each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
+It is recommended to be careful about using cache if you are mutating variables.  
+If you call a cached function with the same arguments it has remembered, but internally there would be a mutated variable changing the result, it will return the old, unmutated result.  
+You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value.  
 Multiple definitions of a function are tested in definition order. The first matching pattern/condition is used.  
 Each expression has its own cache. If you define a function with multiple argument patterns, each definition will have its separate cache, with separate evaluation memory.  
 Example of a pattern-matching multi-defition:  
 factorial(0) : 1; factorial(x) : xfactorial(x - 1)  
 Example of cacheSize:  
-(0)function(x, y) : x + y^x _/* this will have cache disabled, and each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
+(13)function(x, y) : x + y^x _/* this will have cache enabled to remember 13 input-result pairs.  
   
 Ternary function definition:  
 (_\<expressionCacheSize\>_)function(_\<expressionArguments\>_) : _\<expressionCondition\>_ ? _\<expressionTrueDefinition\>_ : _\<expressionFalseDefinition\>_  
@@ -43,7 +48,7 @@ Default Argument Expressions:
 f(x, y:2e^x, z:sin(y)) : 7z+5yz+2x
 Arguments can get an expression that evaluates them. If there is no value supplied to an argument by not writing it at all, or giving "\_" (supplied values override it).  
 The example above would only require 1 argument, which would set up y and z, and all of them will be used in the called function's body  
-(Can use it even multiple times while computing  once, like a precomputed variable)  
+(Can use it even multiple times while computing  once, like a precomputed variable, since default argument expressions are initiated with cache 1)  
 The expressions can even reference the other neighboring arguments, but only those to the left (as those to the right were not read yet, when this is binding).  
 So you can't do this: f(x:y+1,y)=x, but you can when you swap those arguments.  
 Examples:  
