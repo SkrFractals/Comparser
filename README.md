@@ -78,16 +78,16 @@ _\<actionName\>_ : _\<expressionArgument\>_
 
 Return:  
 Breaks out of the specified number of blocks, treating all blocks the same, whether they are ifs or whiles.  
-Example ?1{?1{!1{return:2;printpure:1}printpure:2}printpure:3}printpure:4 /* Prints 3\n4  
+Example: ?1{?1{!1{return:2;printpure:1}printpure:2}printpure:3}printpure:4 /* Prints 3\n4  
   
 Break:  
 Breaks out of the specified number of loop blocks, very similar to return, but it doesn't count if block endings.  
-Example ?1{!1{!1{?1{break:1;printpure:1}printpure:2}printpure:3}printpure:4}printpure:5 /* Prints 3\n4\n5  
+Example: ?1{!1{!1{?1{break:1;printpure:1}printpure:2}printpure:3}printpure:4}printpure:5 /* Prints 3\n4\n5  
   
 Continue:  
 Breaks out of the specified number of loop blocks, and returns back to the last one to retest it.  
 Very similar to break, except it does that return back at the last break out, so it is not a break out on that one anymore.  
-Example a:0;?1{!a<2{a:a+1;printpure:a;!1{?1{continue:2;printpure:10}printpure:20}printpure:30}printpure:40}printpure:50 /* Prints 1\n2\n20\n30
+Example: a:0;?1{!a<2{a:a+1;printpure:a;!1{?1{continue:2;printpure:10}printpure:20}printpure:30}printpure:40}printpure:50 /* Prints 1\n2\n20\n30
   
 Print:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as expression equations.  
