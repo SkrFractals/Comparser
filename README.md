@@ -93,9 +93,14 @@ Print:
 Takes all the elements in the evaluated vector from the expression and prints them into the log as expression equations.  
 Example: f(0) : 1; f(x) : xf(x-1); print : f(5); /* Prints f(5) = 120  
   
-PrintPure:  
+PrintValue:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
-Example: f(0) : 1; f(x) : xf(x-1); print : f(5); /* Prints 120  
+It will trigger a Bad Expression error if the value is NaN.  
+Example: f(0) : 1; f(x) : xf(x-1); printvalue : f(5); /* Prints 120  
+  
+PrintString:  
+Takes all the elements in the evaluated vector from the expression and prints them into the log as pure strings.  
+Example: s : abc; s2 : "def" printstring : s; printstring : s2 /* Prints abc\ndef  
   
 Do:  
 do : _\<expressionArgument\>_  
