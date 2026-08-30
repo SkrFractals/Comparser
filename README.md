@@ -72,8 +72,8 @@ While:
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 It can trigger a loop limit overflow if the condition is true too many times.  
-
-ACTIONS:
+  
+ACTIONS:  
 _\<actionName\>_ : _\<expressionArgument\>_  
 
 Return:  
