@@ -215,7 +215,7 @@ Example: ((1, 2), (3, 4, 5), 6, 13) + ((7, 8, 9), 10, (11, 12))
   
   
 Vector Extractor:  
-\<expression\>[\<expression\>]  
+_\<expression\>_[_\<expression\>_]  
 Extracts terms from a vector using indices in: [expression].  
 Example: (a, b, c, d, e)[2] : c  
 Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] : (30d, 31e), 2c, (5, 1, (30d, 31e))  
@@ -229,21 +229,21 @@ So a binary operation like Min can take the minimum for any size vector.
 They return the first element unchanged if it doesn't have a second operand.  
 Unary operations are applied to each element in the nested vector individually.  
   
-eval(\<expression\>)  
+eval(_\<expression\>_)  
 Attempts to parse and evaluate every Text in the input  
 Evaluates strings as expressions. The strings are parsed using the expression parser, but cannot execute parser-stage commands.  
 Example: eval("1+2", "e^(ipi)") = 3, -1  
   
-count(\<expression\>)  
+count(_\<expression\>_)  
 counts the number of elements in the vector  
 Example: count(0,1,2):3  
   
-cat(\<expression\>)  
+cat(_\<expression\>_)  
 Un-nests the vector and concatenates all the elements next to each other on the top-level of the result vector  
   
-sum(\<expressionIndex\>,\<expressionFrom\>,\<expressionTo\>,\<expression\>)  
-iterative sum: sum(\<index\>,from,to,expression(k\<index\>))  
-Example: sum(0, 1, 4, k0) = 1 + 2 + 3 + 4 = 10  
+sum(_\<stringIndex\>_,_\<expressionFrom\>_,_\<expressionTo\>_,_\<stringExpression\>_)  
+iterative sum: sum(_\<index\>_,from,to,expression(k_\<index\>_))  
+Example: sum("k", 1, 4, "2k") = 2 + 4 + 6 + 8 = 20  
 Can also iterate backwards, unlike the same iterators in math.  
 If you want them to return empty sums like backwards math sums, or negatives like backwards integrals, you can define that with a  ternary definition:  
 DiodeSum(x, from, to, expression) : from > to ? 0 : sum(x,from,to,expression)  
