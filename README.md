@@ -7,7 +7,7 @@ EXECUTION STAGES:
 Comparser has two distinct stages:  
 Parser stage (COMMANDS) — read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage.  
 Evaluation stage (EXPRESSIONS) — after parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
-Case-insensitive - all uppercase letters are internally converted to lowercase.  
+Case-sensitivity optional - if you choose insensitive, all uppercase letters are internally converted to lowercase.  
   
 COMMANDS:  
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.  
