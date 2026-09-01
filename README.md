@@ -3,17 +3,17 @@ Complex Computer Parser
 
 -currently in development, some parts might not work properly yet-
   
-EXECUTION STAGES:  
+## EXECUTION STAGES:  
 Comparser has two distinct stages:  
 Parser stage (COMMANDS) — read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage.  
 Evaluation stage (EXPRESSIONS) — after parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
 Case-sensitivity optional - if you choose insensitive, all uppercase letters are internally converted to lowercase.  
   
-COMMANDS:  
+## COMMANDS:  
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.  
 You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
   
-Function definition:  
+### Function definition:  
 (_\<expressionCacheSize\>_)functionName(_\<expressionArguments\>_) : _\<expressionDefinition\>_  
 CacheSize is a limit that will get assigned to that function, for how many different arguments it will remember its evaluation.  
 CacheSize is optional. It will only get read if the definition begins with parentheses.  
@@ -30,7 +30,7 @@ factorial(0) : 1; factorial(x) : xfactorial(x - 1)
 Example of cacheSize:  
 (13)function(x, y) : x + y^x _/* this will have cache enabled to remember 13 input-result pairs.  
   
-Ternary function definition:  
+### Ternary function definition:  
 (_\<expressionCacheSize\>_)function(_\<expressionArguments\>_) : _\<expressionCondition\>_ ? _\<expressionTrueDefinition\>_ : _\<expressionFalseDefinition\>_  
 Works like argument pattern matching, except the condition can be complex instead of matching an argument exactly  
 Example: factorial(x) : x \<= 1 ? 1 : xfactorial(x - 1)  
@@ -44,7 +44,7 @@ Or:
 f2(x) : _\<conditionB\>_ = 0 ? _\<ifAB\>_ :  _\<ifAnotB\>_   
 f(x) : _\<conditionA\>_ = 0 ? f2(x) : _\<ifNotA\>_   
    
-Default Argument Expressions:
+### Default Argument Expressions:
 f(x, y:2e^x, z:sin(y)) : 7z+5yz+2x
 Arguments can get an expression that evaluates them. If there is no value supplied to an argument by not writing it at all, or giving "\_" (supplied values override it).  
 The example above would only require 1 argument, which would set up y and z, and all of them will be used in the called function's body  
@@ -54,7 +54,7 @@ So you can't do this: f(x:y+1,y)=x, but you can when you swap those arguments.
 Examples:  
 f(x,y:2x+1):2^y; f(2) = 32; f(_, 4) = 16  
   
-Separators:  
+### Separators:  
 ;  
 \n  
 Works very much like in other languages, but it is optional, as new lines also work like separators.  
@@ -63,53 +63,53 @@ New lines can work as separators as long as it is unambiguous.
 For example, if your old line is ending with an operator or opening parenthesis, bracket, or if the next line continues with an operator...
 ...anything that obviously means an expression continues to the next line, the newline will not act as a separator, and it will be interpreted as a multi-line expression.
   
-Variable definition:  
+### Variable definition:  
 variableName : _\<expressionValue\>_  
 -They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.  
 Example: x : 1; print : x, ","; x : 2; print=x; _/* prints 1, 2_  
 
-If:  
+### If:  
 if : _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like if in other languages, only the syntax is slightly different. The keyword "if" is just a question mark, and it doesn't require parentheses  
 Conditions like in these ifs, elses, and whiles are expressions, where the first leaf value will be taken, and it's size compared to 1. Less than 1 is false.
   
-Else:  
+### Else:  
 : _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like elseif in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
 You can chain more of them, like normally with else ifs. And they can also be chained after a while (get entered if the while failed at the beginning)
   
-While:  
+### While:  
 while : _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 It can trigger a loop limit overflow if the condition is true too many times.  
   
-ACTIONS:  
+## ACTIONS:  
 _\<actionName\>_ : _\<expressionArgument\>_  
 
-Return:  
+### Return:  
 Breaks out of the specified number of blocks, treating all blocks the same, whether they are ifs or whiles.  
 Example: if:1{if:1{while:1{return:2;printvalue:1}printvalue:2}printvalue:3}printvalue:4 /* Prints 3\n4  
   
-Break:  
+### Break:  
 Breaks out of the specified number of loop blocks, very similar to return, but it doesn't count if block endings.  
 Example: if:1{while:1{while:1{if:1{break:1;printvalue:1}printvalue:2}printvalue:3}printvalue:4}printvalue:5 /* Prints 3\n4\n5  
   
-Continue:  
+### Continue:  
 Breaks out of the specified number of loop blocks, and returns back to the last one to retest it.  
 Very similar to break, except it does that return back at the last break out, so it is not a break out on that one anymore.  
 Example: a:0;if:1{while:a<2{a:a+1;printvalue:a;while:1{if:1{continue:2;printvalue:10}printvalue:20}printvalue:30}printvalue:40}printvalue:50 /* Prints 1\n2\n20\n30
   
-Print:  
+### Print:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as expression equations.  
 Example: f(0) : 1; f(x) : xf(x-1); print : f(5); /* Prints f(5) = 120  
   
-PrintValue:  
+### PrintValue:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
 It will trigger a Bad Expression error if the value is NaN.  
 Example: f(0) : 1; f(x) : xf(x-1); printvalue : f(5); /* Prints 120  
   
-Do:  
+### Do:  
 do : _\<expressionArgument\>_  
 Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
 Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
@@ -118,17 +118,17 @@ It can trigger a stack overflow if it unpacks too many strings recursively.
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
   
-EXPRESSIONS:  
+## EXPRESSIONS:  
 The evaluation stage. After the initial code was read, you can only call pure expressions without any of the non-expression syntax that was described above.  
 Written in a simple functional/mathematical way. Evaluates into a nestable vector.  
 It doesn't support any of the syntax from above. There are no do, if/else, while, print, function/variable definitions, or even ternary operators.  
 Supports this syntax:  
   
-Parentheses:  
+### Parentheses:  
 (\<expression\>)  
 Mathematical-like parentheses enforcing an order of operations. Without them, it uses the default order of operations of math (PEMDAS).  
   
-Vectors:  
+### Vectors:  
 \<expression\>, \<expression\>, \<expression\>  
 Each expression gets evaluated, and you get back a vector with each result in the same order  
 You can nest vectors with parentheses to make more complex structures.  
@@ -136,7 +136,7 @@ Invariant: vectors containing exactly one element are always collapsed into thei
 For example: 1, (2, 3), 4, (5, (6, 7)), 8, (9), (((10), 11)) will get collapsed into: 1, (2, 3), 4, (5, (6, 7)), 8, 9, (10, 11).  
 This is to keep the actual structure that matters, and for any size 1 nests that could appear to be cleared out.  
    
-Unary operations:  
+### Unary operations:  
   
 _\<expression\>_!  
 Factorial  
@@ -155,13 +155,13 @@ Absolute value, norm
 _\<expression\>_ @@  
 Squared norm. Square of the absolute value.  
 _\<expression\>_|  
-component-wise absolute value   
+Component-wise absolute value   
 Example (5+i)@@ = 26  
 _\<expression\>_#  
 Count top-level vector elements  
 Example: (1,2,3,(4,5,6))# = 4  
   
-Binary operators:  
+### Binary operators:  
 _\<expression\>_ + _\<expression\>_  
 Add  
 _\<expression\>_ - _\<expression\>_  
@@ -214,13 +214,13 @@ Example: ((1, 2), (3, 4, 5), 6, 13) + ((7, 8, 9), 10, (11, 12))
 = ((1 + 7, 2 + 8, 1 + 9), (3 + 10, 4 + 10, 5 + 10), (6 + 11, 6 + 12), (13 + 7, 13 + 8, 13 + 9))  
   
   
-Vector Extractor:  
+### Vector Extractor:  
 _\<expression\>_[_\<expression\>_]  
 Extracts terms from a vector using indices in: [expression].  
 Example: (a, b, c, d, e)[2] : c  
 Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] : (30d, 31e), 2c, (5, 1, (30d, 31e))  
   
-Functions:  
+### Functions:  
 min, max, clamp, exp, ln, log10, sin, cosh, re, im, frac, floor, round, sgn, abs, conj, sqrt, cub, gauss, softmax, gamma, zeta...  
 (full list below)  
 All elementary and component-wise operations and then some.  
@@ -229,19 +229,19 @@ So a binary operation like Min can take the minimum for any size vector.
 They return the first element unchanged if it doesn't have a second operand.  
 Unary operations are applied to each element in the nested vector individually.  
   
-eval(_\<expression\>_)  
+### eval(_\<expression\>_)  
 Attempts to parse and evaluate every Text in the input  
 Evaluates strings as expressions. The strings are parsed using the expression parser, but cannot execute parser-stage commands.  
 Example: eval("1+2", "e^(ipi)") = 3, -1  
   
-count(_\<expression\>_)  
+### count(_\<expression\>_)  
 counts the number of elements in the vector  
 Example: count(0,1,2):3  
   
-cat(_\<expression\>_)  
+### cat(_\<expression\>_)  
 Un-nests the vector and concatenates all the elements next to each other on the top-level of the result vector  
   
-sum(_\<stringIndex\>_,_\<expressionFrom\>_,_\<expressionTo\>_,_\<stringExpression\>_)  
+### sum(_\<stringIndex\>_,_\<expressionFrom\>_,_\<expressionTo\>_,_\<stringExpression\>_)  
 iterative sum: sum(_\<index\>_,from,to,expression(k_\<index\>_))  
 Example: sum("k", 1, 4, "2k") = 2 + 4 + 6 + 8 = 20  
 Can also iterate backwards, unlike the same iterators in math.  
@@ -251,33 +251,33 @@ IntegralLikeSum(x, from, to, expression) : from \> to ? -sum(x, from, to, expres
 There is also "prod" function that functions the same way as an iterated product  
 and there is also "vec" function, which doesn't add or multiply the terms, but puts them all directly into a vector.  
   
-Constants:  
+### Constants:  
 e | pi | tau | gamma | one  
 Get replaced by their associated mathematical constant value  
 Some algebras have their extra constants, like i in Complex numbers and i, j, k in Quaternions.  
   
-Variables:  
+### Variables:  
 Work by simple value substitution just like constants, but you define their names and values  
   
-Numbers:  
+### Numbers:  
 Decimal notation: 123.456  
 Scientific notation could be ambiguously confused with multiplication by Euler's number, so just write it like: 1.234*10^2  
   
-NaN:  
+### NaN:  
 \_  
 "Not a number" is a result of an undefined operation, or a wrongly parsed expression.  
 It can also be used as a discard argument, which would prompt it's efault expression if it has any.  
   
-Strings:  
+### Strings:  
 "string"  
 Adding strings concatenates them.  
 Subtracting removes occurrences of the operand  
   
-Comments:  
-/* begins a comment and lasts until the end of the line or */  
-They can be anyware except inside words and operators. You can even use them to continue to a new line in the few places that don't normally allow that.
+### Comments:  
+/* comments are in between these, and are completely ignored by the parser's logic, unless they are inside strings. */  
+They can be anywhere except inside words and operators. You can even use them to continue to a new line in the few places that don't normally allow that.
   
-Errors:  
+### Errors:  
 1. Stack Overflow - if the expression evaluation thinks it caught itself in an infinite loop (the default limit is 499, and can be adjusted in the Comparser constructor)  
 Examples of stack overflow:  
 f(x)=f(x) /* and call f(anything)  
@@ -285,7 +285,7 @@ f(x,y:y):y /* and call f with a single argument (a second argument would overrid
 There could be other ways, like with eval, etc.  
   
   
-Core evaluation rules
+## Core evaluation rules
 -Expressions evaluate to values or vectors.  
 -One-element vectors are always collapsed.  
 -Operators recursively broadcast over vectors.  
@@ -299,14 +299,14 @@ Core evaluation rules
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------  
   
-Full default function list:  
+## Full default function list:  
 
-Vector/Meta functions:
+### Vector/Meta functions:
 eval(_\<string\>_) ...parses a string as an expression and evaluates it (might not work properly yet). Example: eval("1+1") = 2  
 count(_\<vector\>_) ...counts the number of vector elements in the top layer. Example: count((1,2,3,4),5,6) = 3  
 cat/concat(_\<vector\>_) ...unpacks the nesting of the vector, puts all the elements to one top layer. Example: cat((1,2,(3,4)),5,6) = 1,2,3,4,5,6  
   
-Binary operations (chainable/nestable):
+### Binary operations (chainable/nestable):
 min/minimum(_\<vector\>_,_\<vector\>_,...) ...component-wise minimum.  
 max/maximum(_\<vector\>_,_\<vector\>_,...) ...component-wise maximum.  
 softmin(_\<vector\>_,_\<vector\>_,...) ...component-wise soft minimum. Equals to  ln(e^a+e^b)  
@@ -316,10 +316,10 @@ mul/multiply(_\<vector\>_,_\<vector\>_,...) ...multiplies all elements together
 imcoef(_\<value\>_,_\<coef\>_) ...attempts to return the selected imaginary coefficient. Also equal to re(-\<value\>\<coef\>).  
 cmod/compmod(_\<vector\>_) ...component-wise modulo (division remainder). If the divisor's component is 0, it will return 0 in that component. Example: cmod(5+10i,4+8i)=1+2i.  
   
-Ternary operations:  
+### Ternary operations:  
 clamp(_\<vector\>_,_\<min\>_,_\<max\>_) ...component-wise clamp. Also equal to min(\<max\>,max(\<min\>,\<vector\>).  
 
-Iterators:  
+### Iterators:  
 vec/vector(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)  
 ...evaluates the expression with an extra argument with the "variable" name from "from" to "to" (can go bidirectionally), and builds a vector from these evaluated results.  
 sum(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)  
@@ -327,7 +327,7 @@ sum(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)
 prod/product(_\<variable\>_,_\<from\>_,_\<to\>_, _\<expression\>_)  
 ...evaluates the expression with an extra argument with the "variable" name from "from" to "to" (can go bidirectionally), and multiplies them all together. Also equal to mul(vec(...)).   
   
-Unary operations (evaluate each nested element individually, and returns in a vector with the same structure):  
+### Unary operations (evaluate each nested element individually, and returns in a vector with the same structure):  
 sofabs(_\<vector\>_) ...Also equals softmax(0,_\<vector\>_), or ln(1+e^_\<vector\>_)  
 softneg(_\<vector\>_) ...Also equals softmin(0,_\<vector\>_), or -ln(1+e^(-_\<vector\>_))  
 true(_\<vector\>_) ...Turns magnitude under 1 into 0, and over 1 into 1. Example: true((.5,1.5),-1,1) = (0,1),1  
@@ -376,7 +376,7 @@ coshc/cosch(_\<vector\>_) ...Also equals to (1-cosh(_\<vector\>_))/_\<vector\>_.
 ncoshc/ncosch/coshcpi/coschpi(_\<vector\>_) ...Also equals to cosh(pi*_\<vector\>_).  
   
   
-PLOTTER:  
+## PLOTTER:  
 The app comes with a plotter component. It lets you override a function plot(z,t), where z is the plot input, and t is animation time.  
 It will render a 1D or 2D plot of that function.  
 You can choose any coordinate bases you want.  
@@ -384,7 +384,7 @@ And you can also override the coloring function like: rgb(z):hsvtorgb(loghsv(z))
 This feature is still in development, but it's almost finished.  
 
 
-GPU ACCELERATION:  
+## GPU ACCELERATION:  
 I'm also preparing a GPU shader that will be able to evaluate custom expressions called on the build.  
 This still has a while to be finished, but I've already prepared a translation of the build into the bytecode from the upcoming GPU shader, and a CPU virtual machine for simulating it.  
 Neither has been tested yet, though.  
