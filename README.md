@@ -58,6 +58,10 @@ Separators:
 ;  
 \n  
 Works very much like in other languages, but it is optional, as new lines also work like separators.  
+Semicolon is the most reliable separator, and will work even in a single line.
+New lines can work as separators as long as it is unambiguous.
+For example, if your old line is ending with an operator or opening parenthesis, bracket, or if the next line continues with an operator...
+...anything that obviously means an expression continues to the next line, the newline will not act as a separator, and it will be interpreted as a multi-line expression.
   
 Variable definition:  
 variableName : _\<expressionValue\>_  
@@ -65,15 +69,17 @@ variableName : _\<expressionValue\>_
 Example: x : 1; print : x, ","; x : 2; print=x; _/* prints 1, 2_  
 
 If:  
-? _\<expressionCondition\>_ { _\<commands\>_ }  
+if : _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like if in other languages, only the syntax is slightly different. The keyword "if" is just a question mark, and it doesn't require parentheses  
+Conditions like in these ifs, elses, and whiles are expressions, where the first leaf value will be taken, and it's size compared to 1. Less than 1 is false.
   
 Else:  
-: { _\<commands\>_ }  
-Functions just like else in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
+: _\<expressionCondition\>_ { _\<commands\>_ }  
+Functions just like elseif in other languages. The syntax is different in the same way as if. Must follow immediately after the closing bracket of an if.  
+You can chain more of them, like normally with else ifs. And they can also be chained after a while (get entered if the while failed at the beginning)
   
 While:  
-! _\<expressionCondition\>_ { _\<commands\>_ }  
+while : _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 It can trigger a loop limit overflow if the condition is true too many times.  
@@ -83,16 +89,16 @@ _\<actionName\>_ : _\<expressionArgument\>_
 
 Return:  
 Breaks out of the specified number of blocks, treating all blocks the same, whether they are ifs or whiles.  
-Example: ?1{?1{!1{return:2;printpure:1}printpure:2}printpure:3}printpure:4 /* Prints 3\n4  
+Example: if:1{if:1{while:1{return:2;printvalue:1}printvalue:2}printvalue:3}printvalue:4 /* Prints 3\n4  
   
 Break:  
 Breaks out of the specified number of loop blocks, very similar to return, but it doesn't count if block endings.  
-Example: ?1{!1{!1{?1{break:1;printpure:1}printpure:2}printpure:3}printpure:4}printpure:5 /* Prints 3\n4\n5  
+Example: if:1{while:1{while:1{if:1{break:1;printvalue:1}printvalue:2}printvalue:3}printvalue:4}printvalue:5 /* Prints 3\n4\n5  
   
 Continue:  
 Breaks out of the specified number of loop blocks, and returns back to the last one to retest it.  
 Very similar to break, except it does that return back at the last break out, so it is not a break out on that one anymore.  
-Example: a:0;?1{!a<2{a:a+1;printpure:a;!1{?1{continue:2;printpure:10}printpure:20}printpure:30}printpure:40}printpure:50 /* Prints 1\n2\n20\n30
+Example: a:0;if:1{while:a<2{a:a+1;printvalue:a;while:1{if:1{continue:2;printvalue:10}printvalue:20}printvalue:30}printvalue:40}printvalue:50 /* Prints 1\n2\n20\n30
   
 Print:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as expression equations.  
@@ -102,10 +108,6 @@ PrintValue:
 Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
 It will trigger a Bad Expression error if the value is NaN.  
 Example: f(0) : 1; f(x) : xf(x-1); printvalue : f(5); /* Prints 120  
-  
-PrintString:  
-Takes all the elements in the evaluated vector from the expression and prints them into the log as pure strings.  
-Example: s : abc; s2 : "def" printstring : s; printstring : s2 /* Prints abc\ndef  
   
 Do:  
 do : _\<expressionArgument\>_  
@@ -273,6 +275,7 @@ Subtracting removes occurrences of the operand
   
 Comments:  
 /* begins a comment and lasts until the end of the line or */  
+They can be anyware except inside words and operators. You can even use them to continue to a new line in the few places that don't normally allow that.
   
 Errors:  
 1. Stack Overflow - if the expression evaluation thinks it caught itself in an infinite loop (the default limit is 499, and can be adjusted in the Comparser constructor)  
