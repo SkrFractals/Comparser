@@ -186,17 +186,17 @@ Logarithm of operand's base.
 Example 1000 $$ 10 = 3  
 _\<expression\>_  _\<expression\>_  
 Operator-less multiply  
-_\<expression\>_ = _\<expression\>  
+_\<expression\>_ = _\<expression\>_  
 1 if equal, 0 if not  
-_\<expression\>_ != _\<expression\>  
+_\<expression\>_ != _\<expression\>_  
 0 if equal, 1 if not  
-_\<expression\>_ \\ _<\<expression\>  
+_\<expression\>_ \\ _<\<expression\>_  
 1 if less, 0 if not  
-_\<expression\>_ \<= _\<expression\>  
+_\<expression\>_ \<= _\<expression\>_  
 1 if less or equal, 0 if not  
-_\<expression\>_ \> _\<expression\>  
+_\<expression\>_ \> _\<expression\>_  
 1 if more, 0 if not  
-_\<expression\>_ \>= _\<expression\>  
+_\<expression\>_ \>= _\<expression\>_  
 1 if more or equal, 0 if not  
 Count all of the nested vector elements  
 Example: (1,2,3,(4,5,6))## = 6  
