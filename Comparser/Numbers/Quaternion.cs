@@ -18,28 +18,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public bool IsNaN() => double.IsNaN(R) || double.IsNaN(I);
 
 	public override string ToString() => ToString(-1);
-	public string ToString(int d) {
-		var ijk = " ijkx";
-		var s = "";
-		var r = "";
-		var ci = -1;
-		string[] v = [_sr(R, d), _sr(I, d), _sr(J, d), _sr(K, d)];
-		while (4 > ++ci && ijk[0] != 'x') {
-			string l;
-			for (r += s, l = ijk[..1], ijk = ijk[1..]; ci < 4 && v[ci] == "0"; ++ci) {
-				l = ijk[..1];
-				ijk = ijk[1..];
-			}
-			if (4 <= ci) {
-				if (r == "")
-					r = "0";
-				break;
-			}
-			r += ci == 0 ? _i(v[ci], "") : _i(v[ci], l);
-			s = " ";
-		}
-		return r;
-	}
+	public string ToString(int d) => ValueToString("ijk", [R, I, J, K], d);
 	#endregion
 
 	#region Constants
@@ -64,7 +43,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static double Im(Quaternion q) => q.I + q.J + q.K;
 	public static double ImMag(Quaternion q) => Math.Sqrt(I_Dot(q));
 	// conjugate: a - bi
-	public static Quaternion operator !(Quaternion q) => new(q.R, -q.I, -q.K, -q.K);
+	public static Quaternion operator !(Quaternion q) => new(q.R, -q.I, -q.J, -q.K);
 	// negative: - a - bi
 	public static Quaternion operator -(Quaternion q) => new(-q.R, -q.I, -q.J, -q.K);
 	// u * quaternion: (0, q.I, q.J, q.K) * q;

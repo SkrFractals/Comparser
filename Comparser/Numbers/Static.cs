@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 namespace Comparser.Comparser.Numbers;
 public static class Static {
+	public static readonly bool[] FindName = [false, false, false, true];
+	public static readonly bool[] FindArgs = [true, true, false, true];
 	private const int Bernoullis = 20;
 	static Static() {
 		var b2 = MakeBernoullisR();

@@ -18,6 +18,7 @@ public partial class MenuControl : ParentControl {
 		_expForm?.StartPosition = m;
 		_setForm?.StartPosition = m;
 		parent.SetMinSize();
+		parent.Text = "Comparser - Complex Computer Parser";
 		}
 	private void SetButton_Click(object sender, EventArgs e) => ShowC(_setForm, FormP);
 	private void CodeButton_Click(object sender, EventArgs e) => ShowC(_codeForm, FormP);

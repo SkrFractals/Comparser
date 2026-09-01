@@ -1,8 +1,9 @@
 ﻿#define UNSAFEPARSE
+using System.Diagnostics;
 namespace Comparser.Forms;
 public partial class ComparserControl : ParentControl {
 	public ComparserControl() => InitializeComponent();
-	public ComparserControl(MenuControl root, ParentForm parent) : base(root, parent)  {
+	public ComparserControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
 		splitContainer.Panel1MinSize = 3 * Pad + 2 * RowHeight;
 		splitContainer.Panel2MinSize = 2 * Pad + RowHeight;
@@ -21,50 +22,96 @@ public partial class ComparserControl : ParentControl {
 		codeBox.MouseUp += (_, _) => UpdateLineNumbers();
 		InitRichTextBox(codeBox, CodeBox_TextChanged);
 		splitContainer.Panel2.Controls.Add(_lines);
-	
 		parent.SetMinSize();
+		parent.Text = "Comparser - Code & Build";
 	}
 	private readonly LineNumberControl? _lines;
 	public bool CodeChanged;
-	private bool _modifyCode = false, _editingText = true, _parsing, _parsingFinished;
-	private List<(int position, Color color)> _colors = [];
+	private enum ParseState { Free,Parsing,Cancelled,Finished }
+	private volatile ParseState _parsing = ParseState.Free;
+	private (int position, Color color)[] _colors = [];
 	private List<(Color color, string log)> _logs = [];
 	private string _toParse = "";
 	private CancellationTokenSource _cancel = new();
 	private CancellationToken _token;
-	private double _buildTime;
+	private Stopwatch _buildTime = new(), _freeTime = new(), _codeTime = new();
+	private bool _dirtyResult;
 	private void CodeBox_TextChanged(object? sender, EventArgs e) {
-		if (_modifyCode)
-			return;
-		CodeChanged |= _editingText;
+		CodeChanged = true;
+		buildButton.Text = "BUILD";
+		_codeTime.Restart();
 		UpdateLineNumbers();
 	}
+	
 	private Color GetForeColor() => Root?.Set?.Context?.GetColor().f ?? Color.White;
 	private Color GetErrorColor() => Root?.Set?.Context?.GetErrorSuccessColor().e ?? Color.Red;
 	private Color GetSuccessColor() => Root?.Set?.Context?.GetErrorSuccessColor().s ?? Color.Green;
 	private void Fps_Tick(object? sender, EventArgs e) {
-		_buildTime += fps.Interval;
-		if (_parsingFinished)
-			FinishParse();
-		if (_parsing) {
-			logBox.SelectionStart = 0;
-			logBox.SelectionLength = 0;
-			logBox.Text = "";
-			logBox.SelectionColor = GetForeColor();
-			logBox.AppendText("BUILDING: "+ Math.Floor(_buildTime/1000) + "s");
-			logBox.AppendText(_toParse);
-		}
-		if (!CodeChanged || _parsing)
+		var set = Root?.Set;
+		if(set == null)
 			return;
+		
+		switch (_parsing) {
+		case ParseState.Finished:
+			FinishParse();
+			goto case ParseState.Cancelled;
+		case ParseState.Cancelled:
+			_freeTime.Restart();
+			_parsing = ParseState.Free;
+			goto case ParseState.Free;
+		case ParseState.Free:
+			fps.Interval = 100;
+			if (_dirtyResult && /*!CodeChanged &&*/ _freeTime.ElapsedMilliseconds > 100) {
+				DrawLogsAndColors();
+			}
+			break;
+		case ParseState.Parsing:
+			fps.Interval = (int)Math.Min(set.ReportingDelay, 100 + _buildTime.ElapsedMilliseconds);
+			if (logBox == null || set.ReportingMode == SettingsControl.Reporting.Silent)
+				return;
+			var r = "BUILDING: " + Math.Floor(_buildTime.ElapsedMilliseconds / 1000.0) + "s\n";
+			if(set.ReportingMode >= SettingsControl.Reporting.Report)
+				r += "Remaining text:\n" + Root?.Set?.Context?.ParsePeek();
+			UpdateLog(r);
+			break;
+		}
+		if (!CodeChanged || !set.AutoBuild)
+			return;
+		if (_codeTime.ElapsedMilliseconds < set.BuildDelay)
+			return;
+		if (set.ReportingMode == SettingsControl.Reporting.Silent) 
+			UpdateLog("BUILDING...");
+		Build();
+	}
+	private void Build() {
+		_codeTime.Stop();
+		_freeTime.Stop();
 		CodeChanged = false;
-		_parsing = true;
+		_parsing = ParseState.Parsing;
+		fps.Interval = 100;
 		_toParse = codeBox.Text;
 		_token = (_cancel = new()).Token;
-		abortButton.Enabled = true;
-		_buildTime = 0;
+		buildButton.Text = "CANCEL";
+		_buildTime = Stopwatch.StartNew();
 		Task.Run(Parse, _token);
 	}
+	private void UpdateLog(string r) {
+		NativeMethods.SendMessage(logBox.Handle, NativeMethods.WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
+		logBox.SuspendLayout();
+		try {
+			logBox.SelectionStart = logBox.SelectionLength = 0;
+			logBox.Text = "";
+			logBox.SelectionColor = GetForeColor();
+			logBox.AppendText(r);
+		} finally {
+			NativeMethods.SendMessage(logBox.Handle, NativeMethods.WmSetRedraw, new IntPtr(1), IntPtr.Zero);
+			logBox.Invalidate();
+			logBox.ResumeLayout();
+		}
+		TransferLog();
+	}
 	private void Parse() {
+		Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
 #if UNSAFEPARSE
 		_logs = Root?.Set?.Context?.ReadCode(_toParse, _token, out _colors) ?? [];
 #else
@@ -72,50 +119,71 @@ public partial class ComparserControl : ParentControl {
 			_logs = [(Color.Red,e.Message), (Color.Red, e.StackTrace ?? "")];
 		}
 #endif
-		_parsingFinished = true;
-		_parsing = false;
+		_parsing = _token.IsCancellationRequested ? ParseState.Cancelled : ParseState.Finished;
 	}
 	private void FinishParse() {
-		abortButton.Enabled = false;
-		_editingText = false;
-		_parsingFinished = false;
-		_modifyCode = true;
+		_buildTime.Stop();
+		_dirtyResult = true;
+		buildButton.Text = "OK";
+		//DrawLogsAndColors();
+	}
+	private void TransferLog() {
+		if (Root?.Log?.FormP?.Visible ?? false) { 
+			Root?.Log?.Transfer(logBox.Rtf);
+			_dirtyLog = false;
+		} else _dirtyLog = true;
+	}
+	private bool _dirtyLog;
+	private void DrawLogsAndColors() {
+		_dirtyResult = false;
+		_freeTime.Stop();
+		codeBox.TextChanged -= CodeBox_TextChanged;
+		// apply codeBox type colors
 		ApplyColors(_colors, codeBox);
-		_modifyCode = false;
 		// append logs (errors, prints...)
-		logBox.SelectionStart = 0;
-		logBox.SelectionLength = 0;
-		logBox.Text = "";
-		if (_token.IsCancellationRequested)
-			_logs = [(GetErrorColor(), "BUILD CANCELLED")];
-		else {
-			var fail = false;
+		NativeMethods.SendMessage(logBox.Handle, NativeMethods.WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
+		logBox.SuspendLayout();
+		try {
+			logBox.SelectionStart = logBox.SelectionLength = 0;
+			logBox.Text = "";
+			if (_token.IsCancellationRequested)
+				_logs = [(GetErrorColor(), "BUILD CANCELLED")];
+			else {
+				var fail = false;
+				foreach (var t in _logs) {
+					if (t.color != GetErrorColor())
+						continue;
+					fail = true;
+					break;
+				}
+				if (fail) {
+					logBox.SelectionColor = GetErrorColor();
+					logBox.AppendText("BUILD FAILED\n");
+				} else {
+					logBox.SelectionColor = GetSuccessColor();
+					logBox.AppendText("BUILD SUCCESS " + _buildTime.ElapsedMilliseconds + "ms\n");
+				}
+			}
 			foreach (var t in _logs) {
-				if (t.color != GetErrorColor())
-					continue;
-				fail = true;
-				break;
+				logBox.SelectionColor = t.color;
+				logBox.AppendText(t.log + "\n");
 			}
-			if (fail) {
-				logBox.SelectionColor = GetErrorColor();
-				logBox.AppendText("BUILD FAILED\n");
-			} else {
-				logBox.SelectionColor = GetSuccessColor();
-				logBox.AppendText("BUILD SUCCESS " + Math.Floor(_buildTime) + "ms\n");
-			}
+		} finally {
+			NativeMethods.SendMessage(logBox.Handle, NativeMethods.WmSetRedraw, new IntPtr(1), IntPtr.Zero);
+			logBox.Invalidate();
+			logBox.ResumeLayout();
 		}
-		foreach (var t in _logs) {
-			logBox.SelectionColor = t.color;
-			logBox.AppendText(t.log + "\n");
-		}
-		Root?.Log?.Transfer(logBox.Rtf);
+		TransferLog();
 		// evaluate expression fields with this newly parsed program
 		Root?.Exp?.ReEval();
-		_editingText = true;
+		codeBox.TextChanged += CodeBox_TextChanged;
 	}
 	public override Size GetSize() => new((Pad << 1) + 64, 120);
-	public override void SetDark(bool dark) { base.SetDark(dark); FinishParse(); }
-	private void OpenLog(object? sender, EventArgs e) => Root?.ShowC(Root?.LogForm, FormP);
+	public override void SetDark(bool dark) {
+		base.SetDark(dark);
+		DrawLogsAndColors();
+	}
+
 	private void UpdateLineNumbers() {
 		if (_lines == null)
 			return;
@@ -125,16 +193,29 @@ public partial class ComparserControl : ParentControl {
 		) + 10;
 		var offset = width - _lines.Width;
 		if (offset != 0) {
+			// update width of the linepanel, and adjust the codeBox to it
 			_lines.Width = width;
 			codeBox.Left += offset;
 			codeBox.Width -= offset;
 		}
 		_lines.Invalidate();
 	}
-	private void CancelBuild(object sender, EventArgs e) => _cancel.Cancel();
-	
+	private void OpenLog(object? sender, EventArgs e) {
+		Root?.ShowC(Root?.LogForm, FormP);
+		if(_dirtyLog)
+			TransferLog();
+	}
+	private void CancelBuild(object sender, EventArgs e) {
+		if(_parsing == ParseState.Parsing)
+			_cancel.Cancel();
+		else if (CodeChanged)
+			Build();
+		else if (_dirtyResult)
+			DrawLogsAndColors();
+	}
+
 	#region Code Handling
-	private static class NativeMethods {
+	public static class NativeMethods {
 		public const uint WmSetRedraw = 0x000B;
 		[System.Runtime.InteropServices.DllImport("user32.dll")]
 		public static extern IntPtr SendMessage(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam);
@@ -144,14 +225,9 @@ public partial class ComparserControl : ParentControl {
 		box.AllowDrop = true;//box.EnableAutoDragDrop = true;
 		box.Font = new("Consolas", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		_ = box.Handle;
-		const uint wmUser = 0x0400;
-		const uint emSetEditStyle = wmUser + 69;
-		const int sesNoOleDragDrop = 0x1000; // RichEdit flag: disable its built-in OLE drag/drop processing.
-		//NativeMethods.SendMessage(box.Handle, emSetEditStyle, new(sesNoOleDragDrop), new(sesNoOleDragDrop));
 		box.KeyDown += Override_KeyDown;
 		box.DragEnter += Override_DragEnter;
 		box.DragDrop += Override_DragDrop;
-		//box.MouseDown += Override_MouseDown;
 		box.TextChanged += textChanged;
 	}
 
@@ -190,8 +266,8 @@ public partial class ComparserControl : ParentControl {
 		// Inserting through SelectedText uses the RichTextBox's current formatting.
 		box.SelectedText = text;
 	}
-	public static void ApplyColors(List<(int position, Color color)> colors, RichTextBox box) {
-		if (box.TextLength == 0 || colors.Count == 0)
+	public static void ApplyColors((int position, Color color)[] colors, RichTextBox box) {
+		if (box.TextLength == 0 || colors.Length == 0)
 			return;
 		// Save the user's current state. Keep the selection valid if the text changed.
 		int oldSelectionStart, oldSelectionLength = Math.Min(box.SelectionLength, box.TextLength - (oldSelectionStart = Math.Clamp(box.SelectionStart, 0, box.TextLength)));
@@ -199,8 +275,8 @@ public partial class ComparserControl : ParentControl {
 		try {
 			box.SuspendLayout(); // Prevent visible redraw while applying several ranges.
 			NativeMethods.SendMessage(box.Handle, NativeMethods.WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
-			for (int from, l, i = 0; i < colors.Count; ++i)
-				if (0 < (l = i + 1 < colors.Count ? colors[i + 1].position : box.TextLength) - (from = colors[i].position)) {
+			for (int from, l, i = 0; i < colors.Length; ++i)
+				if (0 < (l = i + 1 < colors.Length ? colors[i + 1].position : box.TextLength) - (from = colors[i].position)) {
 					box.Select(from, l);
 					box.SelectionColor = colors[i].color;
 				}

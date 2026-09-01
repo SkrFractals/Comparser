@@ -26,7 +26,7 @@ public abstract partial class Comparser<T>{
 		public string ToString(int decimals, bool pure) => pure ? CollapseScalar(this).Pv(decimals) : Text + " = " + CollapseScalar(this).Pv(decimals);
 		private string Pv(int decimals, string a = "", string b = "") {
 			if (Values.Length <= 0)
-				return Error > 0 ? PrintError() : Leaf.IsNaN() && Text != "" ? Text : Leaf.ToString(decimals);
+				return Error > 0 ? PrintError() : Leaf.IsNaN() ? String != "" ? String : Text != "" ? Text :  Leaf.ToString(decimals) : Leaf.ToString(decimals);
 			var s = a;
 			for (var i = 0; i < Values.Length; ++i) {
 				Values[i] = CollapseScalar(Values[i]);
@@ -35,7 +35,7 @@ public abstract partial class Comparser<T>{
 			}
 			return s + b;
 		}
-		private string PrintError() => (Error & 1) > 0 ? "Stack Overflow." : "";
+		private string PrintError() => (Error & 1) > 0 ? "Stack Overflow." :(Error & 2) > 0 ? "Bad Expression" : "";
 		private string Tl() {
 			if (Values.Length <= 0)
 				return Text;
@@ -53,12 +53,14 @@ public abstract partial class Comparser<T>{
 		public string GetString() => Values.Length > 0 ? Values[0].GetString() : String;
 		
 		#region Constructors
-		public Value(T value, Operator op, int[]? arg = null, Expression? term = null, Expression? operand = null, bool negative = false, string text = "") {
-			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg ?? []; String = Text = text;
+		public Value(T value, Operator op, int[]? arg = null, Expression? term = null, Expression? operand = null, bool negative = false, string text = "", string? str = null) {
+			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg ?? [];
+			String = str ?? text; Text = text;
 		}
 		public Value(T value, int error = 0, string text = "") { Error = error; Leaf = value; String = Text = text; }
 		public Value(int error = 0, string text = "") { Error = error; String = Text = text; }
-		public Value(Value[] values, int error = 0, string text = "") { Error = error; Values = values; String = Text = text; }
+		public Value(Value[] values, int error = 0, string text = "", string? str = null) { Error = error; Values = values;
+			String = str ?? text; Text = text; }
 		public Value(string text, int[] arg) { Arg = arg; String = Text = text; }
 		#endregion
 		
@@ -218,7 +220,7 @@ public abstract partial class Comparser<T>{
 			vals.Error = av.Error | bv.Error | cv.Error;
 			return vals;
 		}
-		public Value Copy() => new(Leaf, Op, Arg, Term, Operand, Op.Negative, Text) { Values = CopyValues(Values)/*, Terms = CopyValues(Terms)*/ };
+		public Value Copy() => new(Leaf, Op, Arg, Term, Operand, Op.Negative, Text, String) { Values = CopyValues(Values)/*, Terms = CopyValues(Terms)*/ };
 		private static Value[] CopyValues(Value[] c) {
 			var v = new Value[c.Length];
 			for (var i = 0; i < c.Length; ++i)

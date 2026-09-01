@@ -14,6 +14,11 @@ public partial class SettingsControl : ParentControl {
 		darkButton_Click(darkButton, EventArgs.Empty);
 		Root?.Code?.CodeChanged = true;
 		parent.SetMinSize();
+		parent.Text = "Comparser - Settings";
+		reportBox_TextChanged(reportBox, EventArgs.Empty);
+		autoBox_TextChanged(reportBox, EventArgs.Empty);
+		UpdateAuto();
+		UpdateReport();
 	}
 
 	public override Size GetSize() => new(
@@ -45,5 +50,34 @@ public partial class SettingsControl : ParentControl {
 		decimalBox.ForeColor = algebraBox.ForeColor = darkButton.ForeColor =  bf.Item2;
 		Context?.SetDarkMode(dark);*/
 		darkButton.Text =  dark ? "☾" : "☀︎";
+	}
+	private void UpdateAuto() =>autoButton.Text = AutoBuild ? "DELEAYED AUTOMATIC" : "MANUAL";
+	private void UpdateReport() =>reportButton.Text = ReportingMode switch {
+		Reporting.Silent => "SILENT",
+		Reporting.Timer => "ONLY TIME",
+		Reporting.Report => "REPORT STATE",
+		_ => "???"
+	};
+	private void autoButton_Click(object sender, EventArgs e) {
+		AutoBuild = !AutoBuild;
+		UpdateAuto();
+	}
+	public int ReportingDelay = 1000, BuildDelay = 5000;
+	public Reporting ReportingMode = Reporting.Report;
+	public bool AutoBuild = true;
+	private void reportButton_Click(object sender, EventArgs e) {
+		ReportingMode = (Reporting)(((int)ReportingMode + 1) % 3);
+		UpdateReport();
+	}
+	public enum Reporting : byte {
+		Silent = 0,
+		Timer = 1,
+		Report = 2
+	}
+	private void autoBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(autoBox.Text, out BuildDelay) || BuildDelay < 0) BuildDelay = 0;
+	}
+	private void reportBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(reportBox.Text, out ReportingDelay) || ReportingDelay < 0) ReportingDelay = 0;
 	}
 }

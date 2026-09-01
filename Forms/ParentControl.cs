@@ -5,7 +5,7 @@ public partial class ParentControl : UserControl {
 	}
 	protected const int RowHeight = 32, Pad = 3;
 	protected readonly MenuControl? Root;
-	protected readonly ParentForm? FormP;
+	public readonly ParentForm? FormP;
 	protected ParentControl(MenuControl? root, ParentForm parent) {
 		Root = root ?? (MenuControl)this;
 		(FormP = parent).Attach(this);

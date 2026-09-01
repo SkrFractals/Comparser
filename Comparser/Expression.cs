@@ -1,4 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
+using System.DirectoryServices.ActiveDirectory;
 namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public class Expression {
@@ -45,7 +46,7 @@ public abstract partial class Comparser<T> {
 			//if (allowArg) return v.Operand?.Eval(depth, args) ?? v;
 			if (v.Values.Length == 0) {
 				var eval =  Value.Operate2(
-					v.Term?.Eval(depth, args) ?? new([v.Arg.Length == 0 ? v : GetArg(v.Arg, a)]),
+					v.Term?.Eval(depth, args) ?? new([v.Arg.Length == 0 ? v : GetArg(v.Arg, a)], v.Error, v.Text, v.String),
 					v.Operand?.Eval(depth, args) ?? None, v.Op.Op, v.Op.SOp);
 				eval.Operand = v.Operand; // copy possible default argument
 				if(eval.Text == "") eval.Text = v.Text;
@@ -115,13 +116,19 @@ public abstract partial class Comparser<T> {
 			do { // Read vector loop:
 				startR = read.From;
 				Read(out nextOp);
-				if (r.String == "") r.String = read.Uncomment(startR, read.From); // if it didn't remember pre-defaultArg string, it will take it here
+				if (r.Text == "") 
+					r.Text = read.Uncomment(startR, read.From); // if it didn't remember pre-defaultArg string, it will take it here
+				if (r.String == "") 
+					r.String = (r.Term?.V.String ?? "") != "" ? r.Term?.V.String! : r.Text; // if it didn't remember pre-defaultArg string, it will take it here
+				
+				
+				
 				error |= r.Error;
 				read.TrimStart();
 				//read.CharAtRel('\n', 0)
 			}
 			// only left == 0 (aka top layer expression) should accept ',' for a next value
-			while(left == 0 && !read.GotoFirstFailed(0,[','], 1, out _, out _));
+			while(left == 0 && !read.GotoFirstFailed(0, 2, [','], 1, out _, out _));
 			
 			// Save vector to my values:
 			V = new([..expr], error, read.Uncomment(start, read.From));
@@ -155,7 +162,8 @@ public abstract partial class Comparser<T> {
 				}
 				// no unary:
 				if (o.Order == 0) {
-					if ((!Char('(') || read.TrimStart(1) && SubTerm(out r.Term, ')'))
+					if ((!Char('(') || read.TrimStart(1) && SubTerm(out r.Term, ')')) // if opening parenthesis, allow a newline,and read a subterm to encapsulate
+						&& (!Char('"') || ReadString(out r.Term))
 						&& TryFuncFailed() // _term = default function
 						&& (Number(out var n) // _value = number
 							|| Argument(ref argNest) // function arguments
@@ -167,9 +175,11 @@ public abstract partial class Comparser<T> {
 							read.AddC(startR, read.From, ParseDictionary.Type.Arg); // color as argument
 							read.TrimStart(1);
 						}
-						r.String = TrimEnd(read.Text[startR..read.From], 1); // remember string before ':'
+						r.String = TrimEnd(read.Uncomment(startR,read.From), 1); // remember string before ':'
 						//Trim(ref from);
-						if (read.Text.Length <= read.From || read.nextChar != ':' || !isArgument)
+						if (read.Text.Length <= read.From || read.nextChar != ':')
+							return;
+						if (!isArgument && F())
 							return;
 						++read.From; // eat default argument colon
 						// Try to read argument default new([..expr]) is to let it reference already read arguments:
@@ -277,6 +287,15 @@ public abstract partial class Comparser<T> {
 					read.TrimStart();
 					return  (fail || readTo.V.Values.Length == 0 || FailRequiredSymbol(req)) && F();
 				}
+				bool ReadString(out Expression readTo) {
+					var before = read.From;
+					if (read.GotoFirstFailed(1, 2, [], 0, out _, out _, false, 0, true)) {
+						readTo = new(Context, None);
+						return F();
+					}
+					readTo = new(Context, new Value(0, read.Uncomment(before, read.From - 1)));
+					return false;
+				}
 				bool FailRequiredSymbol(char c, int offset = 0) {
 					if (read.GotoFirstFailed(offset, 0, [c], 1, out _, out var found)) 
 						return F();
@@ -350,24 +369,21 @@ public abstract partial class Comparser<T> {
 				bool LeftAssociate(Operator testOp) => testOp.Right ? testOp.Order < left : testOp.Order <= left;
 				bool Fail(Value test) => test.Term == null && (test.Values.Length == 0 || test.Values is [{ Term: null }]) /*&& test.Values[0].Values.Length == 0*/; // && test.Value.IsNaN; // no longer needed as even values are now nested in terms, and I don't test their insides.
 				bool F() {
-					r.Op = new();
-					r.Leaf = T.NaN();
-					r.Values = [];
-					r.Term = r.Operand = null;
-					char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']'];
-					int e, end = read.Text.Length;
-					var prevF = read.From;
-				
-					if(read.From < read.Text.Length)foreach (var et in ends)
-						if ((e = read.Text.IndexOf(et, read.From)) >= 0 && e < end)
-							end = e;
-					//if(from > prevF) 
-					//Colors.Add((prevF, ParseDictionary.Type.Error));
-					if(prevF < end)read.AddC(prevF, end, ParseDictionary.Type.Error);
-					
-					//r.String = r.Text += text[..end].TrimStart(' ').TrimEnd(' ');
-					//text = end < text.Length ? text[end..] : "";
+					(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(),T.NaN(), [], null, null);
+					int e, end = read.Text.Length, prevF = read.From;
+					char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']', '/'];
+					//for(var toCont = true; toCont; read.From = end + 1, end = read.Text.Length) {
+					if (read.From < read.Text.Length)
+						foreach (var et in ends)
+							if ((e = read.Text.IndexOf(et, read.From)) >= 0 && e < end)
+								end = e;
+					//	toCont = end < read.Text.Length - 1 && read.CharAtAbs('/', end) && read.CharAtAbs('*', end + 1);
+					//}
+					if(prevF < end)
+						read.AddC(prevF, end, ParseDictionary.Type.Error);
 					read.From = end;
+					if (!isArgument)
+						r.Error += 2;
 					return true;
 				} // reading failed
 				//bool FailRequiredSymbol(char c, byte offset = 0) => !Char(c, offset) && F();
@@ -375,6 +391,7 @@ public abstract partial class Comparser<T> {
 					int startFrom = read.From;
 					foreach (var f in Context.Context.Get(read.Text, read.From, Functions)) {
 						if (f.name.Length <= 0 || FailRequiredSymbol('(', (byte)f.name.Length)) continue;
+						read.TrimStart(1); // allow newline after opening parenthesis
 						if ((Fail((r.Term = ((CallFunction)f.obj.Obj).Call(read, args)).V) || FailRequiredSymbol(')')) && F()) {
 							read.AddC(startFrom, read.From, ParseDictionary.Type.Error);
 							return true; // must eat func closing parenthesis
@@ -481,7 +498,7 @@ public abstract partial class Comparser<T> {
 		protected Expression(Comparser<T> context, Value t, int cache = 0) {
 			_cache = new(cache);
 			Context = context;
-			V = new([new(t.Leaf, t.Op, t.Arg, t.Term, t.Operand, t.Op.Negative)], t.Error, t.Text);
+			V = new([new(t.Leaf, t.Op, t.Arg, t.Term, t.Operand, t.Op.Negative, t.String)], t.Error, t.Text);
 		}
 		// copy
 		private Expression(Comparser<T> context, Value t, CallFunction.EvalCache cache) {

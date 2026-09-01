@@ -167,8 +167,8 @@ public abstract partial class Comparser<T> {
 			}
 			_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.NaN(), 0, V.Values[0].Text);
-			_expr =  new(new(read.Context, V.Values.Length == 4 ? V.Values[3].Text : "", read.Cancel), out _, _args);
+			_args.Values[iteratorIndex] = new(T.NaN(), 0, V.Values[0].String);
+			_expr =  new(new(read.Context, V.Values.Length == 4 ? V.Values[3].String : "", read.Cancel), out _, _args);
 		}
 		private readonly Expression _expr;
 		private readonly Value _args;
@@ -182,7 +182,7 @@ public abstract partial class Comparser<T> {
 			var iteratorIndex = args.Values.Length;
 			//_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.NaN(), v.Error, v.Values[0].Text);
+			_args.Values[iteratorIndex] = new(T.NaN(), v.Error, v.Values[0].String);
 			//var exp = new Expression(Context, v.Values[3].Text, ni);
 			return Result(EvalK, from, to);
 			Value EvalK(int f) {

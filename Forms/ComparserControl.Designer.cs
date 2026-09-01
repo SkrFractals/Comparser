@@ -26,7 +26,7 @@ partial class ComparserControl {
 		logButton = new System.Windows.Forms.Button();
 		logBox = new System.Windows.Forms.RichTextBox();
 		codeBox = new System.Windows.Forms.RichTextBox();
-		abortButton = new System.Windows.Forms.Button();
+		buildButton = new System.Windows.Forms.Button();
 		splitContainer = new System.Windows.Forms.SplitContainer();
 		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
@@ -58,7 +58,7 @@ partial class ComparserControl {
 		logBox.Location = new System.Drawing.Point(76, 3);
 		logBox.Name = "logBox";
 		logBox.ReadOnly = true;
-		logBox.Size = new System.Drawing.Size(235, 70);
+		logBox.Size = new System.Drawing.Size(235, 69);
 		logBox.TabIndex = 0;
 		logBox.Text = "[logs]";
 		// 
@@ -68,21 +68,20 @@ partial class ComparserControl {
 		codeBox.Location = new System.Drawing.Point(3, 3);
 		codeBox.MinimumSize = new System.Drawing.Size(0, 32);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new System.Drawing.Size(308, 216);
+		codeBox.Size = new System.Drawing.Size(308, 205);
 		codeBox.TabIndex = 0;
 		codeBox.Text = "";
 		// 
-		// abortButton
+		// buildButton
 		// 
-		abortButton.Enabled = false;
-		abortButton.Location = new System.Drawing.Point(3, 41);
-		abortButton.Name = "abortButton";
-		abortButton.Size = new System.Drawing.Size(67, 32);
-		abortButton.TabIndex = 2;
-		abortButton.Text = "CANCEL";
-		abortButton.UseMnemonic = false;
-		abortButton.UseVisualStyleBackColor = true;
-		abortButton.Click += CancelBuild;
+		buildButton.Location = new System.Drawing.Point(3, 41);
+		buildButton.Name = "buildButton";
+		buildButton.Size = new System.Drawing.Size(67, 32);
+		buildButton.TabIndex = 2;
+		buildButton.Text = "OK";
+		buildButton.UseMnemonic = false;
+		buildButton.UseVisualStyleBackColor = true;
+		buildButton.Click += CancelBuild;
 		// 
 		// splitContainer
 		// 
@@ -93,7 +92,7 @@ partial class ComparserControl {
 		// 
 		// splitContainer.Panel1
 		// 
-		splitContainer.Panel1.Controls.Add(abortButton);
+		splitContainer.Panel1.Controls.Add(buildButton);
 		splitContainer.Panel1.Controls.Add(logBox);
 		splitContainer.Panel1.Controls.Add(logButton);
 		// 
@@ -101,7 +100,7 @@ partial class ComparserControl {
 		// 
 		splitContainer.Panel2.Controls.Add(codeBox);
 		splitContainer.Size = new System.Drawing.Size(314, 314);
-		splitContainer.SplitterDistance = 80;
+		splitContainer.SplitterDistance = 75;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 3;
 		// 
@@ -118,7 +117,7 @@ partial class ComparserControl {
 		splitContainer.ResumeLayout(false);
 		ResumeLayout(false);
 	}
-	private System.Windows.Forms.Button abortButton;
+	private System.Windows.Forms.Button buildButton;
 	#endregion
 	private System.Windows.Forms.Timer fps;
 	private System.Windows.Forms.RichTextBox logBox;

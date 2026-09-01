@@ -18,6 +18,7 @@ public partial class ExpressionControl : ParentControl {
 	public ExpressionControl(MenuControl root, ParentForm parent) : base(root, parent){
 		InitializeComponent();
 		parent.SetMinSize();
+		parent.Text = "Comparser - Expression Evaluator";
 	}
 	public void ReEval() {
 		for (var i = 0; i < _expressionRows.Count; ++i)
@@ -36,7 +37,7 @@ public partial class ExpressionControl : ParentControl {
 		if (cachedParse && row.Exp != null && row.Text == row.Expression.Text && row.Text != "") {
 			v = Root?.Set?.Context?.Eval(row.Exp, eval);
 		} else {
-			List<(int, Color)> colors = [];
+			(int, Color)[] colors = [];
 			v = Root?.Set?.Context?.ParseEval(new CancellationTokenSource().Token, row.Text = row.Expression.Text/*Clean()*/, 0,out row.Exp, out colors, eval);
 			ComparserControl.ApplyColors(colors, row.Expression);
 		}

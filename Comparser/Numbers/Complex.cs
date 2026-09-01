@@ -15,15 +15,7 @@ public readonly struct Complex(double r = 0, double i = 0) : INumber<Complex> {
 	public bool IsNaN() => double.IsNaN(R) || double.IsNaN(I);
 
 	public override string ToString() => ToString(-1);
-	public string ToString(int d) {
-		return Static.ValueToString("i", [R, I], d);
-		/*string si = _sr(I, d), r = _sr(R, d);
-		return r == "0"
-			? si == "0" ? "0" : _i(si, "i")
-			: si == "0" ? r : I < 0
-				? r + " - " + _i(si, "i")[1..]
-				: r + " + " + _i(si, "i");*/
-	}
+	public string ToString(int d) => Static.ValueToString("i", [R, I], d);
 	#endregion
 
 	#region Constants
