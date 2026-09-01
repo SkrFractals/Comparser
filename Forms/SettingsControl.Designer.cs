@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel;
-namespace Comparser;
+namespace Comparser.Forms;
 partial class SettingsControl {
 	/// <summary> 
 	/// Required designer variable.
@@ -36,6 +36,7 @@ partial class SettingsControl {
 		darkButton.TabIndex = 2;
 		darkButton.Text = "L";
 		darkButton.UseVisualStyleBackColor = true;
+		darkButton.UseMnemonic = false;
 		darkButton.Click += darkButton_Click;
 		// 
 		// algebraBox
@@ -54,11 +55,11 @@ partial class SettingsControl {
 		// 
 		decLabel.AutoSize = true;
 		decLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)238));
-		decLabel.ForeColor = System.Drawing.Color.White;
 		decLabel.Location = new System.Drawing.Point(3, 6);
 		decLabel.Name = "decLabel";
 		decLabel.Size = new System.Drawing.Size(60, 15);
 		decLabel.TabIndex = 3;
+		decLabel.UseMnemonic = false;
 		decLabel.Text = "Decimals:";
 		// 
 		// decimalBox
@@ -80,6 +81,9 @@ partial class SettingsControl {
 		Controls.Add(decimalBox);
 		Controls.Add(algebraBox);
 		Controls.Add(darkButton);
+		Dock = DockStyle.None;
+		MinimumSize = new System.Drawing.Size(320, 320);
+		MaximumSize = new System.Drawing.Size(320, 320);
 		Size = new System.Drawing.Size(320, 320);
 		ResumeLayout(false);
 		PerformLayout();

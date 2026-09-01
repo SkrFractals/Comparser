@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
-namespace Comparser;
-partial class ExpressionControl {
+namespace Comparser.Forms;
+partial class LogControl {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -21,30 +21,32 @@ partial class ExpressionControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		expBox = new System.Windows.Forms.Button();
+		logBox = new System.Windows.Forms.RichTextBox();
 		SuspendLayout();
 		// 
-		// expBox
+		// logBox
 		// 
-		expBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		expBox.Location = new System.Drawing.Point(3, 3);
-		expBox.Name = "expBox";
-		expBox.Size = new System.Drawing.Size(314, 23);
-		expBox.TabIndex = 3;
-		expBox.Text = "ADD EXPRESSION";
-		expBox.UseVisualStyleBackColor = true;
-		expBox.Click += ExpAdd;
+		logBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
+		logBox.AutoSize = true;
+		logBox.DetectUrls = false;
+		logBox.Font = new System.Drawing.Font("Consolas", 10F);
+		logBox.Location = new System.Drawing.Point(3, 3);
+		logBox.Name = "logBox";
+		logBox.ReadOnly = true;
+		logBox.Size = new System.Drawing.Size(314, 314);
+		logBox.TabIndex = 0;
+		logBox.Text = "[logs]";
 		// 
-		// ExpressionControl
+		// LogControl
 		// 
 		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
 		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
-		Controls.Add(expBox);
-		Size = new System.Drawing.Size(320, 320);
+		Controls.Add(logBox);
 		ResumeLayout(false);
+		PerformLayout();
 	}
 
 	#endregion
-	private System.Windows.Forms.Button expBox;
+	private System.Windows.Forms.RichTextBox logBox;
 }

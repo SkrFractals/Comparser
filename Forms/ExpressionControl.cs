@@ -1,16 +1,16 @@
 ﻿using Comparser.Comparser;
 using Comparser.Comparser.Numbers;
-namespace Comparser;
+namespace Comparser.Forms;
 public partial class ExpressionControl : ParentControl {
-		public class ExpRow(Label index, TextBox expression, Label result, Button del) {
+		public class ExpRow(Label index, RichTextBox expression, Label result, Button del) {
 		public object? Exp;
 		public string Text = "";
 		public readonly Label Index = index;
-		public readonly TextBox Expression = expression;
+		public readonly RichTextBox Expression = expression;
 		public readonly Label Result = result; 
 		public readonly Button Del = del;
 	}
-
+	private bool _dark;
 	private const int InputSize = 64;
 	private readonly List<ExpRow> _expressionRows = [];
 	private readonly List<Button> _swaps = [];
@@ -32,9 +32,16 @@ public partial class ExpressionControl : ParentControl {
 			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), 0, "x")]),
 			_ => new Comparser<Real>.Value([new(Real.MakeR(index), 0, "x")])
 		};
-		var v = cachedParse && row.Exp != null && row.Text == row.Expression.Text && row.Text != "" 
-			? Root?.Set?.Context?.Eval(row.Exp, eval) 
-			: Root?.Set?.Context?.ParseEval(row.Text = row.Expression.Text = Clean(row.Expression.Text), 0,out row.Exp, eval);
+		object? v;
+		if (cachedParse && row.Exp != null && row.Text == row.Expression.Text && row.Text != "") {
+			v = Root?.Set?.Context?.Eval(row.Exp, eval);
+		} else {
+			List<(int, Color)> colors = [];
+			v = Root?.Set?.Context?.ParseEval(new CancellationTokenSource().Token, row.Text = row.Expression.Text/*Clean()*/, 0,out row.Exp, out colors, eval);
+			ComparserControl.ApplyColors(colors, row.Expression);
+		}
+		
+	
 		if(v != null)
 			row.Result.Text = Root?.Set?.Context?.ToString(v,  Root.Set.Decimals);
 	}
@@ -43,7 +50,7 @@ public partial class ExpressionControl : ParentControl {
 		var c = Controls;
 		c.Clear();
 		c.Add(expBox);
-		var y = Pad;
+		var y = Pad + expBox.Bottom;
 		var tab = -1;
 		for (var i = 0; i < _expressionRows.Count; ++i, y += (RowHeight + Pad) << 1) {
 			var row = _expressionRows[i];
@@ -71,6 +78,7 @@ public partial class ExpressionControl : ParentControl {
 			if (i < _expressionRows.Count - 1)
 				_swaps[i].Left = swapL;
 		}
+		SetDark(_dark);
 	}
 	private (int expW, int resW, int delL, int swapL) ExpDim() => (
 		Width - InputSize - (RowHeight << 1) - (Pad << 2) - Pad,
@@ -86,10 +94,10 @@ public partial class ExpressionControl : ParentControl {
 				Name = "index" + si,
 				Text = "x=" + si + ":",
 				AutoSize = true,
-				ForeColor = Color.White,
 				Font = new Font("Consolas", RowHeight >> 1),
 				Anchor = a | AnchorStyles.Left,
 				Location = new(Pad, 0),
+				UseMnemonic = false,
 				Size = new(20, RowHeight)
 			},
 			new() {
@@ -97,46 +105,47 @@ public partial class ExpressionControl : ParentControl {
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
 				Tag = i,
 				Location = new(InputSize + 2 * Pad, 0),
-				Size = new(0, RowHeight)
+				Size = new(0, RowHeight),
+				Multiline = false
 			},
 			new() {
 				Name = "result" + si,
 				AutoSize = true,
-				ForeColor = Color.White,
 				Font = new Font("Consolas", RowHeight >> 1),
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
 				Location = new(Pad, 0),
+				UseMnemonic = false,
 				Size = new(0, RowHeight)
 			},
 			new() {
 				Name = "delexp" + si,
 				Text = "X",
-				BackColor = Color.LightGray,
 				Anchor = a | AnchorStyles.Right,
 				Tag = i,
 				Location = new(0, 0),
+				UseMnemonic = false,
 				Size = new(RowHeight, (RowHeight << 1) + Pad)
 			});
 		if (i > 0) {
 			Button swap = new() {
 				Name = "swap" + si,
 				Text = "🗘", // "↕"
-				BackColor = Color.LightGray,
 				Anchor = a | AnchorStyles.Right,
 				Tag = i - 1,
 				Location = new(0, 0),
+				UseMnemonic = false,
 				Size = new(RowHeight, (RowHeight << 1) + Pad)
 			};
 			swap.Click += ExpSwapped;
 			_swaps.Add(swap);
 		}
-		row.Expression.TextChanged += ExpChanged;
+		ComparserControl.InitRichTextBox(row.Expression, ExpChanged);
 		row.Del.Click += ExpDeleted;
 		_expressionRows.Add(row);
-		_parent?.MakeLayout();
+		FormP?.MakeLayout();
 		Eval(i);
 	}
-	private void ExpChanged(object? sender, EventArgs e) => Eval(((int?)((Control?)sender)?.Tag) ?? 0);
+	private void ExpChanged(object? sender, EventArgs e) => Eval((int?)((Control?)sender)?.Tag ?? 0);
 
 	private void ExpSwapped(object? sender, EventArgs e) {
 		int s = (int?)((Control?)sender)?.Tag ?? 0;
@@ -152,7 +161,7 @@ public partial class ExpressionControl : ParentControl {
 		Eval(s + 1);
 	}
 	private void ExpDeleted(object? sender, EventArgs e) {
-		int d = ((int?)((Control?)sender)?.Tag) ?? 0;
+		var d = ((int?)((Control?)sender)?.Tag) ?? 0;
 		// delete with invisible panel, so they don't trigger reevaluations mid-delete
 		Visible = false;
 		SuspendLayout();
@@ -171,7 +180,7 @@ public partial class ExpressionControl : ParentControl {
 		if (_expressionRows.Count > 0)
 			_swaps.RemoveAt(_expressionRows.Count - 1);
 		// remake layout without re-evaluation:
-		_parent.SetMinSize();
+		FormP?.SetMinSize();
 		CoreLayout();
 		ResumeLayout(false);
 		//outerPanel.ResumeLayout(false);
@@ -180,24 +189,15 @@ public partial class ExpressionControl : ParentControl {
 		//innerPanel.PerformLayout();
 	}
 
-	private static string Clean(string t) // forbidden symbols in expressions
-		=> //t.ToLower()//.Replace(":", "").Replace(";", "").Replace("|", "")
-		t.Replace("\t", "").Replace("\r", "").Replace("\n", "");
+	//private static string Clean(string t) // forbidden symbols in expressions
+	//	=> //t.ToLower()//.Replace(":", "").Replace(";", "").Replace("|", "")
+	//	t.Replace("\t", "").Replace("\r", "").Replace("\n", "");
 	public override Size GetSize() => new(
-		Math.Max((Pad << 2) + Pad + 48 + (RowHeight << 1) + InputSize, 320),
-		(Pad << 2) + (_expressionRows.Count << 1) * (RowHeight + Pad));
-	
-	public override void SetDark(bool dark) {
-		if (dark) 
-			SetColors(Color.Black, Color.White);
-		else 
-			SetColors(Color.White, Color.Black);
-		return;
-		void SetColors(Color back, Color fore) {
-			foreach (var exp in _expressionRows) {
-				exp.Del.BackColor = exp.Expression.BackColor = back; 
-				exp.Del.ForeColor = exp.Expression.ForeColor = fore;
-			}
-		}
-	}
+		Math.Max((Pad << 2) + Pad + 48 + (RowHeight << 1) + InputSize, 240),
+		(Pad << 2) + (1 + (_expressionRows.Count << 1)) * (RowHeight + Pad));
+	public override void SetDark(bool dark) => base.SetDark(_dark = dark);
+	/*private void SetDark(ExpRow exp) {
+		exp.Del.BackColor = exp.Expression.BackColor = _bf.b; 
+		exp.Del.ForeColor = exp.Expression.ForeColor = _bf.f;
+	}*/
 }

@@ -23,7 +23,7 @@ public abstract partial class Comparser<T>{
 		// In a string data type, it contains the string value
 		public string String; // The original text that this input has been parsed from, even if it fails parsing
 		public override string ToString() => CollapseScalar(this).Pv(-1);
-		public string ToString(int decimals) => Text + " = " + CollapseScalar(this).Pv(decimals);
+		public string ToString(int decimals, bool pure) => pure ? CollapseScalar(this).Pv(decimals) : Text + " = " + CollapseScalar(this).Pv(decimals);
 		private string Pv(int decimals, string a = "", string b = "") {
 			if (Values.Length <= 0)
 				return Error > 0 ? PrintError() : Leaf.IsNaN() && Text != "" ? Text : Leaf.ToString(decimals);

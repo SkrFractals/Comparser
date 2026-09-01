@@ -3,13 +3,13 @@ namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 		#region Call Functions
 	// abstract parent
-	public abstract class CallFunction(int cacheSize = 1) {
+	public abstract class CallFunction(int cacheSize = 0) {
 		//protected readonly I[]? Def = def;
 		//public readonly string Name = name;
 		public readonly EvalCache Cache = new(cacheSize);
-		public abstract Expression Call(Comparser<T> context, string text, ref int from, Value args);
+		public abstract Expression Call(Reader read, Value args);
 		// how to use: e.Insert(args, e.GetEval(args) ? e.result.Eval : base.Eval([], args).v); 
-		public class EvalCache(int size = 1) {
+		public class EvalCache(int size = 0) {
 			//private List<(Value args, Value eval)> Debug = []; // TODO remove this when I'm finished debugging
 			private int _filled;
 			private Evaluated? _cache;
@@ -48,22 +48,17 @@ public abstract partial class Comparser<T> {
 	}
 	// Expressions.Functions:
 	private class Ce(Type type, int cache = 1) : CallFunction(cache) {
-		public override Expression Call(Comparser<T> context, string text, ref int from, Value args) {
-			object[] a = [context, this, text, from, args]; // activator arguments
-			var n = (FunctionExpression)Activator.CreateInstance(type, a)!;
-			from = (int)a[3]; // ref string text
-			return n;
-		}
+		public override Expression Call(Reader read, Value args) => (FunctionExpression)Activator.CreateInstance(type, read, this, args)!; //from = (int)a[3]; // ref int from
 	}
 	// Single/Double/Triple argument delegated functions
 	public class Cf(Func<T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
-		public override Expression Call(Comparser<T> context, string text, ref int from, Value args) => new FuncOperator(context, this, del, op, text, ref from, args);
+		public override Expression Call(Reader read, Value args) => new FuncOperator(read, this, del, op, args);
 	}
 	public class Cf2(Func<T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
-		public override Expression Call(Comparser<T> context, string text, ref int from, Value args) => new FuncOperator2(context, this, del, op, text, ref from, args);
+		public override Expression Call(Reader read, Value args) => new FuncOperator2(read, this, del, op, args);
 	}
 	public class Cf3(Func<T, T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
-		public override Expression Call(Comparser<T> context, string text, ref int from, Value args) => new FuncOperator3(context, this, del, op, text, ref from, args);
+		public override Expression Call(Reader read, Value args) => new FuncOperator3(read, this, del, op, args);
 	}
 	#endregion
 
@@ -71,8 +66,8 @@ public abstract partial class Comparser<T> {
 	protected abstract class FunctionExpression : Expression {
 		private readonly CallFunction _parent;
 		protected readonly OpCode OpCode;
-		protected FunctionExpression(Comparser<T> context, CallFunction parent, OpCode op, string text, ref int from, Value args) 
-			: base(context, text, ref from, out _, args) => (_parent, OpCode) = (parent, op);
+		protected FunctionExpression(Reader read, CallFunction parent, OpCode op, Value args) 
+			: base(read, out _, args) => (_parent, OpCode) = (parent, op);
 		protected FunctionExpression(Comparser<T> context, CallFunction parent, OpCode op, Value input) 
 			: base(context, input) => (_parent, OpCode) = (parent, op);
 		public override Value Eval(ushort depth, Value args/*, string text = ""*/) {
@@ -82,19 +77,19 @@ public abstract partial class Comparser<T> {
 		protected abstract Value EvalF(ushort depth, Value v, Value args);
 		public override GpuValue GpuParse(ushort depth) => new(OpCode, base.GpuParse(depth));
 	}
-	private class FuncTextOperator(Comparser<T> context, CallFunction parent, Func<ushort, string, Value> del, string text, ref int from, Value args)
-		: FunctionExpression(context, parent, OpCode.NotAvailable, text, ref from, args) {
+	private class FuncTextOperator(Reader read, CallFunction parent, Func<ushort, string, Value> del, Value args)
+		: FunctionExpression(read, parent, OpCode.NotAvailable, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args) => Value.OperateString(depth, v, del);
 	}
-	private class FuncEval(Comparser<T> context, CallFunction parent, string text, ref int from, Value args, int cache = 0) : FuncTextOperator(context, parent, 
-			(d, x) => d > context._stackOverflow ? StackOverflow : new Expression(context, x, args, cache).Eval((ushort)(1 + d), args), text, ref from, args) { }
+	private class FuncEval(Reader read, CallFunction parent, Value args, int cache = 0) : FuncTextOperator(read, parent, 
+			(d, x) => d > read.Context._stackOverflow ? StackOverflow : new Expression(new(read.Context, x, read.Cancel), out _, args, cache).Eval((ushort)(1 + d), args), args) { }
 	private class FuncOperator : FunctionExpression {
 		private readonly Func<T, T> _del;
-		public FuncOperator(Comparser<T> context, CallFunction parent, Func<T, T> del, OpCode op, string text, ref int from, Value args) : base(context, parent, op, text, ref from, args) => _del = del;
+		public FuncOperator(Reader read, CallFunction parent, Func<T, T> del, OpCode op, Value args) : base(read, parent, op, args) => _del = del;
 		public FuncOperator(Comparser<T> context, CallFunction parent, Func<T, T> del, OpCode op, Value input) : base(context, parent, op, input) => _del = del;
 		override protected Value EvalF(ushort _, Value v, Value args) => Value.Operate(v, _del);
 	}
-	private class FuncOperator2(Comparser<T> context, CallFunction parent, Func<T, T, T> comp, OpCode op, string text, ref int from, Value args) : FunctionExpression(context, parent, op, text, ref from, args) {
+	private class FuncOperator2(Reader read, CallFunction parent, Func<T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort _, Value v, Value args) {
 			switch (v.Values.Length) {
 			case 0: return v;
@@ -107,7 +102,7 @@ public abstract partial class Comparser<T> {
 			}
 		}
 	}
-	private class FuncOperator3(Comparser<T> context, CallFunction parent, Func<T, T, T, T> comp, OpCode op, string text, ref int from, Value args) : FunctionExpression(context, parent, op, text, ref from, args) {
+	private class FuncOperator3(Reader read, CallFunction parent, Func<T, T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort _, Value v, Value args) => v.Values.Length == 3 ? Value.Operate3(v.Values[0], v.Values[1], v.Values[2], comp) : new();
 	}
 	#endregion
@@ -127,38 +122,53 @@ public abstract partial class Comparser<T> {
 		}
 		public override GpuValue GpuParse(ushort depth) => new([GpuParseValue(depth, indices), base.GpuParse(depth)], OpCode.Index);
 	}
-	private class FuncCat(Comparser<T> context, CallFunction parent, string text, ref int from, Value args) : FunctionExpression(context, parent, OpCode.Cat, text, ref from, args) {
+	private class FuncCat(Reader read, CallFunction parent, Value args) : FunctionExpression(read, parent, OpCode.Cat, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args) {
 			List<Value> cat = [];
 			if (0 == v.Values.Length) cat.Add(new(v.Leaf));
-			else Operate(ref cat, v);
+			else Operate(v);
 			return new([.. cat]);
-		}
-		private static void Operate(ref List<Value> cat, Value v) {
-			var vV = v.Values;
-			var s = vV.Length;
-			if (0 == s) cat.Add(new(v.Leaf));
-			else for (var i = 0; i < s; ++i)
-				Operate(ref cat, vV[i]);
+			void Operate(Value r) {
+				var vV = r.Values;
+				var s = vV.Length;
+				if (0 == s) cat.Add(new(r.Leaf));
+				else for (var i = 0; i < s; ++i)
+					Operate(vV[i]);
+			}
 		}
 	}
 	// counts the elements in a vector
-	private class FuncCount(Comparser<T> context, CallFunction parent, string text, ref int from, Value args) : FunctionExpression(context, parent, OpCode.Count, text, ref from, args) {
+	private class FuncCount : FunctionExpression {
+		private FuncCount(Reader read, CallFunction parent, Value args) : base(read, parent, OpCode.Count, args) { }
+		public FuncCount(Comparser<T> context, CallFunction parent, Value args) : base(context, parent, OpCode.Count, args) { }
 		override protected Value EvalF(ushort depth, Value v, Value args) => new(T.MakeR(Math.Max(1, CollapseScalar(v).Values.Length)));
+	}
+	private class FuncCatCount : FunctionExpression {
+		private FuncCatCount(Reader read, CallFunction parent, Value args) : base(read, parent, OpCode.Count, args) { }
+		public FuncCatCount(Comparser<T> context, CallFunction parent, Value args) : base(context, parent, OpCode.Count, args) { }
+		override protected Value EvalF(ushort depth, Value v, Value args) => new(T.MakeR(Operate(v)));
+		private static int Operate(Value v) {
+			var vV = v.Values;
+			int c = 0, s = vV.Length;
+			if (0 == s) return 1;
+			for (var i = 0; i < s; ++i)
+				c += Operate(vV[i]);
+			return c;
+		}
 	}
 	// iterative sum/product: name(<index>,<from>,<to>,expression(k<index>))
 	// "to" can be smaller than "from", works both ways (does not return additive/multiplicative identity when in the wrong order, just iterates backwards)
 	private abstract class Iterator : FunctionExpression {
-		protected Iterator(Comparser<T> context, CallFunction parent, OpCode op, string text, ref int from, Value args) : base(context, parent, op, text, ref from, args) {
+		protected Iterator(Reader read, CallFunction parent, OpCode op, Value args) : base(read, parent, op, args) {
 			var iteratorIndex = args.Values.Length;
 			if (V.Values.Length != 4) {
-				_expr = new(Context, "", _args = None);
+				_expr = new(new(read.Context, "", read.Cancel), out _, _args = None);
 				return;
 			}
 			_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
 			_args.Values[iteratorIndex] = new(T.NaN(), 0, V.Values[0].Text);
-			_expr =  new(Context, V.Values.Length == 4 ? V.Values[3].Text : "", _args);
+			_expr =  new(new(read.Context, V.Values.Length == 4 ? V.Values[3].Text : "", read.Cancel), out _, _args);
 		}
 		private readonly Expression _expr;
 		private readonly Value _args;
@@ -197,7 +207,7 @@ public abstract partial class Comparser<T> {
 			return a;
 		}
 	}
-	private abstract class CollapseIterator(Comparser<T> context, CallFunction parent, OpCode op, string text, ref int from, Value args) : Iterator(context, parent, op, text, ref from, args) { 
+	private abstract class CollapseIterator(Reader read, CallFunction parent, OpCode op, Value args) : Iterator(read, parent, op, args) { 
 		override protected Value Result(Func<int, Value> eval, int from, int to) {
 			var sum = eval(from).Copy(); // prepare first iteration as the initial vector
 			Iterate(IterK, from, to);
@@ -211,17 +221,17 @@ public abstract partial class Comparser<T> {
 	}
 	// return a vector of sums of iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (x,2x); sum(0,1,3,exp(k0)) => (1+2+3,2+4+6) => (6,12); // 6 is the sum of x term, evaluated with k0=1..3, 12 is the sum of 2x term, evaluated with k0=1..3
-	private class Sum(Comparser<T> context, CallFunction parent, string text, ref int from, Value args) : CollapseIterator(context, parent, OpCode.Sum, text, ref from, args) { 
+	private class Sum(Reader read, CallFunction parent, Value args) : CollapseIterator(read, parent, OpCode.Sum, args) { 
 		override protected void Op(ref Value result, Value iteration) => result = Value.Operate2(result, iteration, INumber<T>.Add, (x, y) => x + y);
 	}
 	// return a vector of products of iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (x,2x); prod(0,1,3,exp(k0)) => (1*2*3,2*4*6) => (6,48); // 6 is the product of x term, evaluated with k0=1..3, 48 is the product of 2x term, evaluated with k0=1..3
-	private class Product(Comparser<T> context, CallFunction parent, string text, ref int from, Value args) : CollapseIterator(context, parent, OpCode.Prod, text, ref from, args) {
+	private class Product(Reader read, CallFunction parent, Value args) : CollapseIterator(read, parent, OpCode.Prod, args) {
 		override protected void Op(ref Value result, Value iteration) => result = Value.Operate2(result, iteration, INumber<T>.Mul, (x, _) => x);
 	}
 	// returns a vector of first elements of evaluated iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (3x,2x,4x); vector(0,1,3,exp(k0)) => (3*1,3*2,3*3) => (3,6,9); // only took the first 3x term, evaluated with k0=1..3
-	private class Vector(Comparser<T> context, CallFunction parent, string text, ref int from, Value args) : Iterator(context, parent, OpCode.Vec, text, ref from, args) {
+	private class Vector(Reader read, CallFunction parent, Value args) : Iterator(read, parent, OpCode.Vec, args) {
 		override protected Value Result(Func<int, Value> eval, int from, int to) { 
 			var size = 1 + Math.Abs(from - to);
 			Value sum = new(new Value[size]) { Values = { [0] = eval(from)/*.Values[0]*/ } };
@@ -235,11 +245,11 @@ public abstract partial class Comparser<T> {
 
 	#region Function Expressions - Custom
 	// User defined custom expression functions
-	public class CallCustom(/*string name, */(Value input, Expression def, Expression? condition)[] def, int cache = 1) : CallFunction(cache) {
+	public class CallCustom(/*string name, */(Value input, Expression def, Expression? condition)[] def, int cache = 0) : CallFunction(cache) {
 		public (Value input, Expression def, Expression? condition)[] Def = def;
-		public override Expression Call(Comparser<T> context, string text, ref int from, Value args) => new CustomFunc(context, this, text, ref from, args);
+		public override Expression Call(Reader read, Value args) => new CustomFunc(read, this, args);
 	}
-	private class CustomFunc(Comparser<T> context, CallCustom parent, string text, ref int from, Value args) : FunctionExpression(context, parent, OpCode.Call, text, ref from, args) {
+	private class CustomFunc(Reader read, CallCustom parent, Value args) : FunctionExpression(read, parent, OpCode.Call, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args) {
 			if (depth > Context._stackOverflow)
 				return StackOverflow;

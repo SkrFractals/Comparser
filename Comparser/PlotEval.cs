@@ -9,10 +9,10 @@ public abstract partial class Comparser<T> {
 		private readonly Comparser<T> _context;
 
 		private static readonly Value Xyt = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "t")]);
-		public PlotEval(Comparser<T> context, string text) => _exp = new(_context = context, _text = text, Xyt);
-		public void ReParse(string text) {
+		public PlotEval(CancellationToken cancel, Comparser<T> context, string text) => _exp = new(new(_context = context, _text = text, cancel), out _, Xyt);
+		public void ReParse(CancellationToken cancel, string text) {
 			if (_text == (_text = text)) return;
-			_exp = new(_context, text, Xyt);
+			_exp = new(new(_context, text, cancel), out _, Xyt);
 		}
 		private PlotFrame[] _plot = [];
 

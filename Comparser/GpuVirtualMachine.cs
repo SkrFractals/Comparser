@@ -123,7 +123,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					--nest;
 					recurse = Collapse(recurse);
 					if (recurse.Values.Length == 0)
-						return i == 0 && nest == 0 ? EvalArg(recurse, input) : new(T.NaN());
+						return i == 0 && nest == 0 ? Collapse(EvalArg(recurse, input)) : new(T.NaN());
 					var fail = recurse.Values.Length <= i;
 					if (nest == 0)
 						return fail ? new(T.NaN()) : recurse.Values[i];
@@ -133,8 +133,12 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 							return new(arg.Leaf);
 						var argDef = _definitions[arg.Def][0];
 						var argPtr = argDef.definition;
-						return depth > _stackOverflow ? new() : Eval(args, ref argPtr, (ushort)(1 + depth));
-						//? EvalValue((ushort)(1 + depth), arg, args)
+						//return depth > _stackOverflow ? new() : Eval(args, ref argPtr, (ushort)(1 + depth));
+						if (depth > _stackOverflow) return new();
+						// TODO check if this correctly caches default args:
+						var evalArg = Eval(args, ref argPtr, (ushort)(1 + depth));
+						arg.Values = [evalArg];
+						return evalArg;
 					}
 			}
 			case OpCode.Leaf:

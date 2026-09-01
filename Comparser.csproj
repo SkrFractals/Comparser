@@ -11,22 +11,28 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Update="ParentForm.cs">
+    <Compile Update="Controls\ComparserControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\ExpressionControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\MenuControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\ParentControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\SettingsControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Controls\ParentForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="ComparserControl.cs">
+    <Compile Update="Controls\LogControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="SettingsControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="ParentControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="MenuControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="ExpressionControl.cs">
+    <Compile Update="Forms\LineNumberControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
   </ItemGroup>

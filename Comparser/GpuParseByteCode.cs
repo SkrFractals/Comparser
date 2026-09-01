@@ -8,7 +8,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			Iln10 = new(T.MakeR(1.0/Math.Log(10))),
 			QTau = new(T.MakeR(Math.PI / 2));
 		
-		public bool ParseByteCode(Comparser<T> context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {
+		public bool ParseByteCode(CancellationToken cancel, Comparser<T> context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {
 			
 			List<byte> header = []; // header string
 			WriteInt(INumber<T>.ToBytes(T.Zero()).Length, header); // leaf size -> header
@@ -22,34 +22,34 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			// replacement custom functions (those that branch or use the x argument multiple times):
 			Value x = new([new(T.NaN(), 0, "x")]), // passable argument x
 				x0 = new([new(T.Zero(), 0, "x")]); // pattern match x as 0
-			CallCustom sinc = new([(x0, new(context, "1", None), null), 
-					(x, new(context, "sin(x)/x", x), null)]),
+			CallCustom sinc = new([(x0, new(new(context, "1", cancel), out _, None), null), 
+					(x, new(new(context, "sin(x)/x", cancel), out _, x), null)]),
 				// alternative using condition instead of pattern matching: var sinc = new CallCustom([(x, new(context, "sin(x)/x", x), new(context, "x==0", x))]);
-				nsinc = new([(x0, new(context, "1", None), null), 
-					(x, new(context, "sin(pix)/(pix)", x), null)]),
-				sinhc = new([(x0, new(context, "1", None), null), 
-					(x, new(context, "sinh(x)/x", x), null)]),
-				nsinhc = new([(x0, new(context, "1", None), null),
-					(x, new(context, "sinh(pix)/(pix)", x), null)]),
-				cosc = new([(x0, new(context, "0", None), null), 
-					(x, new(context, "(1-cos(x))/x", x), null)]),
-				ncosc = new([(x0, new(context, "0", None), null),
-					(x, new(context, "(1-cos(pix))/(pix)", x), null)]),
-				coshc = new([(x0, new(context, "0", None), null),
-					(x, new(context, "(1-cosh(x))/x", x), null)]),
-				ncoshc = new([(x0, new(context, "0", None), null),
-					(x, new(context, "(1-cosh(pix))/(pix)", x), null)]),
-				tanh = new([(x, new(context, "sinh(x)/cosh(x)", x), null)]),
-				coth = new([(x, new(context, "cosh(x)/sinh(x)", x), null)]),
-				tan = new([(x, new(context, "sin(x)/cos(x)", x), null)]),
-				cot = new([(x, new(context, "cos(x)/sin(x)", x), null)]),
-				frac = new([(x, new(context, "x-trunc(x)", x), null)]),
-				sgn = new([(x0, new(context, "0", None), null), 
-					(x, new(context, "x/abs(x)", x), null)]),
-				immag = new([(x, new(context, "abs(x-re(x))", x), null)]),
-				sqr = new([(x, new(context, "xx", x), null)]),
-				cub = new([(x, new(context, "xxx", x), null)]),
-				quart = new([(x, new(context, "sqr(sqr(x))", x), null)]);
+				nsinc = new([(x0, new(new(context, "1", cancel), out _, None), null), 
+					(x, new(new(context, "sin(pix)/(pix)", cancel), out _, x), null)]),
+				sinhc = new([(x0, new(new(context, "1",  cancel), out _,None), null), 
+					(x, new(new(context, "sinh(x)/x",  cancel), out _,x), null)]),
+				nsinhc = new([(x0, new(new(context, "1",  cancel), out _,None), null),
+					(x, new(new(context, "sinh(pix)/(pix)", cancel), out _, x), null)]),
+				cosc = new([(x0, new(new(context, "0", cancel), out _, None), null), 
+					(x, new(new(context, "(1-cos(x))/x",  cancel), out _,x), null)]),
+				ncosc = new([(x0, new(new(context, "0", cancel), out _, None), null),
+					(x, new(new(context, "(1-cos(pix))/(pix)", cancel), out _, x), null)]),
+				coshc = new([(x0, new(new(context, "0", cancel), out _, None), null),
+					(x, new(new(context, "(1-cosh(x))/x", cancel), out _, x), null)]),
+				ncoshc = new([(x0, new(new(context, "0",  cancel), out _,None), null),
+					(x, new(new(context, "(1-cosh(pix))/(pix)", cancel), out _, x), null)]),
+				tanh = new([(x, new(new(context, "sinh(x)/cosh(x)",  cancel), out _,x), null)]),
+				coth = new([(x, new(new(context, "cosh(x)/sinh(x)", cancel), out _, x), null)]),
+				tan = new([(x, new(new(context, "sin(x)/cos(x)",  cancel), out _,x), null)]),
+				cot = new([(x, new(new(context, "cos(x)/sin(x)",  cancel), out _,x), null)]),
+				frac = new([(x, new(new(context, "x-trunc(x)", cancel), out _, x), null)]),
+				sgn = new([(x0, new(new(context, "0", cancel), out _, None), null), 
+					(x, new(new(context, "x/abs(x)", cancel), out _, x), null)]),
+				immag = new([(x, new(new(context, "abs(x-re(x))",  cancel), out _,x), null)]),
+				sqr = new([(x, new(new(context, "xx", cancel), out _, x), null)]),
+				cub = new([(x, new(new(context, "xxx", cancel), out _, x), null)]),
+				quart = new([(x, new(new(context, "sqr(sqr(x))",  cancel), out _,x), null)]);
 			#endregion
 			
 			#region Parse

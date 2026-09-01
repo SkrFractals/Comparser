@@ -1,4 +1,5 @@
-﻿namespace Comparser.Comparser;
+﻿using Comparser.Comparser.Numbers;
+namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public class Expression {
 		
@@ -6,10 +7,10 @@ public abstract partial class Comparser<T> {
 		// Contains user-defined custom function
 		protected readonly Comparser<T> Context;
 		// Parsed and evaluated data
-		protected readonly Value V;
+		public readonly Value V;
 		// Cache for remembering recently evaluated arguments
 		private readonly CallFunction.EvalCache _cache;
-		public readonly List<(int start, ParseDictionary.Type color)> Colors = [];
+		//public readonly List<(int start, ParseDictionary.Type color)> Colors = [];
 		#endregion
 		
 		#region Evaluations
@@ -91,21 +92,17 @@ public abstract partial class Comparser<T> {
 		/// <summary>
 		/// Reads and parses an expression string
 		/// </summary>
-		/// <param name="context">context that contains custom callable functions/constants</param>
-		/// <param name="text">string to parse</param>
-		/// <param name="from">starting index in the text to parse, will return how much of the text was parsed</param>
+		/// <param name="read">parser class providing the Comparser context and read stream</param>
 		/// <param name="nextOp">returns operand's operator if that operand should be left-associated with my term, will encapsulate previous operator into my term, and use nextOp on next operand</param>
 		/// <param name="args">argument value, will substitute every x in the string</param>
 		/// <param name="cache">cache size of this new Expression</param>
 		/// <param name="left">what order of operations was my parent's operator? Used to test for associativity</param>
-		public Expression(Comparser<T> context, string text, ref int from, out Operator nextOp, Value args, int cache = 0, byte left = 0, bool isArgument = false) {
-			
-			// Get and set context
-			if ((Context = context)._caseInsensitive)
-				text = text.ToLower();
+		/// <param name="isArgument">is this an argument parse?</param>
+		public Expression(Reader read, out Operator nextOp, Value args, int cache = 0, OpOrder left = 0, bool isArgument = false) {
+			Context = read.Context;
 			
 			// Init variables
-			int startR, start = from, error = 0;
+			int startR, start = read.From, error = 0;
 			_cache = new(cache);
 			Value /*t = new(),*/ r;
 			List<Value> expr = [];
@@ -113,66 +110,104 @@ public abstract partial class Comparser<T> {
 			// Parse Arguments:
 			ParseDictionary pArgs = new(); //args = UnCollapseScaler(args);
 			Nest();
-			
+			read.TrimStart();
+			nextOp = new();
 			do { // Read vector loop:
-				startR = from;
-				Read(ref from, out nextOp);
-				if (r.String == "") r.String = text[startR..from]; // if it didn't remember pre-defaultArg string, it will take it here
+				startR = read.From;
+				Read(out nextOp);
+				if (r.String == "") r.String = read.Uncomment(startR, read.From); // if it didn't remember pre-defaultArg string, it will take it here
 				error |= r.Error;
-				Trim(ref from);
-			} while (left == 0 && Char(ref from, ',')); // only left == 0 (aka top layer expression) should accept ',' for a next value
+				read.TrimStart();
+				//read.CharAtRel('\n', 0)
+			}
+			// only left == 0 (aka top layer expression) should accept ',' for a next value
+			while(left == 0 && !read.GotoFirstFailed(0,[','], 1, out _, out _));
 			
 			// Save vector to my values:
-			V = new([..expr], error, text[start..from]);
+			V = new([..expr], error, read.Uncomment(start, read.From));
 			return;
 
-			void Read(ref int from, out Operator nextOp) {
+			void Read(out Operator nextOp) {
 				// Init read
 				r = new();
-				//Nest a = new(255);
 				expr.Add(r);
 				nextOp = r.Op = new();
-				Trim(ref from);
-				r.Op.Negative = Char(ref from, '-');
+				r.Op.Negative = Char('-');
 				r.Leaf = T.NaN();
-				Trim(ref from);
+				read.TrimStart();
 				// Try parenthesis/function/number/constant/argument:
 				int[] argNest = [];
-				if ((!Char(ref from, '(') || SubTerm(out r.Term, ref from, ')'))
-					&& TryFuncFailed(ref from) // _term = default function
-					&& (Number(ref from, out var n) // _value = number
-						|| Argument(ref from, ref argNest) // function arguments
-						|| Constant(ref from, out n) // _value = constant
-					))
-					r.Term = new(context, argNest.Length == 0 ? n : new(text[startR..from], argNest), cache); //r.Value = n; // _value = argument (x/y/z/t...)
-				else if (Fail(r) && F(ref from)) { // failed to read a term/value
-					if(isArgument)
-						AddColors(startR, from, ParseDictionary.Type.Arg); // color as argument
-					if (text.Length <= from || text[from] != ':' || !isArgument)
-						return;
-					r.String = text[startR..(from++)]; // remember string before ':'
-					r.Operand = new(context, text, ref from, out _, new([..expr]), cache); // try to read argument default new([..expr]) is to let it reference already read arguments
-					return; // false; //  unexpected end fail
-				}
-				Trim(ref from);
-				if (End(ref from)) // unexpected ')', or no op, and return back successful
-					return; // true; 
-				// Read operators/comments:
+
+				// unary operators:
 				Operator o;
-				while ((o = text[from] switch {
-					'+' => new Add(), '-' => new Sub(), '*' => new Mul(), '/' => new Div(), '\\' => new LDiv(), '^' => new Pow(), '$' => new Root(), '%' => new Mod(),
-					'=' => new Equal(), '<' => new Less(CharAt(text,'=',from + 1)), '>' => new More(CharAt(text,'=',from + 1)),
-					'[' => new Index(), '!' => new Exclamation(), _ => new Mul(false)
+				if (End(false)) // unexpected ')', or no op, and return back successful
+					return; // true; 
+				while ((o = read.nextChar switch {
+					'/' => new Div(), '\\' => new LDiv(), _ => new()
 				}).GetType() switch {
-					var x when x == typeof(Exclamation) => NotUnequal(from) && ++from > 0 && Encapsulate(new FuncOperator(context, Fact, T.Factorial, OpCode.Factorial, expr[^1]), from), // factorial
-					var x when x == typeof(Index) => ExtractTerms(ref from), // index
-					var x when x == typeof(Div) => CharAt(text, '*', from + 1) && Comment(ref from), // comment
+					var x when x == typeof(Div) => read.IsComment(), // comment
 					_ => false
 				}) {
-					Trim(ref from);
-					if (o.Order == 0 || from >= text.Length) return; // true;
+					if (o.Order == 0)
+						return;
+					read.TrimStart();
+					if (read.From >= read.Text.Length) return; // true;
 				}
-				from += o.EatOp; // eat operator
+				// no unary:
+				if (o.Order == 0) {
+					if ((!Char('(') || read.TrimStart(1) && SubTerm(out r.Term, ')'))
+						&& TryFuncFailed() // _term = default function
+						&& (Number(out var n) // _value = number
+							|| Argument(ref argNest) // function arguments
+							|| Constant(out n) // _value = constant
+						))
+						r.Term = new(Context, argNest.Length == 0 ? n : new(read.Uncomment(startR, read.From), argNest), cache); //r.Value = n; // _value = argument (x/y/z/t...)
+					else if (Fail(r) && F()) { // failed to read a term/value
+						if (isArgument) {
+							read.AddC(startR, read.From, ParseDictionary.Type.Arg); // color as argument
+							read.TrimStart(1);
+						}
+						r.String = TrimEnd(read.Text[startR..read.From], 1); // remember string before ':'
+						//Trim(ref from);
+						if (read.Text.Length <= read.From || read.nextChar != ':' || !isArgument)
+							return;
+						++read.From; // eat default argument colon
+						// Try to read argument default new([..expr]) is to let it reference already read arguments:
+						read.TrimStart(1);
+						r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
+						// CollectColors
+						return; // false; //  unexpected end fail
+					}
+					read.TrimStart();
+				} else {
+					r.Term = new(Context, new(T.MakeR(1))); // unary inverse
+					read.TrimStart(1);
+				}
+
+				if (End(false)) // unexpected ')', or no op, and return back successful
+					return; // true; 
+				// Read operators/comments:
+				while ((o = read.nextChar switch {
+					'+' => new Add(), '-' => new Sub(), '*' => new Mul(), '/' => new Div(), '\\' => new LDiv(), '^' => new Pow(), '$' => new Root(read.CharAtRel('$', 1)), '%' => new Mod(read.CharAtRel('%', 1)),
+					'=' => new Equal(), '<' => new Less(read.CharAtRel('=', 1)), '>' => new More(read.CharAtRel('=', 1)),
+					'[' => new Index(), '!' => new Exclamation(), '&' => new Sqr(), '~' => new Conj(), '#' => new Count(true), '@' => new Abs(true), '|' => new AbsRi(true), _ => new Mul(false)
+				}).GetType() switch {
+					var x when x == typeof(Sqr) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpSqr, T.Sqr, OpCode.Sqr, expr[^1])), // sqr
+					var x when x == typeof(Conj) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpConj, INumber<T>.Conj, OpCode.Conj, expr[^1])), // conjugate
+					var x when x == typeof(Exclamation) => DoubleOp('=', new Exclamation(OpOrder.Compare)) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpFact, T.Factorial, OpCode.Factorial, expr[^1])), // factorial
+					var x when x == typeof(Index) => ExtractTerms(), // index
+					var x when x == typeof(Div) => read.IsComment(), // comment
+					var x when x == typeof(Count) => DoubleOp('#', new Count()) && ++read.From > 0 && Encapsulate(new FuncCount(Context, OpCount, expr[^1]))
+						|| (read.From += 2) > 0 && Encapsulate(new FuncCatCount(Context, OpCatCount, expr[^1])), // count / catCount
+					var x when x == typeof(Abs) => DuO('@', new Abs(), OpAbs, (z) => T.MakeR(INumber<T>.Abs(z)), OpCode.Abs, OpSqrAbs, INumber<T>.SqrAbs, OpCode.SqrAbs), // abs / sqrAbs
+					var x when x == typeof(AbsRi) => DuO('|', new AbsRi(), OpAbsRi, T.AbsComp, OpCode.Absri, OpSign, INumber<T>.Sign, OpCode.Sgn), // count / catCount
+					_ => false
+				}) {
+					read.TrimStart();
+					if (o.Order == 0 || read.From >= read.Text.Length) return; // true;
+				}
+				read.From += o.EatOp; // eat operator
+				read.TrimStart(o.EatOp > 0 ? 1 : 0);
 				o.Negative = r.Op.Negative; // move negative flag to the new operator
 				if (LeftAssociate(o)) {
 					nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
@@ -180,17 +215,19 @@ public abstract partial class Comparser<T> {
 				}
 				// Read operand:
 				while (true) {
-					if (Fail((r.Operand = new(context, text, ref from, out o, args, cache, (r.Op = o).Order)).V)) {
-						if (r.Op.EatOp >= 0 && F(ref from))
+					var fail = Fail((r.Operand = new(read, out o, args, cache, (r.Op = o).Order)).V);
+					//CollectColors(r.Operand);
+					if (fail) {
+						if (r.Op.EatOp > 0 && F()) {
 							return; // false; // failed to read operand
+						}
 						r.Op = new();
 						break; // if it was operator-less multiplication - assume it was an expression end instead
 					}
-					CollectColors(r.Operand);
 					if (o.Order == 0) break;
 					// operand's next op has lower or equal order priority:
 					// encapsulate my term into another term (wrap my term into parentheses), take the next operator and find the next operand to use it on
-					_ = Encapsulate(new(context, expr[^1], cache), from);
+					_ = Encapsulate(new(Context, expr[^1], cache));
 					if (!LeftAssociate(o))
 						continue; // need to test associativity again, to let it recurse backwards. otherwise 2^2^2+1 would be 2^(2^2+1)
 					nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
@@ -199,174 +236,228 @@ public abstract partial class Comparser<T> {
 				return; // true;
 
 				//bool IsChar(int from, char c = '=') => from < text.Length && text[from] == c;
-				bool NotUnequal(int from) {
-					if (!CharAt(text, '=', from + 1))
+				bool DuO(char c, Operator newOp, CallFunction parent1, Func<T, T> del1, OpCode op1, CallFunction parent2, Func<T, T> del2, OpCode op2)
+					=> DoubleOp(c, newOp) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent1, del1, op1, expr[^1]))
+						|| ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent2, del2, op2, expr[^1]));
+				bool DoubleOp(char c, Operator newOp) {
+					if (!read.CharAtRel(c, 1))
 						return true; // must be a factorial, keep it
-					o = new Exclamation(1); // must be !=, change into that
+					o = newOp; // must be !=, change into that
 					return false;
 				}
-				bool Comment(ref int from) {
-					--from; // eat initial /
+				//bool IsComment(ref int from, ref int line) => read.CharAtRel('*', 1) && !Context.GotoFirstFailed(cancel, text, ref from, ref line, Colors, [],1,out _, out _, true);
+				/*bool Comment(ref int from) {
+					var before = from;
+					++from; // eat initial /
 					for (var go = true; go;) {
 						var i = text.IndexOf('/', from);
 						if (i < 0) {
 							from = text.Length;
 							o = new();
+							AddColors(before, from, ParseDictionary.Type.Comment);
 							return true;
 						}
 						go = text[i - 1] != '*';
 						from += i - from + 1; //Eat((byte)(i + 1), ref text);
 					}
+					AddColors(before, from, ParseDictionary.Type.Comment);
+					return true;
+				}*/
+				bool ExtractTerms() {
+					++read.From;
+					if (!SubTerm(out var indices, ']'))
+						return Encapsulate(new FuncIndex(Context, expr[^1], indices.V));
+					o = new(); // failed to parse indices
 					return true;
 				}
-				bool ExtractTerms(ref int from) {
-					++from;
-					if (SubTerm(out var indices, ref from, ']'))
-						o = new(); // failed to parse indices
-					return Encapsulate(new FuncIndex(context, expr[^1], indices.V), from);
-				}
-				bool SubTerm(out Expression readTo, ref int from, char req) {
-					var fail = Fail((readTo = new(context, text, ref from, out _, args)).V);
-					CollectColors(readTo);
+				bool SubTerm(out Expression readTo, char req) {
+					var fail = Fail((readTo = new(read, out _, args)).V);
+					//CollectColors(readTo);
 					//r.String = r.Text += readTo.V.Text;
-					return (FailRequiredSymbol(req, ref from) || fail || readTo.V.Values.Length == 0) && F(ref from);
+					read.TrimStart();
+					return  (fail || readTo.V.Values.Length == 0 || FailRequiredSymbol(req)) && F();
 				}
-				void CollectColors(Expression e) {
+				bool FailRequiredSymbol(char c, int offset = 0) {
+					if (read.GotoFirstFailed(offset, 0, [c], 1, out _, out var found)) 
+						return F();
+					read.From = found + 1; // goto behind the char we found
+					return false;
+				}
+				/*void CollectColors(Expression e) {
 					foreach (var c in e.Colors)
 						Colors.Add(c); // collect sub expression parsing colors
+				}*/
+				bool End(bool allowNewLines) {
+					bool endDefault = false;
+					char next;
+					if (!allowNewLines) {
+						int beforeFrom = read.From, beforeLine = read.Line;
+						while (!read.GotoFirstFailed(0,1, ['\n'], 0, out _, out _/*, false, 0, false, true, [false]*/)) 
+							endDefault = true;
+							//++read.From;
+						var nf = read.From;
+						read.From = beforeFrom;
+						read.Line = beforeLine;
+						if (!endDefault) 
+							nf = beforeFrom;
+						if (nf >= read.Text.Length) 
+							return true;
+						next = read.Text[nf];
+					} else {
+						if (read.TrimStart(1)) return true;
+						next = read.nextChar;
+					}
+
+					bool result = read.TrimStart(allowNewLines ? 1 : 0) || next switch {
+						// what counds as an expression end:
+						')' => true, // ends parentheses
+						',' => true, // divides vector element expressions
+						'{' => true, // after if or while
+						'}' => true, // after block
+						';' => true, // separator
+						'\n' => !allowNewLines, // separator
+						'?' => true, // ternary
+						':' => true, // ternary, default arguments, definitions
+						']' => true, // ends indexer 
+						// operators strictly allowing continuation:
+						'+' => false, // add
+						'-' => false, // subtract
+						'*' => false, // multiply
+						'/' => false, // div
+						'%' => false, // mod
+						'^' => false, // pow
+						'$' => false, // root/log
+						'&' => false, // sqr
+						'|' => false, // absri
+						'@' => false, // abs
+						'#' => false, // count
+						'~' => false, // conj
+						'!' => false, // !read.CharAtRel('=',1) && endDefault, // unequal, but not factorial, as that could be while
+						'<' => false, // less
+						'>' => false, // more
+						'=' => false, // equal
+						'[' => false, // begin indexer, TODO allow newline after
+						'(' => false, // TODO move cache between args
+						//'(' // don't, could be a cache of a following command, make newlines after (// TODO newline after (parentheses and functions )
+						_ => endDefault
+					};
+					return endDefault && !result ? read.TrimStart(1) : result; // f we found an op on the next line, then trim the newlines
 				}
-				bool End(ref int from) => Trim(ref from) || text[from] switch {
-					')' => true, // ends parentheses
-					',' => true, // divides vector element expressions
-					'{' => true, // after if or while
-					'}' => true, // after block
-					';' => true, // separator
-					'\n' => true, // separator
-					'?' => true, // ternary
-					':' => true, // ternary, default arguments, definitions
-					']' => true, // ends indexer 
-					_ => false
-				};
-				bool Encapsulate(Expression p, int from) {
-					expr[^1] = r = new(T.NaN(), new(), null, p, null, false, text[startR..from]);
+				bool Encapsulate(Expression p) {
+					expr[^1] = r = new(T.NaN(), new(), null, p, null, false, read.Uncomment(startR,read.From));
 					return true;
 				}
 				bool LeftAssociate(Operator testOp) => testOp.Right ? testOp.Order < left : testOp.Order <= left;
 				bool Fail(Value test) => test.Term == null && (test.Values.Length == 0 || test.Values is [{ Term: null }]) /*&& test.Values[0].Values.Length == 0*/; // && test.Value.IsNaN; // no longer needed as even values are now nested in terms, and I don't test their insides.
-				bool F(ref int from) {
+				bool F() {
 					r.Op = new();
 					r.Leaf = T.NaN();
 					r.Values = [];
 					r.Term = r.Operand = null;
 					char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']'];
-					int e, end = text.Length;
-					var prevF = from;
+					int e, end = read.Text.Length;
+					var prevF = read.From;
 				
-					foreach (var et in ends)
-						if ((e = text.IndexOf(et, from)) >= 0 && e < end)
+					if(read.From < read.Text.Length)foreach (var et in ends)
+						if ((e = read.Text.IndexOf(et, read.From)) >= 0 && e < end)
 							end = e;
-					if(from > prevF)
-						Colors.Add((prevF, ParseDictionary.Type.Error));
+					//if(from > prevF) 
+					//Colors.Add((prevF, ParseDictionary.Type.Error));
+					if(prevF < end)read.AddC(prevF, end, ParseDictionary.Type.Error);
+					
 					//r.String = r.Text += text[..end].TrimStart(' ').TrimEnd(' ');
 					//text = end < text.Length ? text[end..] : "";
-					from = end;
+					read.From = end;
 					return true;
 				} // reading failed
-				bool FailRequiredSymbol(char c, ref int from, byte offset = 0) => !Char(ref from, c, offset) && F(ref from);
-				bool TryFuncFailed(ref int from) {
-					int startFrom = from;
-					foreach (var f in Context.Context.Get(text, Functions)) {
-						if (f.name.Length <= 0 || FailRequiredSymbol('(', ref from, (byte)f.name.Length)) continue;
-						var endFrom = startFrom + f.name.Length;
-						var fail = Fail((r.Term = ((CallFunction)f.obj.Obj).Call(context, text, ref from, args)).V); // try to read the arguments
-						//r.String = r.Text += r.Term.V.Text;
-						fail = (FailRequiredSymbol(')', ref from) || fail) && F(ref from);
-						if (fail) {
-							Colors.Add((from, ParseDictionary.Type.Error));
-							return fail; // must eat func closing parenthesis
+				//bool FailRequiredSymbol(char c, byte offset = 0) => !Char(c, offset) && F();
+				bool TryFuncFailed() {
+					int startFrom = read.From;
+					foreach (var f in Context.Context.Get(read.Text, read.From, Functions)) {
+						if (f.name.Length <= 0 || FailRequiredSymbol('(', (byte)f.name.Length)) continue;
+						if ((Fail((r.Term = ((CallFunction)f.obj.Obj).Call(read, args)).V) || FailRequiredSymbol(')')) && F()) {
+							read.AddC(startFrom, read.From, ParseDictionary.Type.Error);
+							return true; // must eat func closing parenthesis
 						}
-						AddColors(startFrom, endFrom, f.obj.Type);
-						return fail; // must eat func closing parenthesis
+						read.AddC(startFrom,startFrom+f.name.Length, f.obj.Type);
+						return false;
 					}
 					return true;
 				}
-				bool Number(ref int from, out Value number) {
-					var startFrom = from;
-					if (Char(ref from, '_')) {
-						AddColors(startFrom, from, ParseDictionary.Type.Number);
+				bool Number(out Value number) {
+					var startFrom = read.From;
+					if (Char('_')) {
+						read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
 						number = new(T.NaN()); // '_' is NaN
 						return true;
 					}
-					if (RealNumber(ref from, out var real)) {
-						number = new(T.MakeR(real), 0, text[startR..from]);
+					if (RealNumber(out var real)) {
+						read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
+						number = new(T.MakeR(real), 0, read.Uncomment(startR, read.From));
 						return true;
 					}
 					number = None;
 					return false;
 				}
-				bool RealNumber(ref int from, out double number, double l = 0) {
-					if (from < text.Length) {
-						if (text[from] == '.') {
+				bool RealNumber(out double number, double l = 0) {
+					if (read.From < read.Text.Length) {
+						if (read.nextChar == '.') {
 							// eat decimal point
-							++from; //_ = Eat(1, ref text);
+							++read.From; //_ = Eat(1, ref text);
 							// get fractional part
-							number = l + DecimalNumber(ref from);
+							number = l + DecimalNumber();
 							return true;
 						}
-						if (int.TryParse(text[from].ToString(), out var i)) {
+						if (int.TryParse(read.nextChar.ToString(), out var i)) {
 							l *= 10;
 							// eat another digit
-							++from; //_ = Eat(1, ref text);
+							++read.From; //_ = Eat(1, ref text);
 							// add another whole digit, or finish
-							_ = RealNumber(ref from, out number, l + i); // && 1 <= n ? 10 * i + n : i + n;
+							_ = RealNumber(out number, l + i); // && 1 <= n ? 10 * i + n : i + n;
 							return true;
 						}
 					}
 					number = l; // no more digits
 					return false;
 				}
-				double DecimalNumber(ref int from, double d = 1) {
-					if (from >= text.Length) return 0; // no more digits
+				double DecimalNumber(double d = 1) {
+					if (read.From >= read.Text.Length) return 0; // no more digits
 					d /= 10; // prepare another position
-					if (!int.TryParse(text[from].ToString(), out var i))
+					if (!int.TryParse(read.nextChar.ToString(), out var i))
 						return 0;
-					++from; //Eat(1, ref text);
-					return i * d + DecimalNumber(ref from, d);
+					++read.From; //Eat(1, ref text);
+					return i * d + DecimalNumber(d);
 				}
-				bool Constant(ref int from, out Value number) {
+				bool Constant(out Value number) {
 					// WARNING, if there is any function with the same name, then you can't operator-less multiply with parentheses from the right!
 					// for example gamma is either eulerConstant or the gamma function:
 					// gamma2 = eulerConstant*2, gamma(2+1) = evaluates gamma function at 2, (2+1)gamma = (2+1)*eulerConstant
-					foreach (var c in Context.Context.Get(text, Constants)) {
+					foreach (var c in Context.Context.Get(read.Text, read.From, Constants)) {
 						if (c.name.Length <= 0) continue;
 						number = ((Value)c.obj.Obj).Copy();
-						AddColors(from, from += c.name.Length, c.obj.Type);
+						read.AddC(read.From, read.From += c.name.Length, c.obj.Type);
 						return true;
 					}
 					number = None;
 					return false;
 				}
-				bool Argument(ref int from, ref int[] resultNest) {
-					foreach (var a in pArgs.Get(text, (byte)ParseDictionary.Type.Arg)) {
+				bool Argument(ref int[] resultNest) {
+					foreach (var a in pArgs.Get(read.Text, read.From, (byte)ParseDictionary.Type.Arg)) {
 						if (a.name.Length <= 0) continue;
 						resultNest = (int[])a.obj.Obj;
-						AddColors(from, from += a.name.Length, a.obj.Type);
+						read.AddC(read.From, read.From += a.name.Length, a.obj.Type);
 						return true;
 					}
 					return false;
 				}
-				void AddColors(int startFrom, int endFrom, ParseDictionary.Type type) {
-					Colors.Add((startFrom, type));
-					Colors.Add((endFrom, ParseDictionary.Type.Text));
-				}
 			}
-			bool Char(ref int from, char c, byte offset = 0) {
-				var o = from + offset;
-				var test = text.Length > o && text[o] == c;
+			bool Char(char c, byte offset = 0) {
+				var o = read.From + offset;
+				var test = read.Text.Length > o && read.Text[o] == c;
 				if (!test)
 					return test;
 				//r.String = r.Text += text[..++offset];
-				from += offset; //R(offset, ref from);
+				read.From += offset + 1; //R(offset, ref from);
 				return test;
 			}
 			void Nest() {
@@ -385,8 +476,6 @@ public abstract partial class Comparser<T> {
 					}
 				}
 			}
-			// Trims whitespace
-			bool Trim(ref int from) => TrimStart(text, ref from);
 		}
 		// encapsulate a value
 		protected Expression(Comparser<T> context, Value t, int cache = 0) {
@@ -400,14 +489,15 @@ public abstract partial class Comparser<T> {
 			Context = context;
 			V = t.Copy();
 		}// Simple single expression parse (without returning the rest of the code)
-		public Expression(Comparser<T> context, string text, Value args, int from = 0, int cache = 0) {
-			if (context._caseInsensitive) text = text.ToLower();
-			var e = new Expression(Context = context, text, ref from, out _, args, cache);
+		/*public Expression(Reader read, Value args, int from = 0, int cache = 0) {
+			Context = read.Context;
+			var e = new Expression(read, out _, args, cache);
 			V = e.V;
-			V.String = V.Text += text;
+			V.String = V.Text += read.Text[from..];
+			//Colors = e.Colors;
 			//V = text == "" ? e.V : None;
 			_cache = new(cache);
-		}
+		}*/
 		#endregion
 		
 		private const byte Functions = (byte)ParseDictionary.Type.UserF | (byte)ParseDictionary.Type.DefaultF;

@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel;
-namespace Comparser;
+namespace Comparser.Forms;
 partial class MenuControl {
 	/// <summary> 
 	/// Required designer variable.
@@ -32,43 +32,47 @@ partial class MenuControl {
 		setButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
 		setButton.Location = new System.Drawing.Point(3, 3);
 		setButton.Name = "setButton";
-		setButton.Size = new System.Drawing.Size(314, 23);
+		setButton.Size = new System.Drawing.Size(314, 32);
 		setButton.TabIndex = 0;
 		setButton.Text = "SETTINGS";
 		setButton.UseVisualStyleBackColor = true;
+		setButton.UseMnemonic = false;
 		setButton.Click += SetButton_Click;
 		// 
 		// codeButton
 		// 
 		codeButton.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		codeButton.Location = new System.Drawing.Point(3, 32);
+		codeButton.Location = new System.Drawing.Point(3, 41);
 		codeButton.Name = "codeButton";
-		codeButton.Size = new System.Drawing.Size(314, 228);
+		codeButton.Size = new System.Drawing.Size(314, 200);
 		codeButton.TabIndex = 2;
 		codeButton.Text = "CODE";
 		codeButton.UseVisualStyleBackColor = true;
+		codeButton.UseMnemonic = false;
 		codeButton.Click += CodeButton_Click;
 		// 
 		// expButton
 		// 
 		expButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		expButton.Location = new System.Drawing.Point(3, 266);
+		expButton.Location = new System.Drawing.Point(3, 247);
 		expButton.Name = "expButton";
-		expButton.Size = new System.Drawing.Size(314, 23);
+		expButton.Size = new System.Drawing.Size(314, 32);
 		expButton.TabIndex = 3;
 		expButton.Text = "EXPRESSIONS";
 		expButton.UseVisualStyleBackColor = true;
+		expButton.UseMnemonic = false;
 		expButton.Click += ExpButton_Click;
 		// 
 		// plotButton
 		// 
 		plotButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		plotButton.Location = new System.Drawing.Point(3, 295);
+		plotButton.Location = new System.Drawing.Point(3, 285);
 		plotButton.Name = "plotButton";
-		plotButton.Size = new System.Drawing.Size(314, 23);
+		plotButton.Size = new System.Drawing.Size(314, 32);
 		plotButton.TabIndex = 4;
 		plotButton.Text = "PLOT";
 		plotButton.UseVisualStyleBackColor = true;
+		plotButton.UseMnemonic = false;
 		plotButton.Click += PlotButton_Click;
 		// 
 		// MenuControl
@@ -80,7 +84,6 @@ partial class MenuControl {
 		Controls.Add(codeButton);
 		Controls.Add(expButton);
 		Controls.Add(plotButton);
-		Size = new System.Drawing.Size(320, 320);
 		ResumeLayout(false);
 	}
 

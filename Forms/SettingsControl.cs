@@ -1,5 +1,5 @@
 ﻿using Comparser.Comparser;
-namespace Comparser;
+namespace Comparser.Forms;
 public partial class SettingsControl : ParentControl {
 	public int Decimals = 3;
 	public int Algebra = 1;
@@ -23,8 +23,10 @@ public partial class SettingsControl : ParentControl {
 	private void DecimalBox_TextChanged(object? sender, EventArgs e) {
 		var old = Decimals;
 		_ = int.TryParse(decimalBox.Text, out Decimals);
+		Root?.Set?.Context?.SetDecimals(Root.Set.Decimals);
 		if (old != Decimals)
-			Root?.Exp?.ReEval();
+			Root?.Code?.CodeChanged = true; // re-parse so the prints and expressions update
+			//Root?.Exp?.ReEval();
 	}
 	private void AlgebraBox_SelectedIndexChanged(object? sender, EventArgs e) {
 		Algebra = algebraBox.SelectedIndex;
@@ -33,21 +35,15 @@ public partial class SettingsControl : ParentControl {
 	}
 	
 	private void darkButton_Click(object sender, EventArgs e) {
-		Root?.SetDark(_darkMode = !_darkMode);
+		Context?.SetDarkMode(_darkMode = !_darkMode);
+		Root?.SetDark(_darkMode);
 	}
-	public override void SetDark(bool dark){
-		Context?.SetDarkMode(dark);
-		if (dark) { 
-			SetColors(Color.Black, Color.White);
-			darkButton.Text = "☾";
-		} else {
-			SetColors(Color.White, Color.Black);	
-			darkButton.Text = "☀︎";
-		}
-		return;
-		void SetColors(Color back, Color fore) {
-			decimalBox.BackColor = algebraBox.BackColor = darkButton.BackColor = back;
-			decimalBox.ForeColor = algebraBox.ForeColor = darkButton.ForeColor = fore;
-		}
+	public override void SetDark(bool dark) {
+		base.SetDark(dark);
+		/*var bf = dark ? (Color.Black, Color.White,  "☾") : (Color.White, Color.Black, "☀︎");
+		decimalBox.BackColor = algebraBox.BackColor = darkButton.BackColor =  bf.Item1;
+		decimalBox.ForeColor = algebraBox.ForeColor = darkButton.ForeColor =  bf.Item2;
+		Context?.SetDarkMode(dark);*/
+		darkButton.Text =  dark ? "☾" : "☀︎";
 	}
 }

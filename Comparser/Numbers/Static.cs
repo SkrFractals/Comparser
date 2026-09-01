@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 namespace Comparser.Comparser.Numbers;
 public static class Static {
 	private const int Bernoullis = 20;
@@ -106,7 +107,7 @@ public static class Static {
 		var l = (byte)(255 * v);
 		return Color.FromArgb(l, l, l);
 	}
-	public static string _i(string i, string c) => i == "1" ? c : i + c; // redundant part of I.ToString
+	public static string _i(string i, string c) => i is "1" or "-1" ? c : i + c; // redundant part of I.ToString
 	//private static string _s(double v, int d) => d < 0 ? v.ToString() : v.ToString("F" + d.ToString()); 
 	public static string _sr(double value, int d) {
 		string r;
@@ -123,6 +124,42 @@ public static class Static {
 		if (s.EndsWith(".")) s = s.TrimEnd('.');
 		return s == "-0" ? "0" : s;
 	}
+	public static string ValueToString(string units, double[] values, int d) {
+		var v = new string[values.Length];
+		for (var i = 0; i < values.Length; ++i)
+			v[i] = _sr(values[i], d);
+		var (first, result) = v[0] == "0" ? (true, "") : (false, v[0]);
+		for (var ci = 0; values.Length > ++ci; first &= v[ci] == "0") {
+			result += v[ci] switch { "0" => "",
+			"-1" => (first ? "-" : " - ") + units[ci - 1],
+			"1" =>  (first ?  "" : " + ") + units[ci - 1],
+			_ => first ? v[ci] + units[ci - 1] : 
+				(v[ci][0] == '-' ? 
+					" - " + v[ci][1..] : 
+					" + " + v[ci])
+				+ units[ci - 1]
+			};
+		}
+		return result == "" ? "0" : result;
+		
+		
+		/*while (4 > ++ci && ijk[0] != 'x') {
+			string l;
+			for (r += s, l = ijk[..1], ijk = ijk[1..]; ci < 4 && v[ci] == "0"; ++ci) {
+				l = ijk[..1];
+				ijk = ijk[1..];
+			}
+			if (4 <= ci) {
+				if (r == "")
+					r = "0";
+				break;
+			}
+			r += ci == 0 ? _i(v[ci], "") : _i(v[ci], l);
+			s = " ";
+		}
+		return r;*/
+	}
+
 	#region Math
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static double Add(double a, double b) => a + b;
