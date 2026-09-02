@@ -224,8 +224,8 @@ Example: ((1, 2), (3, 4, 5), 6, 13) + ((7, 8, 9), 10, (11, 12))
 ### Vector Extractor:  
 _\<expression\>_[_\<expression\>_]  
 Extracts terms from a vector using indices in: [expression].  
-Example: (a, b, c, d, e)[2] : c  
-Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] : (30d, 31e), 2c, (5, 1, (30d, 31e))  
+Example: (a, b, c, d, e)[2] = c  
+Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] = (30d, 31e), 2c, (5, 1, (30d, 31e))  
   
 ### <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/8157451f-687a-4c7e-b073-6a1cd949ea0b" />Default Functions:  
 min, max, clamp, exp, ln, log10, sin, cosh, re, im, frac, floor, round, sgn, abs, conj, sqrt, cub, gauss, softmax, gamma, zeta...  
@@ -261,7 +261,7 @@ and there is also "vec" function, which doesn't add or multiply the terms, but p
   
 ### <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/72aed23b-74c1-4b8f-b5e2-6187c28bc611" />Arguments:  
 They have an orange color in the editor in dark mode.  
-Any xpression call get these as an input.  When you define a function, you can give it any number of arguments and name them.
+Any expression call get these as an input.  When you define a function, you can give it any number of arguments and name them.
 Or give then a default expression that would evaluate them if the caller didn't supply any.
 And if you just write something that successfult evaluates into a number instead of a name, the function will pattern match whether the caller provides that value. 
   
