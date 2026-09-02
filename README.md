@@ -272,15 +272,18 @@ It can also be used as a discard argument, which would prompt it's efault expres
 "string"  
 Adding strings concatenates them.  
 Subtracting removes occurrences of the operand.  
+Multiplying a string with a value on the right acts as a dynamic delegate call of a function whose name matches that string.  
   
 Delegate Calls:  
 There are two way this can be done.  
 1. Constant: _\<constantString\>_(_\<expressionArgument\>_)
 If you have a string in a constant, that matches any function name (including your defined functions), you can call that constant like that function.
+You must write parentheses the same way as calling a regular function.  
 Example: a:"sin";print:a(pi/2); /* prints a(pi/2) = 1  
 3. Dynamic: _\<variableString\>\<expressionArgument\>_  
-Multiplying a string that matches any default or user function with any value on its right will virtually call that function on that value.  
-Example: twoXsevenY(x,y):2x+7y;a:"twoXsevenY";b(d,x):d(x);print:b(a,1,2); /* prints b(a,1,2) = 16  
+Multiplying a string that matches any default or user function with any value on its right will virtually call that function on that value.
+You can write parentheses for visual resemblance, but it's really an overload of multiplication for strings, so it can also use operator-less multiply.
+Example: twoXsevenY(x,y):2x+7y;a:"twoXsevenY";b(d,x):dx;print:b(a,1,2); /* prints b(a,1,2) = 16  
   
 ### Comments:  
 /* comments are in between these, and are completely ignored by the parser's logic, unless they are inside strings. */  
