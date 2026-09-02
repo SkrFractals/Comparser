@@ -156,7 +156,7 @@ public abstract partial class Comparser<T>{
 			vals.Error = av.Error;
 			return vals;
 		}
-		public static Value Operate2(Value av, Value bv, Func<T, T, T> o, Func<string, string, string> so) {
+		public static Value Operate2(Value av, Value bv, Func<T, T, T> o, Func<string, string, string> so, ushort depth, Comparser<T> context, Value args, bool call = false) {
 			// DEBUG
 			/*var oe = o(T.MakeR(3), T.MakeR(3));
 			var avO = av.Op;
@@ -175,22 +175,35 @@ public abstract partial class Comparser<T>{
 			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
 			if (vB.Length == 0) vB = [new(bv.Leaf, bv.Error, bv.String)];
 			for (var i = 0; i < s; ++i) {
-				int an, bn;
-				vals.Values[i] = (an = (vA[a] = CollapseScalar(vA[a])).Values.Length) 
-					+ (bn = (vB[b] = CollapseScalar(vB[b])).Values.Length) == 0
+				int an = (vA[a] = CollapseScalar(vA[a])).Values.Length, 
+					bn = (vB[b] = CollapseScalar(vB[b])).Values.Length;
+				vals.Values[i] = an == 0 && Virtual(vA[a]) is { } f
+					? CallVirtual(f, vB[b])
+					: an + bn == 0
 					? new(o(vA[a].Leaf, vB[b].Leaf), vA[a].Error, so(vA[a].String, vB[b].String)) 
 					: Operate2(
 						an == 0 ? new([new(vA[a].Leaf,vA[a].Error)]) : vA[a],
-						bn == 0 ? new([new(vB[b].Leaf,vA[a].Error)]) : vB[b], o, so);
+						bn == 0 ? new([new(vB[b].Leaf,vA[a].Error)]) : vB[b], o, so, depth, context, args, call);
 				a = (a + 1) % vA.Length;
 				b = (b + 1) % vB.Length;
 			}
 			if (s != 0)
 				return vals;
-			vals.Leaf = o(av.Leaf, bv.Leaf);
-			vals.String = so(av.String, bv.String);
-			vals.Error = av.Error | bv.Error;
+			if (Virtual(av) is { } ff)
+				vals = CallVirtual(ff, bv);
+			else {
+				vals.Leaf = o(av.Leaf, bv.Leaf);
+				vals.String = so(av.String, bv.String);
+				vals.Error = av.Error | bv.Error;
+			}
 			return vals;
+
+			CallFunction? Virtual(Value v) => call && v.Leaf.IsNaN() && (context.UserFunctions.TryGetValue(v.String, out var f) || context.DefaultFunctions.TryGetValue(v.String, out f)) ? f : null;
+			Value CallVirtual(CallFunction f, Value v) {
+				var exp = f.Call(new(context, "", new CancellationTokenSource().Token), args);
+				exp.V.Values = [v];
+				return exp.Eval((ushort)(1 + depth), args);
+			}
 		}
 		public static Value Operate3(Value av, Value bv, Value cv, Func<T, T, T, T> o) {
 			Value[] vA = (av = CollapseScalar(av)).Values, vB = (bv = CollapseScalar(bv)).Values, vC = (cv = CollapseScalar(cv)).Values;

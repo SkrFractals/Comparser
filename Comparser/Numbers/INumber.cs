@@ -280,7 +280,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 			iShiftNoCenter = InitialShifts;
 			iUpdateShift = UpdateShiftsWindow;
 		} else {
-			// sliding window won't be worth it, so only batch the reflections (enhacing theperformance up to 2x):
+			// sliding window won't be worth it, so only batch the reflections (enhancing the performance up to 2x):
 			iShiftCenter = InitialShiftsTotal;
 			iShiftNoCenter = Nop;
 			iUpdateShift = UpdateShiftsTotal;
@@ -293,7 +293,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 		for (u = 0; u < aun; ++u) {
 			i = 0; pi = ni = u + center; t = T.MakeR(LnTh); // train (sliding sum window)
 			branch();
-			Run(); // final run (every branch had it at the end, so i took it out)
+			Run(); // final run (every branch had it at the end, so I took it out)
 		}
 		return;
 

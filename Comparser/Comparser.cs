@@ -19,7 +19,6 @@ public interface IComparser {
 	public (Color b, Color f) GetColor();
 	public (Color e, Color s) GetErrorSuccessColor();
 	public List<(Color color, string log)> ReadCode(string text, CancellationToken cancel, out (int position, Color color)[] colors);
-	
 }
 
 public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort stackOverflowLimit = 499, ushort doOverflowLimit = 499, ushort loopLimit = 499, ushort iteratorLimit = 499, bool allowParsePeek = true) : IComparser where T : unmanaged, INumber<T> {
@@ -54,16 +53,14 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		List<(int i, int c)> back = [];
 		string e;
 		List<(Color, string)> log = [];
-		Dictionary<string, CallFunction> userFunctions = [];
+		UserFunctions.Clear();
 		ReadLines("", reader);
 		if (brackets > 0)
 			log.Add((Color.Red, "Missing " + brackets + "x END BRACKET and eof. Not fatal but probably wrong."));
 		colors = reader.GetColors();
 		return log;
 
-		//string CleanWhite(string cl) => cl.Replace(" ", "").Replace("\t", "").Replace("\r", "");
 		void ReadLines(string pref, Reader read) {
-			//_context.CustomFunctions = new Comparser.CallFunction[CustomFunctions.Count];
 			while (read.From < read.Text.Length) {
 				if (cancel.IsCancellationRequested)
 					return;
@@ -156,10 +153,8 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							_ => Actions.None
 						};
 						read.AddC(beforeI, beforeI + name.Length, actionCode == Actions.None ? ParseDictionary.Type.UserC : ParseDictionary.Type.Action);
-						//read.AddC(beforeI + name.Length, read.From,ParseDictionary.Type.Text);
 						read.TrimStart(1);
 						var expression = new Expression(read, out _, args);
-						//CollectColors(expression);
 						eval = expression.Eval(0, None);
 						switch (actionCode) {
 						case Actions.Print:
@@ -168,7 +163,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							break;
 						case Actions.PrintValue:
 							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true)));
-							Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (/*eval.GetLeaf().IsNaN() ||*/ (eval.Error & 2) > 0) ? FailReason.BadExpression : FailReason.Success);
+							Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.Error & 2) > 0 ? FailReason.BadExpression : FailReason.Success);
 							break;
 						/*case Actions.PrintNumber:
 							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true)));
@@ -240,7 +235,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						if (action)
 							break;
 						eval.Text = name;
-						Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.Error & 2) > 0 /*GetLeaf().IsNaN()*/ ? FailReason.BadExpression : FailReason.Success);
+						Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.Error & 2) > 0? FailReason.BadExpression : FailReason.Success);
 						if (parsedC.TryGetValue(name, out var exists)) {
 							// mutate existing
 							exists.Values = eval.Values;
@@ -253,8 +248,8 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					} // it is a function:
 					var failFunc = FailReason.Success;
 					read.AddC(beforeI, beforeI + name.Length,ParseDictionary.Type.UserF);
-					if (!userFunctions.ContainsKey(name)) // create the custom function if this is its first definition
-						Context.Insert(new(userFunctions[name] = new CallCustom([]), ParseDictionary.Type.UserF), name);
+					if (!UserFunctions.ContainsKey(name)) // create the custom function if this is its first definition
+						Context.Insert(new(UserFunctions[name] = new CallCustom([]), ParseDictionary.Type.UserF), name);
 					LoadTernary();
 					break;
 					void LoadTernary() {
@@ -273,21 +268,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						}
 						AddF(args, conditionals, defaultBranch); // no if
 					}
-					/*string LoadDef() {
-						int found;
-						while (!read.GotoFirstFailed(0, 2,['(', ':', '\n', ';'], 1, out s, out found, false, 0, false, false, [false, false, false, true]) && s == 2) ;
-						if (s < 0 || s > 1)
-							return Fc();
-						//if (TrimEnd(read.Text[(beforeI + (name = TrimEnd(read.Text[beforeI..(f = Math.Min(read.From - 1, found))])).Length)..f]).Length > 0)
-						//	return "Unexpected text after definition NAME.";
-						//if (TrimEnd(read.Uncomment(beforeI + (name = TrimEnd(read.Text[beforeI..(f = Math.Min(read.From - 1, found))])).Length)..f]).Length > 0)
-						name = TrimEnd(read.Uncomment(beforeI, f = Math.Min(read.From - 1, found)), 1);
-						//read.From = beforeI + name.Length;
-						return TrimEnd(read.Uncomment(beforeI + name.Length, f), 1).Length > 0 ? "Unexpected text after definition NAME."
-							: name.Length == 0 ? "No definition name."
-							: IsFunc() ? FailArgs(out args) ? "Failed to parse ARGUMENTS." : FuncEndFailed() : "";
-					}*/
-					
 					string LoadDef() {
 						var stage = 0;
 						var foundCantBeNext = Static.FindName;
@@ -308,8 +288,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 										if ("" != (e = FailEvalClose(out eval) ? "Failed to parse CACHE size."
 											: eval.Values.Length != 1 ? "Multiple values in the CACHE size expression: " + eval
 											: eval.Values[0].Leaf.IsNaN() ? "CACHE size evaluated as NaN." : "")) {
-											//ColorError();
-											//FailEnd();
 											return e;
 										}
 										cache = (int)Math.Round(T.Re(eval.Values[0].Leaf));
@@ -330,7 +308,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					void IsFailed(Expression expression) {
 						var v = CollapseScalar(expression.V);
 						if (v.Values.Length != 0 || v.Term != null || !v.Leaf.IsNaN())
-							return;// CollectColors(expression);
+							return;
 						read.AddC(beforeI, read.From, ParseDictionary.Type.Error);
 						failFunc = FailReason.BadExpression;
 						
@@ -355,19 +333,13 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						if (dBranch != null)
 							pfn.Add((args, dBranch, null));
 						// create/update the compiled function:
-						((CallCustom)userFunctions[name]).Def = [.. parsedF[name]];
+						((CallCustom)UserFunctions[name]).Def = [.. parsedF[name]];
 						Cl(failFunc);
 					}
-					//codeLine = (nextChar = s.IndexOf(';')) >= 0 ? s[(nextChar + 1)..] + s1 : (nextChar = s1.IndexOf(';')) >= 0 ? s1[(nextChar + 1)..] : "";
-					//}
 					(int i, int c) GetBack() => back.Count > brackets ? back[brackets] : (-1, -1);
 					void Conditional((int i, int c) rb) {
 						if (brackets < back.Count) back[brackets] = rb;
 						else back.Add(rb);
-						/*if ("" != (e = FailEval(out eval) ? "Failed to parse CONDITION." : "")) {
-							FailEnd();
-							return;
-						}*/
 						while (eval.Values.Length > 0)
 							eval = eval.Values[0];
 						if ((e = If())[0] == '_') { // "loop" during WHILE = stack overflow limit, "loop" during IF = skip :{} after ending a block
@@ -399,8 +371,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 									return "Failed to find an END BRACKET after skipping a failed condition";
 								if (read.GotoFirstFailed([':'], 1, out _, out _))
 									return "_N"; // No else block
-								//if (read.GotoFirstFailed(['{'], 1, out _, out _))
-								//	return "Failed to find a START BRACKET when trying to enter an ELSE branch.";
 							}
 						}
 						
@@ -416,25 +386,12 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					}
 				}
 				continue;
-
-				//void ColorError() => read.AddC(beforeI, ParseDictionary.Type.Error);
-				//void ColorText(int at = -1) => read.AddC(0 <= at ? at : read.From, ParseDictionary.Type.Text);
-				//void CollectColors(Expression expression) => CollectC(expression, col);
-				//void AddColor(int start, ParseDictionary.Type t) => AddC(start, t, col);
-				//string NoWhite(string s) => s.Replace(" ", "").Replace("\t", "").Replace("\r", "");
 				bool FailEval(out Value evaluated, bool isArg = false) {
-					//++i;//exp = exp[1..]; // eat initial symbol that triggered it
 					var expression = new Expression(read, out _, None, 0, 0, isArg);
-					//CollectColors(expression);
 					evaluated = UnCollapseScalar(expression.Eval(0, None));
 					return false;
 				}
-				bool FailEvalClose(out Value evaluated, bool isArg = false) {
-					if (FailEval(out evaluated, isArg) || read.GotoFirstFailed(0, 2,[')'], 1, out _, out _))
-						return true; // closing parenthesis after the argument expression
-					//++i;//exp = exp[1..];
-					return false;
-				}
+				bool FailEvalClose(out Value evaluated, bool isArg = false) => FailEval(out evaluated, isArg) || read.GotoFirstFailed(0, 2,[')'], 1, out _, out _);
 				void Cl(FailReason reason,bool fromError = false) {
 					read.TrimStart();
 					var before = read.From;
@@ -449,7 +406,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					} else {
 						GotoNext();
 						if(fromError)
-							read.AddC(/*reason != FailReason.Success ? s : */beforeI, read.From, ParseDictionary.Type.Error);
+							read.AddC(beforeI, read.From, ParseDictionary.Type.Error);
 					}
 					read.TrimStart(2);
 					return;
@@ -459,9 +416,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						if (reason <= FailReason.Unexpected)
 							beforeI = before;
 						if (found != int.MaxValue) {
-							read.From = found; // TODO this is a very fresh edit, hopefully it won't break anything
-							//beforeI = i; // mark error from here, and towards +goto:
-							//i = found + 1; // the first found separator or block end. 
+							read.From = found;
 							return;
 						}
 						read.From = read.Text.Length; // not found separator, put it at the oef. 
@@ -537,6 +492,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		[ParseDictionary.Type.Action] = Color.FromArgb(255, 255, 0),
 		[ParseDictionary.Type.UserF] = Color.FromArgb(128, 128, 255),
 		[ParseDictionary.Type.DefaultF] = Color.FromArgb(64,64,255),
+		[ParseDictionary.Type.PointerF] = Color.FromArgb(128,0,255),
 		[ParseDictionary.Type.Arg] = Color.FromArgb(192, 96, 0),
 		[ParseDictionary.Type.UserC] = Color.FromArgb(0,255,48),
 		[ParseDictionary.Type.DefaultC] = Color.FromArgb(0,160,0),
@@ -553,6 +509,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		[ParseDictionary.Type.Action] =  Color.FromArgb(192, 192, 0),
 		[ParseDictionary.Type.UserF] = Color.Blue,
 		[ParseDictionary.Type.DefaultF] = Color.FromArgb(0,0,192),
+		[ParseDictionary.Type.PointerF] = Color.FromArgb(64,0,192),
 		[ParseDictionary.Type.Arg] = Color.FromArgb(160, 80, 0),
 		[ParseDictionary.Type.UserC] = Color.FromArgb(0,192,32),
 		[ParseDictionary.Type.DefaultC] =Color.FromArgb(0,128,0),
@@ -573,7 +530,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		}
 		public enum Type : byte {
 			//NameSpace = 1 << 0,	// obj = Package pkg, with constants and functions | bitmap 
-			Action = 1 << 0,			// obj = (byte)CodeCall callIndex | print, do...
+			Action = 1 << 0,		// obj = (byte)CodeCall callIndex | print, do...
 			UserF = 1 << 1,			// obj = (Dictionary<CallFunction> )
 			DefaultF = 1 << 2,		// obj = (Dictionary<CallFunction> )
 			Arg = 1 << 3,			// obj = (Value container, int index) index | arguments
@@ -583,10 +540,11 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 			Text = (1 << 5) + 2,	// not dictionary, just for parsing colors - generic code text
 			Comment = (1 << 5) + 3,	// not dictionary, just for parsing colors - comment
 			String = (1 << 5) + 4,	// not dictionary, just for parsing colors - "string"
-			Error = (1 << 5) + 5,	// not dictionary, just for parsing colors - error
-			Success = (1 << 5) + 6,	// not dictionary, just for parsing colors - success
-			Back = (1 << 5) + 7,	// not dictionary, just for parsing colors - background
-			Fore = (1 << 5) + 8		// not dictionary, just for parsing colors - non-code text
+			PointerF = (1 << 5) + 5,// not dictionary, just for parsing colors - function pointer
+			Error = (1 << 5) + 6,	// not dictionary, just for parsing colors - error
+			Success = (1 << 5) + 7,	// not dictionary, just for parsing colors - success
+			Back = (1 << 5) + 8,	// not dictionary, just for parsing colors - background
+			Fore = (1 << 5) + 9		// not dictionary, just for parsing colors - non-code text
 		}
 		private readonly List<S> _d = [];
 		private readonly Dictionary<char, ParseDictionary> _next = [];
@@ -645,8 +603,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 	private readonly bool _caseInsensitive = caseInsensitive, _allowParsePeek = allowParsePeek;
 	static protected readonly Value None = new();
 	private static readonly Value StackOverflow = new(1);
-	//private Dictionary<string, CallFunction> _customFunctions = []; // user-defined functions
-	//private Value _customConstants = None; // user-defined constants
 	private static readonly Cf OpFact = new(T.Factorial, OpCode.Factorial);
 	private static readonly Cf OpSqr = new(T.Sqr, OpCode.Sqr);
 	private static readonly Cf OpConj = new(INumber<T>.Conj, OpCode.Conj);
@@ -658,6 +614,8 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 	private static readonly Cf OpSign = new(INumber<T>.Sign, OpCode.Sgn);
 	protected abstract Value GenericConstants();
 	protected readonly ParseDictionary Context = new();
+	public readonly Dictionary<string, CallFunction> UserFunctions = [];
+	public readonly Dictionary<string, CallFunction> DefaultFunctions = [];
 	#endregion
 	
 	#region Helpers
@@ -669,22 +627,15 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		public readonly CancellationToken Cancel = cancel;
 		public readonly string Text = text;
 		public readonly List<(int position, ParseDictionary.Type color)> Colors = [(0, ParseDictionary.Type.Text)];
-		//private readonly List<(int, bool)> _comments = [(0,false)];
 		private void GetChar(char c, out int location, int? i = null, string? dtext = null) {
 			int f = i ?? From;
 			string d = dtext ?? Text;
 			if (f >= d.Length || (location = d.IndexOf(c, f)) < 0) location = int.MaxValue;
 		}
-		/*public bool CharAtAbs(char c, int offset, string? dtext = null) {
-			var t = dtext ?? Text;
-			return offset < t.Length && t[offset] == c;
-		}*/
 		public bool CharAtRel(char c, int offset) => (offset += From) < Text.Length && Text[offset] == c;
 		public bool CharAtAbs(char c, int offset, string? text = null) => offset < (text ??= Text).Length && text[offset] == c;
 		public (int position, Color color)[] GetColors() => Colors.Select(p => (p.position, this.Context.GetColor(p.color))).ToArray();
-		//public void AddStart(int start, ParseDictionary.Type t) {//TrimColors(start);//if(Colors.Count == 0 || start >= Colors[^1].position)Colors.Add((start, Context.GetColor(t)));//}
-		public void AddC(int start, int end, ParseDictionary.Type colorStart) {// => AddC(start, end, Context.GetColor(colorStart));
-		//public void AddC(int start, int end, Color colorStart) {
+		public void AddC(int start, int end, ParseDictionary.Type colorStart) {
 			if (end <= start)
 				return; // no range, don't do anything
 			int ip = Colors.Count;
@@ -701,18 +652,11 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 				returnColor = Colors[ip].color;
 			// and place out new ending key there
 			Colors.Insert(ip,(end, returnColor));
-			//while (++e < Colors.Count && Colors[e].position < end) ;//Colors.Insert(s,(end, colorEnd));//Colors.Insert(s, colorStart);//if(Colors.Count == 0 || start >= Colors[^1].position)Colors.Add((start, c));
 		}
 		public void AppendC(List<(int, ParseDictionary.Type)> append) {
 			foreach (var c in append)
 				Colors.Add(c);
 		}
-		/*private void TrimColors(int start) {
-			int i = Colors.Count;
-			while(i > 0 && Colors[i - 1].position)
-			while (Colors.Count > 0 && start < Colors[^1].position)
-				Colors.RemoveAt(Colors.Count - 1);
-		}*/
 		public bool IsComment(int separators = 0) => CharAtRel('*', 1) && !GotoFirstFailed([], separators, out _, out _, true);
 		public bool TrimStart(int separators = 0/*, bool real = true*/) {
 			while (Text.Length > From)
@@ -757,10 +701,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 			Line = bl;
 			return failed;
 		}
-		// it will only advance if it succeeded
-		/*public bool GotoFirstFailed(int offset, char[] c, int separators, out int s, out int found, bool comment = false, int skip = 0, bool str = false, bool otherMustBeNext = true, bool[]? foundCantBeNext = null) 
-			=> GotoFirstFailed(offset, 0, c, separators, out s, out found, comment, skip, str, otherMustBeNext, foundCantBeNext)
-				|| GotoFirstFailed(c, separators, out s, out found, comment, skip, str, otherMustBeNext, foundCantBeNext);*/
 		/// <summary>
 		/// advances one character beyond any of the target characters, counting comments and lines in the process
 		/// </summary>
@@ -790,7 +730,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 			return r;
 			bool Perform(ref int s, ref int found) {
 				var searches = new int[c.Length];
-				if (TrimStart(separators/*, real*/))
+				if (TrimStart(separators))
 					return true;
 				int search = int.MaxValue;
 				//do {
@@ -806,7 +746,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 				found = search;
 				int next;
 				s = -1;
-				while (int.MaxValue != (next = Math.Min( /*Math.Min(ln, */strMark /*)*/, Math.Min(Math.Min(braStart, braEnd), Math.Min(commDash, search))))) {
+				while (int.MaxValue != (next = Math.Min(strMark, Math.Min(Math.Min(braStart, braEnd), Math.Min(commDash, search))))) {
 					if (Cancel.IsCancellationRequested)
 						return true;
 					search = int.MaxValue;
@@ -838,36 +778,35 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						if (otherMustBeNext && Text[From] != '"' && skip == 0 && !comment && !str)
 							return true;
 						Eat();
-						GetChar('"', out braStart);
+						GetChar('"', out strMark);
 						if (comment)
 							break; // inside a comment, doesn't count
 						if (!str && skip == 0)
 							return true;
-						if (Text[From - 2] != '\\' && (str = !str) == false && wasString)
-							return false; // found end of string
+						if (str) {
+							if (Text[next - 1] != '\\') {
+								str = false;
+								if (wasString)
+									return false;// found end of string
+							}
+						} else str = !str;
 						break;
 					case '/': // comment
 						if (otherMustBeNext && Text[From] != '/' && skip == 0 && !comment && !str)
 							return true;
 						bool endComment = next > 0 && Text[next - 1] == '*', newComment = next < Text.Length - 1 && Text[next + 1] == '*';
-						//if (newComment) ++next;
 						Eat();
 						GetChar('/', out commDash);
 						if (str)
 							break; // inside a string, doesn't count
 						var prev = comment;
 						if (!(comment = newComment || comment && !endComment)) {
-							//if (real) {
-								if (prev) AddC(startComment, From, ParseDictionary.Type.Comment);
+							if (prev) AddC(startComment, From, ParseDictionary.Type.Comment);
 								startComment = -1;
-								//_comments.Add((From, false));
-							//}
 							if (wasComment)
 								return false; // found the end of the comment
 						} else if (prev != comment) {
 							startComment = next;
-							//if(real)
-							//	_comments.Add((startComment = next, true));
 						} else if (prev == comment && !comment && skip == 0 && (!newComment || endComment))
 							return true; // not skipping anything and it's not a beginning of a comment
 
@@ -896,14 +835,9 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							return false; // finish skip block
 						break;
 					default: // can this even happen?
-						//if (next != 0 && skip == 0 && !comment && !str)
-						//	return true; // didn't find it
 						return true; // found something wrong
 					}
 				}
-				//if(mustBeNext)
-				//if(GotoFirstFailed([';','\n'], out _,false,0,false,false))
-				//	i = codeL.Length;
 				return true; // didn't find it
 
 				void Eat() {
@@ -952,11 +886,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 	private static void GetCharAbs(char c, out int location, string txt = "") {
 		if ((location = /*(txt.Length == 0 ? codeL : txt)*/txt.IndexOf(c)) < 0) location = int.MaxValue;
 	}
-	/*private void CollectC(Expression expression, List<(int position, Color color)> col) {
-		foreach (var c in expression.Colors)
-			AddC(c.start, c.color, col);
-	}*/
-	
 	private static Value CollapseScalar(Value i) {
 		while (i.Values.Length == 1)
 			i = i.Values[0];
@@ -967,9 +896,6 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 			i.Values = [new(i.Leaf, i.Error, i.String) {Operand = i.Operand}];
 		return i;
 	}
-	//private static int SafeCollapse(Value[] v, int i) => v.Length == 0 ? 0 : (v[i] = CollapseScalar(v[i])).Values.Length;
-	//private static T SafeLeaf(Value[] v, int i) => v.Length == 0 ? T.NaN() : v[i].Leaf;
-	//private static string SafeText(Value[] v, int i) => v.Length == 0 ? "" : v[i].Text;
 	[GeneratedRegex(@"^[a-zA-Z0-9\s,]*$")]
 	private static partial Regex MyRegex();
 	#endregion
@@ -1130,56 +1056,12 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		A("softneg", new Cf(INumber<T>.SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
 		return;
 		void C(string name, T v) => Context.Insert(new(new Value(v, 0, name), ParseDictionary.Type.DefaultC), name);
-		void A(string name, CallFunction c) => Context.Insert(new(c, ParseDictionary.Type.DefaultF), name);
+		void A(string name, CallFunction c) {
+			DefaultFunctions[name] = c;
+			Context.Insert(new(c, ParseDictionary.Type.DefaultF), name);
+		}
 	}
 }
 public class ComparserR : Comparser<Real> { override protected Value GenericConstants() => None; }
 public class ComparserC : Comparser<Complex> { override protected Value GenericConstants() => new([new(Complex.i, 0, "i")]); }
 public class ComparserQ : Comparser<Quaternion> { override protected Value GenericConstants() => new([new(Quaternion.i, 0, "i"), new(Quaternion.j, 0, "j"), new(Quaternion.k, 0, "k")]); }
-
-
-
-/*while (!found && (!comment && skip > 0 && (plus != int.MaxValue || minus != int.MaxValue) || comment && comm != int.MaxValue)) {
-	var best = comm < plus && comm < minus;
-	if ((comment || best) && comm != int.MaxValue) {
-		if (comment) {
-			comment &= codeLine[comm - 1] != '*' || comm + 1 < codeLine.Length && codeLine[comm + 1] == '*';
-			EatComm();
-		} else if (best) {
-			comment |= comm + 1 < codeLine.Length && codeLine[comm + 1] == '*';
-			EatComm();
-		}
-		bool EatComm() {
-			if(eat = Eat(comm))
-				GetChar('/', out comm);
-			else if (FailNewLine())
-				return true;
-
-		}
-	}
-	if (!comment && skip > 0) {
-		if (plus != int.MaxValue && plus < minus && plus < comm) {
-			eat = Eat(plus);
-			++skip;
-			GetChar('{', out plus);
-		} else if (minus != int.MaxValue && minus < comm) {
-			eat = Eat(minus);
-			if (--skip == 0) {
-				// TODO enter the else branch if skipIf and :
-			} else GetChar('}', out minus);
-		}
-	}
-	continue;*/
-
-/*foreach (var p in parsedC)
-	if (p.String == name) {
-		// mutate variable
-		p.Values = eval.Values;
-		p.Leaf = eval.Leaf; // probably not needed?
-
-		//_customConstants = new([.. parsedC]);
-		return;
-	}
-// new variable
-parsedC.Add(eval);*/
-//_customConstants = new([.. parsedC]);

@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 namespace Comparser.Comparser.Numbers;
 public static class Static {
 	public static readonly bool[] FindName = [false, false, false, true];
@@ -23,10 +22,9 @@ public static class Static {
 	}
 
 	private static double[] MakeBernoullisR() {
-		
-		var B = new double[Bernoullis];
-		var maxIterations = Bernoullis << 1;
-		B[0] = 1.0 / 6;
+		var b = new double[Bernoullis];
+		const int maxIterations = Bernoullis << 1;
+		b[0] = 1.0 / 6;
 		// b[i] = sum[m=0..n]: sum[k=0..m]: (-1)^k * Comb(m k) * k^n * (m+1)^(-1)
 		for (var i = 2; i < Bernoullis; ++i) {
 			int e, o, m, tri, n = i << 1;
@@ -44,17 +42,16 @@ public static class Static {
 				p[2] += m; // increment the 3rd column on the left edge of the pascal triangle
 				if (m % 2 == 0) (e, o) = (m, ++m); else (o, e) = (m, ++m); // odd and even loops
 				p[m] = 1; // add a new 1 at the end column on the right edge of the pascal triangle
-				var m1 = 1.0 + m; // 0th and 1st k-term
-				nk = new BigRational(-m, 1);  // 1st term (and 0th is always zero for n>0)
+				nk = new(-m, 1);  // 1st term (and 0th is always zero for n>0)
 				do nk += new BigRational(p[e], 1) * powers[e]; // k-loop: even k terms, p[e] = Combinations(n,e)
 				while (2 <= (e -= 2)); // decrement even k iterators down to 1
 				do nk -=  new BigRational(p[o], 1) * powers[o]; // k-loop: odd k terms, p[o] = Combinations(n,o)
 				while (2 <= (o -= 2)); // decrement odd k iterators down to 1
 				ns += nk  * new BigRational(1,1 + m);
 			}
-			B[i - 1] = ns.FromD();
+			b[i - 1] = ns.FromD();
 		}
-		return B;
+		return b;
 	}//1.0 / (1 + 1.0 / m);
 	
 	// bernouli numbers

@@ -105,10 +105,8 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	}
 	// quaternion^3
 	public static Quaternion Cub(Quaternion q) {
-		double qr = q.R, idot = I_Dot(q), r2 = qr * qr, v = 3 * r2 - idot;
-		return new(qr * (r2 - 3 * idot), v * q.I, v * q.J, v * q.K);
-		//double I = IDot(q), a = 2 * q.R, aa = q.R * a, AI = q.R * q.R - I;
-		//return new(a * AI - a * I, q.I * (AI += aa), q.J * AI, q.K * AI);
+		double qr = q.R, iDot = I_Dot(q), r2 = qr * qr, v = 3 * r2 - iDot;
+		return new(qr * (r2 - 3 * iDot), v * q.I, v * q.J, v * q.K);
 	}
 	// quaternion^4
 	public static Quaternion Quart(Quaternion q) {

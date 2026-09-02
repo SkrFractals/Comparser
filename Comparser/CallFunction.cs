@@ -90,14 +90,14 @@ public abstract partial class Comparser<T> {
 		override protected Value EvalF(ushort _, Value v, Value args) => Value.Operate(v, _del);
 	}
 	private class FuncOperator2(Reader read, CallFunction parent, Func<T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
-		override protected Value EvalF(ushort _, Value v, Value args) {
+		override protected Value EvalF(ushort depth, Value v, Value args) {
 			switch (v.Values.Length) {
 			case 0: return v;
 			case 1: return v.Values[0];
 			default:
 				var s = v.Values[0];
 				for (var c = 1; c < v.Values.Length; ++c)
-					s = Value.Operate2(s, v.Values[c], comp, (x, _) => x);
+					s = Value.Operate2(s, v.Values[c], comp, (x, _) => x, depth, Context, None);
 				return s;
 			}
 		}
@@ -222,12 +222,12 @@ public abstract partial class Comparser<T> {
 	// return a vector of sums of iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (x,2x); sum(0,1,3,exp(k0)) => (1+2+3,2+4+6) => (6,12); // 6 is the sum of x term, evaluated with k0=1..3, 12 is the sum of 2x term, evaluated with k0=1..3
 	private class Sum(Reader read, CallFunction parent, Value args) : CollapseIterator(read, parent, OpCode.Sum, args) { 
-		override protected void Op(ref Value result, Value iteration) => result = Value.Operate2(result, iteration, INumber<T>.Add, (x, y) => x + y);
+		override protected void Op(ref Value result, Value iteration) => result = Value.Operate2(result, iteration, INumber<T>.Add, (x, y) => x + y, 0, Context, None);
 	}
 	// return a vector of products of iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (x,2x); prod(0,1,3,exp(k0)) => (1*2*3,2*4*6) => (6,48); // 6 is the product of x term, evaluated with k0=1..3, 48 is the product of 2x term, evaluated with k0=1..3
 	private class Product(Reader read, CallFunction parent, Value args) : CollapseIterator(read, parent, OpCode.Prod, args) {
-		override protected void Op(ref Value result, Value iteration) => result = Value.Operate2(result, iteration, INumber<T>.Mul, (x, _) => x);
+		override protected void Op(ref Value result, Value iteration) => result = Value.Operate2(result, iteration, INumber<T>.Mul, (x, _) => x, 0, Context, None);
 	}
 	// returns a vector of first elements of evaluated iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (3x,2x,4x); vector(0,1,3,exp(k0)) => (3*1,3*2,3*3) => (3,6,9); // only took the first 3x term, evaluated with k0=1..3
