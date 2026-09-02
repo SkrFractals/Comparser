@@ -164,10 +164,12 @@ Example: (1,2,3,(4,5,6))# = 4
 ### Binary operators:  
 _\<expression\>_ + _\<expression\>_  
 Add  
+(if any operand is a string, it will add the other operand as a string)  
 _\<expression\>_ - _\<expression\>_  
 Subtract  
 __\<expression\>_ * _\<expression\>_  
 Multiply  
+If the LEFT operand is a string, it will try to call a function matching that string's name on the right operand(s).  
 _\<expression\>_ / _\<expression\>_  
 Divide  
 _\<expression\>_ \ _\<expression\>_  
