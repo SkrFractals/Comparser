@@ -402,3 +402,6 @@ This feature is still in development, but it's almost finished.
 I'm also preparing a GPU shader that will be able to evaluate custom expressions called on the build.  
 This still has a while to be finished, but I've already prepared a translation of the build into the bytecode from the upcoming GPU shader, and a CPU virtual machine for simulating it.  
 Neither has been tested yet, though.  
+It will not support any features that work with strings:  
+No EVAL function, no string data, no dynamic delegates (constant delegates are fine - those are resolved during parsing).  
+  
