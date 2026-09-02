@@ -291,7 +291,7 @@ Scientific notation could be ambiguously confused with multiplication by Euler's
 ### NaN:  
 \_  
 "Not a number" is a result of an undefined operation, or a wrongly parsed expression.  
-It can also be used as a discard argument, which would prompt it's efault expression if it has any.  
+It can also be used as a discard argument, which would prompt its default expression if it has any.  
   
 ### Strings:  
 "string"  
