@@ -5,9 +5,15 @@ Complex Computer Parser
   
 ## EXECUTION STAGES:  
 Comparser has two distinct stages:  
-Parser stage (COMMANDS) — read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage.  
-Evaluation stage (EXPRESSIONS) — after parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
+  
+### Parser stage (COMMANDS)  
+Read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage. 
+This language half is imperative.  
+  
+### Evaluation stage (EXPRESSIONS)  
+After parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
 Case-sensitivity optional - if you choose insensitive, all uppercase letters are internally converted to lowercase.  
+This language half is functional.  
   
 ## COMMANDS:  
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.  
