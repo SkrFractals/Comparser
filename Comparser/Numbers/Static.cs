@@ -183,6 +183,7 @@ public static class Static {
 	public static double Sqr(double x) => x * x;
 	public static double Lerp(double a, double b, double t) => a * (1 - t) + b * t;
 	#endregion
+	public static string[] Errors = ["", "NaN", "Stack Overflow", "Bad Expression", "Unexpected"];
 }
 
 

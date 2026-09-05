@@ -1,8 +1,7 @@
-﻿namespace Comparser.Forms;
+﻿using Comparser.Comparser;
+namespace Comparser.Forms;
 public partial class ParentControl : UserControl {
-	protected ParentControl() {
-		InitializeComponent();
-	}
+	protected ParentControl() => InitializeComponent();
 	protected const int RowHeight = 32, Pad = 3;
 	protected readonly MenuControl? Root;
 	public readonly ParentForm? FormP;
@@ -10,6 +9,18 @@ public partial class ParentControl : UserControl {
 		Root = root ?? (MenuControl)this;
 		(FormP = parent).Attach(this);
 		InitializeComponent();
+	}
+	public class TextField {
+		public TextField(RichTextBox box, EventHandler textChanged, string text = "") {
+			Exp = null;
+			Value = null;
+			Text = text;
+			ComparserControl.InitRichTextBox(Box = box, textChanged);
+		}
+		public object? Exp;
+		public object? Value;
+		public string Text;
+		public RichTextBox Box;
 	}
 	public virtual void CoreLayout() { }
 	public virtual Size GetSize() => new(0,0);
@@ -49,4 +60,15 @@ public partial class ParentControl : UserControl {
 		Anchor = AnchorStyles.Bottom | AnchorStyles.Right | AnchorStyles.Left | AnchorStyles.Top;
 	}
 	public virtual void PerformClose() { }
+	protected object? Eval(TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null)
+		=> !Visible || !Enabled ? null : Eval(Root?.Set?.Context, field, cachedParse, args, cancel);
+	public static object? Eval(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { // TODO call re-eval together with expressionControl
+		if (c is null)
+			return null;
+		if (cachedParse && field.Exp != null && field.Text == field.Box.Text) 
+			return field.Value = c.Eval(field.Exp, args);
+		field.Value =  c.ParseEval(cancel ?? new CancellationTokenSource().Token, field.Text = field.Box.Text, 0,out field.Exp, out var colors, args);
+		ComparserControl.ApplyColors(colors, field.Box);
+		return field.Value;
+	}
 }

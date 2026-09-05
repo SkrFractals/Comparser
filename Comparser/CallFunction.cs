@@ -60,6 +60,9 @@ public abstract partial class Comparser<T> {
 	public class Cf3(Func<T, T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
 		public override Expression Call(Reader read, Value args) => new FuncOperator3(read, this, del, op, args);
 	}
+	public class Cf4(Func<T, T, T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
+		public override Expression Call(Reader read, Value args) => new FuncOperator4(read, this, del, op, args);
+	}
 	#endregion
 
 	#region Function Expressions - Operators
@@ -104,6 +107,9 @@ public abstract partial class Comparser<T> {
 	}
 	private class FuncOperator3(Reader read, CallFunction parent, Func<T, T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort _, Value v, Value args) => v.Values.Length == 3 ? Value.Operate3(v.Values[0], v.Values[1], v.Values[2], comp) : new();
+	}
+	private class FuncOperator4(Reader read, CallFunction parent, Func<T, T, T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
+		override protected Value EvalF(ushort _, Value v, Value args) => v.Values.Length == 4 ? Value.Operate4(v.Values[0], v.Values[1], v.Values[2], v.Values[3], comp) : new();
 	}
 	#endregion
 
@@ -177,7 +183,7 @@ public abstract partial class Comparser<T> {
 				return new(T.NaN());
 			int from = (int)Math.Round(T.Re(v.Values[1].Leaf)),
 				to = (int)Math.Round(T.Re(v.Values[2].Leaf));
-			if (Math.Abs(from - to) > Context._iterLimit)
+			if (Math.Abs(from - to) > Context._iterOverflow)
 				return new(T.NaN()); // iteration range over limit, perhaps accidental huge/infinity value in the range?
 			var iteratorIndex = args.Values.Length;
 			//_args = new(new Value[iteratorIndex + 1]);

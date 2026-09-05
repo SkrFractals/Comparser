@@ -2,12 +2,10 @@
 using Comparser.Comparser.Numbers;
 namespace Comparser.Forms;
 public partial class ExpressionControl : ParentControl {
-		public class ExpRow(Label index, RichTextBox expression, Label result, Button del) {
-		public object? Exp;
-		public string Text = "";
+	protected class ExpRow(Label index, RichTextBox expression, Label result, Button del, EventHandler textChanged) {
+		public readonly TextField Field = new(expression, textChanged);
 		public readonly Label Index = index;
-		public readonly RichTextBox Expression = expression;
-		public readonly Label Result = result; 
+		public readonly Label Result = result;
 		public readonly Button Del = del;
 	}
 	private bool _dark;
@@ -28,22 +26,12 @@ public partial class ExpressionControl : ParentControl {
 		if (!Visible)
 			return;
 		var row = _expressionRows[index];
-		object eval = Root?.Set?.Algebra switch {
+		object? v, args = Root?.Set?.Algebra switch {
 			1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), 0, "x")]),
 			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), 0, "x")]),
 			_ => new Comparser<Real>.Value([new(Real.MakeR(index), 0, "x")])
 		};
-		object? v;
-		if (cachedParse && row.Exp != null && row.Text == row.Expression.Text && row.Text != "") {
-			v = Root?.Set?.Context?.Eval(row.Exp, eval);
-		} else {
-			(int, Color)[] colors = [];
-			v = Root?.Set?.Context?.ParseEval(new CancellationTokenSource().Token, row.Text = row.Expression.Text/*Clean()*/, 0,out row.Exp, out colors, eval);
-			ComparserControl.ApplyColors(colors, row.Expression);
-		}
-		
-	
-		if(v != null)
+		if((v = Eval(row.Field, cachedParse, args)) != null)
 			row.Result.Text = Root?.Set?.Context?.ToString(v,  Root.Set.Decimals);
 	}
 
@@ -55,9 +43,9 @@ public partial class ExpressionControl : ParentControl {
 		var tab = -1;
 		for (var i = 0; i < _expressionRows.Count; ++i, y += (RowHeight + Pad) << 1) {
 			var row = _expressionRows[i];
-			row.Index.Top = row.Expression.Top = row.Del.Top = y;
+			row.Index.Top = row.Field.Box.Top = row.Del.Top = y;
 			row.Result.Top = y + RowHeight + Pad;
-			row.Expression.TabIndex = ++tab;
+			row.Field.Box.TabIndex = ++tab;
 			row.Del.TabIndex = ++tab;
 			if (i < _expressionRows.Count - 1) {
 				var s = _swaps[i];
@@ -66,14 +54,14 @@ public partial class ExpressionControl : ParentControl {
 				c.Add(s);
 			}
 			c.Add(row.Index);
-			c.Add(row.Expression);
+			c.Add(row.Field.Box);
 			c.Add(row.Result);
 			c.Add(row.Del);
 		}
 		var (expW, resW, edelL, swapL) = ExpDim();
 		for (var i = 0; i < _expressionRows.Count; ++i) {
 			var row = _expressionRows[i];
-			row.Expression.Width = expW;
+			row.Field.Box.Width = expW;
 			row.Result.Width = resW;
 			row.Del.Left = edelL;
 			if (i < _expressionRows.Count - 1)
@@ -95,7 +83,7 @@ public partial class ExpressionControl : ParentControl {
 				Name = "index" + si,
 				Text = "x=" + si + ":",
 				AutoSize = true,
-				Font = new Font("Consolas", RowHeight >> 1),
+				Font = new("Consolas", RowHeight >> 1),
 				Anchor = a | AnchorStyles.Left,
 				Location = new(Pad, 0),
 				UseMnemonic = false,
@@ -112,7 +100,7 @@ public partial class ExpressionControl : ParentControl {
 			new() {
 				Name = "result" + si,
 				AutoSize = true,
-				Font = new Font("Consolas", RowHeight >> 1),
+				Font = new("Consolas", RowHeight >> 1),
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
 				Location = new(Pad, 0),
 				UseMnemonic = false,
@@ -126,7 +114,7 @@ public partial class ExpressionControl : ParentControl {
 				Location = new(0, 0),
 				UseMnemonic = false,
 				Size = new(RowHeight, (RowHeight << 1) + Pad)
-			});
+			}, ExpChanged);
 		if (i > 0) {
 			Button swap = new() {
 				Name = "swap" + si,
@@ -140,7 +128,6 @@ public partial class ExpressionControl : ParentControl {
 			swap.Click += ExpSwapped;
 			_swaps.Add(swap);
 		}
-		ComparserControl.InitRichTextBox(row.Expression, ExpChanged);
 		row.Del.Click += ExpDeleted;
 		_expressionRows.Add(row);
 		FormP?.MakeLayout();
@@ -154,8 +141,8 @@ public partial class ExpressionControl : ParentControl {
 		Visible = false;
 		var rowA = _expressionRows[s];
 		var rowB = _expressionRows[s + 1];
-		(rowA.Expression.Text, rowA.Result.Text, rowA.Exp, rowA.Text, rowB.Expression.Text, rowB.Result.Text, rowB.Exp, rowB.Text) 
-			= (rowB.Expression.Text, rowB.Result.Text, rowB.Exp,rowB.Text, rowA.Expression.Text, rowA.Result.Text, rowA.Exp, rowA.Text);
+		(rowA.Field.Box.Text, rowA.Result.Text, rowA.Field.Exp, rowA.Field.Text, rowB.Field.Box.Text, rowB.Result.Text, rowB.Field.Exp, rowB.Field.Text) 
+			= (rowB.Field.Box.Text, rowB.Result.Text, rowB.Field.Exp,rowB.Field.Text, rowA.Field.Box.Text, rowA.Result.Text, rowA.Field.Exp, rowA.Field.Text);
 		Visible = true;
 		// reevaluate with swapped indices
 		Eval(s);
@@ -171,10 +158,10 @@ public partial class ExpressionControl : ParentControl {
 		for (int i = d + 1; i < _expressionRows.Count; ++i) {
 			var rowTo = _expressionRows[i - 1];
 			var row = _expressionRows[i];
-			rowTo.Text = row.Text;
-			rowTo.Expression.Text = row.Expression.Text;
+			rowTo.Field.Text = row.Field.Text;
+			rowTo.Field.Box.Text = row.Field.Box.Text;
 			rowTo.Result.Text = row.Result.Text;
-			rowTo.Exp = row.Exp;
+			rowTo.Field.Exp = row.Field.Exp;
 		}
 		// remove controls
 		_expressionRows.RemoveAt(_expressionRows.Count - 1);

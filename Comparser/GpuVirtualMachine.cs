@@ -192,7 +192,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			case OpCode.Mul:
 			case OpCode.Pow:
 			case OpCode.Max:
-			case OpCode.SoftMax:
+			//case OpCode.SoftMax:
 				eval = Eval(input, ref pc);
 				if (!evaluate) 
 					break;
@@ -202,12 +202,21 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						op.MyValue = Operate2(op.MyValue, eval.Values[i], op.MyCode);
 				} else op.MyValue = eval;
 				break;
-			case OpCode.Clamp:
-				eval = Eval(input, ref pc);
+			//case OpCode.Clamp:
+			//case OpCode.SoftClamp:
+			//case OpCode.SoftMaxB:
+			/*	eval = Eval(input, ref pc);
 				if (!evaluate) 
 					break;
 				op.MyValue = eval.Values.Length == 3 ? Operate3(eval.Values[0], eval.Values[1], eval.Values[2], op.MyCode) : eval;
-				break;
+				break;*/
+			// TODO substitute Clamp, SoftMaxB, SoftClamp, SoftClampB
+			/*case OpCode.SoftClampB:
+				eval = Eval(input, ref pc);
+				if (!evaluate) 
+					break;
+				op.MyValue = eval.Values.Length == 4 ? Operate4(eval.Values[0], eval.Values[1], eval.Values[2], eval.Values[3], op.MyCode) : eval;
+				break;*/
 			// Binary:
 			
 			// Iterators:
@@ -348,7 +357,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					OpCode.Acosh => T.Acosh(l), OpCode.Asinh => T.Asinh(l), OpCode.Atanh => T.Atanh(l), OpCode.Acoth => T.Acoth(l),
 					OpCode.Acos => T.Acos(l), OpCode.Atan => T.Atan(l), OpCode.Re => T.MakeR(T.Re(l)), OpCode.Im =>T.MakeR(T.Im(l)),
 					OpCode.Trunc => T.Trunc(l), OpCode.Floor => T.Floor(l), OpCode.Round => T.Round(l), OpCode.Absri => T.AbsComp(l),
-					OpCode.SqrAbs => T.MakeR(+l), OpCode.Abs => T.MakeR(INumber<T>.Abs(l)),
+					OpCode.SqrAbs => T.MakeR(+l), OpCode.Abs => INumber<T>.T_Abs(l),
 					OpCode.Arg => T.MakeR(T.Arg(l)), OpCode.Conj => INumber<T>.Conj(l),
 					OpCode.Factorial => T.Factorial(l), OpCode.Gamma => T.Gamma(l), OpCode.Zeta => T.Zeta(l),
 					_ => T.NaN()
@@ -383,7 +392,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					_ => T.NaN()
 				};
 			}
-			VmValue Operate3(VmValue av, VmValue bv, VmValue cv, OpCode opCode) {
+			/*VmValue Operate3(VmValue av, VmValue bv, VmValue cv, OpCode opCode) {
 				VmValue[] vA = (av = Collapse(av)).Values, vB = (bv = Collapse(bv)).Values, vC = (cv = Collapse(cv)).Values;
 				int a = 0, b = 0, c = 0, s = Math.Max(vC.Length, Math.Max(vA.Length, vB.Length));
 				VmValue vals = new(new VmValue[s]);
@@ -412,7 +421,38 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					OpCode.Clamp => T.Clamp(la, lb, lc),
 					_ => T.NaN()
 				};
-			}
+			}*/
+			/*VmValue Operate4(VmValue av, VmValue bv, VmValue cv, VmValue dv, OpCode opCode) {
+				VmValue[] vA = (av = Collapse(av)).Values, vB = (bv = Collapse(bv)).Values, 
+					vC = (cv = Collapse(cv)).Values, vD = (dv = Collapse(dv)).Values;
+				int a = 0, b = 0, c = 0, s = Math.Max(Math.Max(vC.Length,vD.Length), Math.Max(vA.Length, vB.Length));
+				VmValue vals = new(new VmValue[s]);
+				if (vA.Length == 0) vA = [new(av.Leaf)];
+				if (vB.Length == 0) vB = [new(bv.Leaf)];
+				if (vC.Length == 0) vC = [new(cv.Leaf)];
+				for (int i = 0; i < s; ++i) {
+					int an, bn, cn;
+					vals.Values[i] = (an = (vA[a] = Collapse(vA[a])).Values.Length)
+						+ (bn = (vB[b] = Collapse(vB[b])).Values.Length)
+						+ (cn = (vC[c] = Collapse(vC[c])).Values.Length) == 0
+							? new(OpLeaf(vA[a].Leaf, vB[b].Leaf, vC[c].Leaf))
+							: Operate3(
+								an == 0 ? new([new(vA[a].Leaf)]) : vA[a],
+								bn == 0 ? new([new(vB[b].Leaf)]) : vB[b],
+								cn == 0 ? new([new(vC[c].Leaf)]) : vC[c], opCode);
+					a = (a + 1) % vA.Length;
+					b = (b + 1) % vB.Length;
+					c = (c + 1) % vC.Length;
+				}
+				if (s != 0)
+					return vals;
+				vals.Leaf = OpLeaf(av.Leaf, bv.Leaf, cv.Leaf);
+				return vals;
+				T OpLeaf(T la, T lb,T lc) => opCode switch {
+					OpCode.Clamp => T.Clamp(la, lb, lc),
+					_ => T.NaN()
+				};
+			}*/
 		}
 		private static VmValue Collapse(VmValue i) {
 			while (i.Values.Length == 1)

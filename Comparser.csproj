@@ -32,6 +32,9 @@
     <Compile Update="Controls\LogControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Update="Forms\PlotControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Update="Forms\LineNumberControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

@@ -7,7 +7,61 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			Iln2 = new(T.MakeR(1.0/Math.Log(2))),
 			Iln10 = new(T.MakeR(1.0/Math.Log(10))),
 			QTau = new(T.MakeR(Math.PI / 2));
-		
+
+		private class Subs(Comparser<T> context, CancellationToken cancel) {
+			private static readonly Value 
+				X0 = new([new(T.Zero(), 0, "x")]), // pattern match x as 0
+				X = new([new(T.NaN(), 0, "x")]), // passable argument x
+				Xy = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y")]), // passable xy
+				Xyz = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "z")]), // passable xyz
+				Xyzw = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "z"), new(T.NaN(), 0, "w")]); // passable xyzw
+			public readonly Comparser<T> Context = context;
+			public readonly CallCustom Sinc = new([(X0, new(new(context, "1", cancel), out _, None), null), 
+					(X, new(new(context, "sin(x)inv(x)", cancel), out _, X), null)]),
+				// alternative using condition instead of pattern matching: var sinc = new CallCustom([(x, new(context, "sin(x)/x", x), new(context, "x==0", x))]);
+				Nsinc = new([(X0, new(new(context, "1", cancel), out _, None), null), 
+					(X, new(new(context, "sin(pix)inv(pix)", cancel), out _, X), null)]),
+				Sinhc = new([(X0, new(new(context, "1",  cancel), out _,None), null), 
+					(X, new(new(context, "sinh(x)inv(x)",  cancel), out _,X), null)]),
+				Nsinhc = new([(X0, new(new(context, "1",  cancel), out _,None), null),
+					(X, new(new(context, "sinh(pix)inv(pix)", cancel), out _, X), null)]),
+				Cosc = new([(X0, new(new(context, "0", cancel), out _, None), null), 
+					(X, new(new(context, "(1+neg(cos(x)))/x",  cancel), out _,X), null)]),
+				Ncosc = new([(X0, new(new(context, "0", cancel), out _, None), null),
+					(X, new(new(context, "(1+neg(cos(pix)))inv(pix)", cancel), out _, X), null)]),
+				Coshc = new([(X0, new(new(context, "0", cancel), out _, None), null),
+					(X, new(new(context, "(1+neg(cosh(x)))inv(x)", cancel), out _, X), null)]),
+				Ncoshc = new([(X0, new(new(context, "0",  cancel), out _,None), null),
+					(X, new(new(context, "(1+neg(cosh(pix)))inv(pix)", cancel), out _, X), null)]),
+				Tanh = new([(X, new(new(context, "sinh(x)inv(cosh(x))",  cancel), out _,X), null)]),
+				Coth = new([(X, new(new(context, "cosh(x)inv(sinh(x))", cancel), out _, X), null)]),
+				Tan = new([(X, new(new(context, "sin(x)inv(cos(x))",  cancel), out _,X), null)]),
+				Cot = new([(X, new(new(context, "cos(x)inv(sin(x))",  cancel), out _,X), null)]),
+				Frac = new([(X, new(new(context, "x+neg(trunc(x))", cancel), out _, X), null)]),
+				Sgn = new([(X0, new(new(context, "0", cancel), out _, None), null), 
+					(X, new(new(context, "xinv(abs(x))", cancel), out _, X), null)]),
+				Clamp = new([(Xyz, new(new(context, "min(max(x,y),z)",  cancel), out _, Xyz), null)]),
+				SftAbs = new([(X, new(new(context, "log(1+exp(x))",  cancel), out _, X), null)]),
+				//SftNeg = new([(X, new(new(context, "neg(log(1+exp(neg(x))))",  cancel), out _, Xy), null)]),
+				SftMax = new([(Xy, new(new(context, "log(exp(x)+exp(y))",  cancel), out _, Xy), null)]),
+				//SftMin = new([(Xy, new(new(context, "neg(log(exp(neg(x))+exp(neg(y))))",  cancel), out _, Xy), null)]),
+				SftClamp = new([(Xyz, new(new(context, "x+log(1+exp(y+neg(x)))+neg(log(1+exp(z+neg(z))))",  cancel), out _, Xyz), null)]),
+				
+				// TODO these could use a precomputed log(b)
+				SftAbsB = new([(Xy, new(new(context, "log(1+exp(log(y)x))inv(log(y))",  cancel), out _, X), null)]),
+				SftNegB = new([(Xy, new(new(context, "neg(log(1+exp(neg(log(y)x))))inv(log(y))",  cancel), out _, Xy), null)]),
+				SftMaxB = new([(Xyz, new(new(context, "log(exp(log(z)x)+exp(log(z)y))inv(log(z))",  cancel), out _, Xyz), null)]),
+				SftMinB = new([(Xyz, new(new(context, "neg(log(exp(log(z)neg(x))+exp(log(z)neg(y))))inv(log(z))",  cancel), out _, Xyz), null)]),
+				SftClampB = new([(Xyzw, new(new(context, "x+(log(1+exp(log(w)(y+neg(x))))+neg(log(1+exp(log(w)(z+neg(z))))))inv(log(w))",  cancel), out _, Xyz), null)]),
+				
+				ExpB = new([(Xy, new(new(context, "exp(log(y)x)",  cancel), out _, Xy), null)]),
+				LogB = new([(Xy, new(new(context, "log(x)inv(log(y))",  cancel), out _, Xy), null)]),
+				ImMag = new([(X, new(new(context, "abs(x+neg(re(x)))",  cancel), out _,X), null)]),
+				Square = new([(X, new(new(context, "xx", cancel), out _, X), null)]), // TODO maybe later implement it for performance
+				Cub = new([(X, new(new(context, "xxx", cancel), out _, X), null)]),
+				Quart = new([(X, new(new(context, "sqr(sqr(x))",  cancel), out _,X), null)]);
+		}
+		private static Subs? _subs;
 		public bool ParseByteCode(CancellationToken cancel, Comparser<T> context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {
 			
 			List<byte> header = []; // header string
@@ -18,39 +72,9 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			List<CallCustom> newCalls = []; // found custom function calls for parsing
 			int parsedCalls = 0; // already parsed newCalls -> funcPrints + funcCodes
 			
-			#region Subtitution Custom Functions
 			// replacement custom functions (those that branch or use the x argument multiple times):
-			Value x = new([new(T.NaN(), 0, "x")]), // passable argument x
-				x0 = new([new(T.Zero(), 0, "x")]); // pattern match x as 0
-			CallCustom sinc = new([(x0, new(new(context, "1", cancel), out _, None), null), 
-					(x, new(new(context, "sin(x)/x", cancel), out _, x), null)]),
-				// alternative using condition instead of pattern matching: var sinc = new CallCustom([(x, new(context, "sin(x)/x", x), new(context, "x==0", x))]);
-				nsinc = new([(x0, new(new(context, "1", cancel), out _, None), null), 
-					(x, new(new(context, "sin(pix)/(pix)", cancel), out _, x), null)]),
-				sinhc = new([(x0, new(new(context, "1",  cancel), out _,None), null), 
-					(x, new(new(context, "sinh(x)/x",  cancel), out _,x), null)]),
-				nsinhc = new([(x0, new(new(context, "1",  cancel), out _,None), null),
-					(x, new(new(context, "sinh(pix)/(pix)", cancel), out _, x), null)]),
-				cosc = new([(x0, new(new(context, "0", cancel), out _, None), null), 
-					(x, new(new(context, "(1-cos(x))/x",  cancel), out _,x), null)]),
-				ncosc = new([(x0, new(new(context, "0", cancel), out _, None), null),
-					(x, new(new(context, "(1-cos(pix))/(pix)", cancel), out _, x), null)]),
-				coshc = new([(x0, new(new(context, "0", cancel), out _, None), null),
-					(x, new(new(context, "(1-cosh(x))/x", cancel), out _, x), null)]),
-				ncoshc = new([(x0, new(new(context, "0",  cancel), out _,None), null),
-					(x, new(new(context, "(1-cosh(pix))/(pix)", cancel), out _, x), null)]),
-				tanh = new([(x, new(new(context, "sinh(x)/cosh(x)",  cancel), out _,x), null)]),
-				coth = new([(x, new(new(context, "cosh(x)/sinh(x)", cancel), out _, x), null)]),
-				tan = new([(x, new(new(context, "sin(x)/cos(x)",  cancel), out _,x), null)]),
-				cot = new([(x, new(new(context, "cos(x)/sin(x)",  cancel), out _,x), null)]),
-				frac = new([(x, new(new(context, "x-trunc(x)", cancel), out _, x), null)]),
-				sgn = new([(x0, new(new(context, "0", cancel), out _, None), null), 
-					(x, new(new(context, "x/abs(x)", cancel), out _, x), null)]),
-				immag = new([(x, new(new(context, "abs(x-re(x))",  cancel), out _,x), null)]),
-				sqr = new([(x, new(new(context, "xx", cancel), out _, x), null)]),
-				cub = new([(x, new(new(context, "xxx", cancel), out _, x), null)]),
-				quart = new([(x, new(new(context, "sqr(sqr(x))",  cancel), out _,x), null)]);
-			#endregion
+			if (_subs == null || _subs.Context != context)
+				_subs = new(context, cancel);
 			
 			#region Parse
 			bool success = true;
@@ -86,30 +110,42 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				
 				void MakeByteCodeS(GpuValue v) {
 					GpuValue? s = v._op switch { // substitute
+						OpCode.Clamp => new(OpCode.Call, v, _subs!.Clamp),
+						OpCode.SoftClamp => new(OpCode.Call, v, _subs!.SftClamp),
+						OpCode.SoftClampB => new(OpCode.Call, v, _subs!.SftClampB),
+						OpCode.SoftMax => new(OpCode.Call, v, _subs!.SftMax),
+						OpCode.SoftMaxB => new(OpCode.Call, v, _subs!.SftMaxB),
+						OpCode.ExpB => new(OpCode.Call, v, _subs!.ExpB),
+						//OpCode.ExpB => new(OpCode.Exp, new([new(OpCode.Log, v.Values[1]), v.Values[0]], OpCode.Mul)),
+						OpCode.LogB => new(OpCode.Call, v, _subs!.LogB),
+						//OpCode.LogB => new([new(OpCode.Log, v.Values[0]), new(OpCode.Inv, new(OpCode.Log, v.Values[1]))], OpCode.Mul),
 						OpCode.More => new(OpCode.Neg, new(OpCode.Less, new(OpCode.Neg, v))),
 						OpCode.MoreEqual => new(OpCode.Neg, new(OpCode.LessEqual, new(OpCode.Neg, v))),
 						OpCode.Min => new(OpCode.Neg, new(OpCode.Max, new(OpCode.Neg, v))),
 						OpCode.SoftMin => new(OpCode.Neg, new(OpCode.SoftMax, new(OpCode.Neg, v))), 
-						OpCode.SoftAbs => new([new(T.Zero()), v], OpCode.SoftMax), 
-						OpCode.SoftNeg => new([new(T.Zero()), v], OpCode.SoftMin), 
+						OpCode.SoftMinB => new(OpCode.Call, v, _subs!.SftMinB),//new(OpCode.Neg, new(OpCode.SoftMaxB, new(OpCode.Neg, v))), 
+						OpCode.SoftAbs => new(OpCode.Call, v, _subs!.SftAbs),//new([new(T.Zero()), v], OpCode.SoftMax),
+						OpCode.SoftAbsB => new(OpCode.Call, v, _subs!.SftAbsB),//new([new(T.Zero()), v], OpCode.SoftMaxB),
+						OpCode.SoftNeg => new(OpCode.Neg, new(OpCode.SoftAbs, new(OpCode.Neg, v))),//new(OpCode.Call, v, subs!.SftNeg),//
+						OpCode.SoftNegB => new(OpCode.Call, v, _subs!.SftNegB),//new([new(T.Zero()), v], OpCode.SoftMinB),
 						OpCode.Exp10 => new(OpCode.Exp, new([Ln10, v], OpCode.Mul)),
 						OpCode.Exp2 => new(OpCode.Exp, new([Ln2, v], OpCode.Mul)), 
 						OpCode.Log10 => new([new(OpCode.Log, v), Iln10], OpCode.Mul),
 						OpCode.Log2 => new([new(OpCode.Log, v), Iln2], OpCode.Mul),
-						OpCode.Sinc => new(OpCode.Call, v, sinc),
-						OpCode.Nsinc => new(OpCode.Call, v, nsinc),
-						OpCode.Sinhc => new(OpCode.Call, v, sinhc),
-						OpCode.Nsinhc => new(OpCode.Call, v, nsinhc),
-						OpCode.Cosc => new(OpCode.Call, v, cosc),
-						OpCode.Ncosc => new(OpCode.Call, v, ncosc),
-						OpCode.Coshc => new(OpCode.Call, v, coshc),
-						OpCode.Ncoshc => new(OpCode.Call, v, ncoshc),
-						OpCode.Tanh => new(OpCode.Call, v, tanh),
-						OpCode.Coth => new(OpCode.Call, v, coth),
+						OpCode.Sinc => new(OpCode.Call, v, _subs!.Sinc),
+						OpCode.Nsinc => new(OpCode.Call, v, _subs!.Nsinc),
+						OpCode.Sinhc => new(OpCode.Call, v, _subs!.Sinhc),
+						OpCode.Nsinhc => new(OpCode.Call, v, _subs!.Nsinhc),
+						OpCode.Cosc => new(OpCode.Call, v, _subs!.Cosc),
+						OpCode.Ncosc => new(OpCode.Call, v, _subs!.Ncosc),
+						OpCode.Coshc => new(OpCode.Call, v, _subs!.Coshc),
+						OpCode.Ncoshc => new(OpCode.Call, v, _subs!.Ncoshc),
+						OpCode.Tanh => new(OpCode.Call, v, _subs!.Tanh),
+						OpCode.Coth => new(OpCode.Call, v, _subs!.Coth),
 						OpCode.Sech => new(OpCode.Inv, new(OpCode.Cosh, v)),
 						OpCode.Csch => new(OpCode.Inv, new(OpCode.Sinh, v)),
-						OpCode.Tan => new(OpCode.Call, v, tan),
-						OpCode.Cot => new(OpCode.Call, v, cot),
+						OpCode.Tan => new(OpCode.Call, v, _subs!.Tan),
+						OpCode.Cot => new(OpCode.Call, v, _subs!.Cot),
 						OpCode.Sec => new(OpCode.Inv, new(OpCode.Cos, v)),
 						OpCode.Csc => new(OpCode.Inv, new(OpCode.Sin, v)),
 						OpCode.Asech => new(OpCode.Acosh, new(OpCode.Inv, v)),
@@ -118,16 +154,16 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						OpCode.Acot => new([QTau, new(OpCode.Neg, new(OpCode.Atan, v))], OpCode.Add),
 						OpCode.Asec => new(OpCode.Acos, new(OpCode.Inv, v)),
 						OpCode.Acsc => new(OpCode.Asin, new(OpCode.Inv, v)),
-						OpCode.ImMag => new(OpCode.Call, v, immag),
+						OpCode.ImMag => new(OpCode.Call, v, _subs!.ImMag),
 						OpCode.ImCoef => new(OpCode.Call, new(OpCode.Re, new(OpCode.Neg, new(OpCode.Mul,v)))),
-						OpCode.Frac => new(OpCode.Call, v, frac),
+						OpCode.Frac => new(OpCode.Call, v, _subs!.Frac),
 						OpCode.Ceil => new(OpCode.Neg, new(OpCode.Floor, new(OpCode.Neg, v))),
-						OpCode.Sgn => new(OpCode.Call, v, sgn),
+						OpCode.Sgn => new(OpCode.Call, v, _subs!.Sgn),
 						OpCode.Sqrt => new([v, new(T.MakeR(.5))], OpCode.Pow),
-						OpCode.Sqr => new(OpCode.Call, v, sqr),
+						OpCode.Sqr => new(OpCode.Call, v, _subs!.Square),
 						OpCode.Cbrt => new([v, new(T.MakeR(1.0/3))], OpCode.Pow),
-						OpCode.Cub => new(OpCode.Call, v, cub),
-						OpCode.Quart => new(OpCode.Call, v, quart),
+						OpCode.Cub => new(OpCode.Call, v, _subs!.Cub),
+						OpCode.Quart => new(OpCode.Call, v, _subs!.Quart),
 						OpCode.Gauss => new(OpCode.Exp, new(OpCode.Neg, new(OpCode.Sqr, v))),
 						_ => null
 					};

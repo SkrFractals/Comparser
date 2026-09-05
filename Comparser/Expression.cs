@@ -3,6 +3,10 @@ namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public class Expression {
 		
+		
+		public static FailReason Err(ref FailReason error, Value b) => error = (FailReason)Math.Max((byte)error, (byte)b.Error);
+
+		
 		#region Content
 		// Contains user-defined custom function
 		protected readonly Comparser<T> Context;
@@ -23,11 +27,11 @@ public abstract partial class Comparser<T> {
 		public virtual Value Eval(ushort depth, Value args) {
 			if (_cache.GetEval(args)) return _cache.Result?.Eval!;
 			Value result = new(new Value[V.Values.Length]);
-			int error = 0;
+			FailReason error = FailReason.Success;
 			if (V.Values.Length == 0)
 				result = EvalValue(depth, V, args);
 			else
-				for (var e = 0; e < V.Values.Length; error |= result.Values[e].Error, ++e)
+				for (var e = 0; e < V.Values.Length; Err(ref error, result.Values[e]), ++e)
 					result.Values[e] = EvalValue(depth, V.Values[e], args);
 			var t = V.Text;
 			if (error == 0) {
@@ -80,7 +84,14 @@ public abstract partial class Comparser<T> {
 		public static GpuValue GpuParseValue(ushort depth, Value v) 
 			=> v.Op.Gop(v.Term?.GpuParse(depth) ?? (v.Arg.Length == 0 ? new(v.Leaf) : new(v.Arg)), v.Operand?.GpuParse(depth) ?? new());
 		#endregion
-		
+
+		public enum ParseAs : byte {
+			Expression = 0,		// tries to parse an evaluable expression
+			Argument = 1,		// always successfully returns a string if parsing fails at any point, finally will try to read defArg into its Operand
+			Definition = 2,		// always successfully returns a string if parsing fails at any point, first level parenthesis is only allowed at the very beginning
+			DefinitionExp = 3	// if we got parenthesis at beginning, this mode will allow further deeper parentheses
+		}
+
 		#region Parse Constructors
 		/// <summary>
 		/// Reads and parses an expression string
@@ -90,12 +101,13 @@ public abstract partial class Comparser<T> {
 		/// <param name="args">argument value, will substitute every x in the string</param>
 		/// <param name="cache">cache size of this new Expression</param>
 		/// <param name="left">what order of operations was my parent's operator? Used to test for associativity</param>
-		/// <param name="isArgument">is this an argument parse?</param>
-		public Expression(Reader read, out Operator nextOp, Value args, int cache = 0, OpOrder left = 0, bool isArgument = false) {
+		/// <param name="parseAs">what are e expecting this to be? Modifies what it is allowed to parse and return.</param>
+		public Expression(Reader read, out Operator nextOp, Value args, int cache = 0, OpOrder left = 0, ParseAs parseAs = ParseAs.Expression) {
 			Context = read.Context;
 			
 			// Init variables
-			int startR, start = read.From, error = 0;
+			int startR, start = read.From;
+			FailReason error = 0;
 			_cache = new(cache);
 			Value /*t = new(),*/ r;
 			List<Value> expr = [];
@@ -105,35 +117,17 @@ public abstract partial class Comparser<T> {
 			Nest();
 			read.TrimStart();
 			nextOp = new();
-			while(true) { // Read vector loop:
+			do { // Read vector loop:
 				startR = read.From;
 				Read(out nextOp);
-				if (r.Text == "") 
+				if (r.Text == "")
 					r.Text = read.Uncomment(startR, read.From); // if it didn't remember pre-defaultArg string, it will take it here
-				if (r.String == "") 
+				if (r.String == "")
 					r.String = (r.Term?.V.String ?? "") != "" ? r.Term?.V.String! : r.Text; // if it didn't remember pre-defaultArg string, it will take it here
-				error |= r.Error;
+				Err(ref error, r);
 				read.TrimStart();
+			} while (ParseContinue());
 
-				if (left == 0 && isArgument) {
-					r.String = TrimEnd(read.Uncomment(startR, read.From), 1); // remember string before ':'
-					read.AddC(startR, read.From, ParseDictionary.Type.Arg); // color as argument
-					read.TrimStart(1);
-				}
-				// only left == 0 (aka top layer expression) should accept ',' for a next value
-				if (left != 0 || read.GotoFirstFailed(0, 2, [',', ':'], 1, out var s, out var found))
-					break;
-				if (s == 0)
-					continue;
-				if (!isArgument)
-					break;
-				
-				// Try to read argument default new([..expr]) is to let it reference already read arguments:
-				read.TrimStart(1);
-				r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
-			}
-			
-			
 			// Save vector to my values:
 			V = new([..expr], error, read.Uncomment(start, read.From));
 			return;
@@ -167,17 +161,19 @@ public abstract partial class Comparser<T> {
 				// no unary:
 				if (o.Order == 0) {
 					var startTerm = read.From;
-					if ((!Char('(') || !read.TrimStart(1) && SubTerm(out r.Term, ')')) // if opening parenthesis, allow a newline,and read a subterm to encapsulate
+					if ((
+							parseAs == ParseAs.Definition && left != 0 // definitions do not allow parenthesis unless they got one right at the beginning of the top level
+							|| !Char('(') 
+							|| !read.TrimStart(1) && SubTerm(out r.Term, ')')
+							) // if opening parenthesis, allow a newline,and read a subterm to encapsulate
 						&& (!Char('"') || ReadString(out r.Term))
 						&& TryFuncFailed() // _term = default function
 						&& (Number(out var n) // _value = number
 							|| Const(out n, pArgs, (byte)ParseDictionary.Type.Arg, c => new(read.Uncomment(startR, read.From), (int[])c.obj.Obj)) // function arguments
-							|| (
-								Const(out n, Context.Context, Constants, c => ((Value)c.obj.Obj).Copy()) // _value = constant
-								&& (!(Context.UserFunctions.TryGetValue(n.String, out var f) || Context.DefaultFunctions.TryGetValue(n.String, out f))
-									|| read.GotoFirstFailed(0, 2, ['('], 1, out _, out _)
-									|| CallF(f, startTerm, read.From - 1, ParseDictionary.Type.PointerF))
-							)
+							|| Const(out n, Context.Context, Constants, c => ((Value)c.obj.Obj).Copy()) // _value = constant
+							&& (!(Context.UserFunctions.TryGetValue(n.String, out var f) || Context.DefaultFunctions.TryGetValue(n.String, out f))
+								|| read.GotoFirstFailed(0, 2, ['('], 1, out _, out _)
+								|| CallF(f, startTerm, read.From - 1, ParseDictionary.Type.PointerF))
 						)) r.Term = new(Context, n, cache); // just a value
 					else if (Fail(r) && F()) return;//if(Fail(r) && F()) TryComment();
 					read.TrimStart();
@@ -200,13 +196,15 @@ public abstract partial class Comparser<T> {
 					var x when x == typeof(Div) => read.IsComment(), // comment
 					var x when x == typeof(Count) => DoubleOp('#', new Count()) && ++read.From > 0 && Encapsulate(new FuncCount(Context, OpCount, expr[^1]))
 						|| (read.From += 2) > 0 && Encapsulate(new FuncCatCount(Context, OpCatCount, expr[^1])), // count / catCount
-					var x when x == typeof(Abs) => DuO('@', new Abs(), OpAbs, (z) => T.MakeR(INumber<T>.Abs(z)), OpCode.Abs, OpSqrAbs, INumber<T>.SqrAbs, OpCode.SqrAbs), // abs / sqrAbs
-					var x when x == typeof(AbsRi) => DuO('|', new AbsRi(), OpAbsRi, T.AbsComp, OpCode.Absri, OpSign, INumber<T>.Sign, OpCode.Sgn), // count / catCount
+					var x when x == typeof(Abs) => DuO('@', new Abs(), OpAbs, INumber<T>.T_Abs, OpCode.Abs, OpSqrAbs, INumber<T>.SqrAbs, OpCode.SqrAbs), // abs / sqrAbs
+					var x when x == typeof(AbsRi) => DuO('|', new AbsRi(), OpCompAbs, T.AbsComp, OpCode.Absri, OpSign, INumber<T>.Sign, OpCode.Sgn), // count / catCount
 					_ => false
 				}) {
 					read.TrimStart();
 					if (o.Order == 0 || read.From >= read.Text.Length) return; // true;
 				}
+				if (o.EatOp == 0 && !Context._operatorLess)
+					return; // operator-less multiply is blocked
 				read.From += o.EatOp; // eat operator
 				read.TrimStart(o.EatOp > 0 ? 1 : 0);
 				o.Negative = r.Op.Negative; // move negative flag to the new operator
@@ -216,17 +214,12 @@ public abstract partial class Comparser<T> {
 				}
 				// Read operand:
 				while (true) {
-					var fail = Fail((r.Operand = new(read, out o, args, cache, (r.Op = o).Order, isArgument)).V);
+					var fail = Fail((r.Operand = new(read, out o, args, cache, (r.Op = o).Order, parseAs)).V);
 					if (fail) {
-						if (isArgument && F()) {
-							//var rop = r.Operand;
-							//F();
-							//r.Operand = rop.V.Operand;
+						if (parseAs != ParseAs.Expression && F()) // operand failed when we're looking for an argument - go back and take the string and try the defarg there 
 							break;
-						}
-						if (r.Op.EatOp > 0 && F()) {
+						if (r.Op.EatOp > 0 && F())
 							return; // false; // failed to read operand
-						}
 						r.Op = new();
 						break; // if it was operator-less multiplication - assume it was an expression end instead
 					}
@@ -258,7 +251,7 @@ public abstract partial class Comparser<T> {
 					return true;
 				}
 				bool SubTerm(out Expression readTo, char req) {
-					var fail = Fail((readTo = new(read, out _, args)).V);
+					var fail = Fail((readTo = new(read, out _, args, 0, 0, parseAs >= ParseAs.Definition ? ParseAs.DefinitionExp : parseAs)).V);
 					read.TrimStart();
 					return (fail || readTo.V.Values.Length == 0 || FailRequiredSymbol(req)) && F();
 				}
@@ -272,24 +265,11 @@ public abstract partial class Comparser<T> {
 					for (var i = 0; (i = s.IndexOf('\\', i)) >= 0;) {
 						if (i + 1 < s.Length)
 							switch (s[i + 1]) {
-							case '\\': // intentional backslash in string
-								s = s.Remove(++i, 1);
-								break;
-							case 'n': // intentional newline in string
-								R("\n");
-								++i;
-								break;
-							case 't': // intentional newline in string
-								R("\t");
-								++i;
-								break;
-							case 'r': // intentional newline in string
-								R("\r");
-								++i;
-								break;
-							default:
-								++i;
-								break;
+							case '\\': s = s.Remove(++i, 1); break; // intentional backslash in string
+							case 'n': R("\n"); break; // intentional newline in string
+							case 't': R("\t"); break; // intentional newline in string
+							case 'r': R("\r"); break; // intentional newline in string
+							default: ++i; break;
 								void R(string character) {
 									s = s.Remove(i, 2).Insert(i, character);
 									++i;
@@ -324,8 +304,7 @@ public abstract partial class Comparser<T> {
 						if (read.TrimStart(1)) return true;
 						next = read.nextChar;
 					}
-
-					bool result = read.TrimStart(allowNewLines ? 1 : 0) || next switch {
+					var result = read.TrimStart(allowNewLines ? 1 : 0) || next switch {
 						// what counts as an expression end:
 						')' => true, // ends parentheses
 						',' => true, // divides vector element expressions
@@ -353,9 +332,8 @@ public abstract partial class Comparser<T> {
 						'<' => false, // less
 						'>' => false, // more
 						'=' => false, // equal
-						'[' => false, // begin indexer, TODO allow newline after
-						'(' => false, // TODO move cache between args
-						//'(' // don't, could be a cache of a following command, make newlines after (// TODO newline after (parentheses and functions )
+						'[' => false, // begin indexer
+						//'(' => false, // a definition can begin with a parenthesis, so those are not allowed on a new line
 						_ => endDefault
 					};
 					return endDefault && !result ? read.TrimStart(1) : result; // if we found an op on the next line, then trim the newlines
@@ -377,8 +355,8 @@ public abstract partial class Comparser<T> {
 					if (prevF < end)
 						read.AddC(prevF, end, ParseDictionary.Type.Error);
 					read.From = end;
-					if (!isArgument)
-						r.Error += 2;
+					if (parseAs == ParseAs.Expression)
+						r.Error = (FailReason)Math.Max((byte)FailReason.BadExpression, (byte)r.Error);
 					return true;
 				} // reading failed
 				bool TryFuncFailed() {
@@ -452,6 +430,31 @@ public abstract partial class Comparser<T> {
 					return false;
 				}
 			}
+			bool ParseContinue() {
+				if (left != 0) // only the top-level layer is allowed to follow up with ',' or ':'
+					return false;
+				int s;
+				switch (parseAs) {
+				case ParseAs.Definition: // definitions are not allowed to follow with ',' or ':' inside their expressions
+					TrimString();
+					return false;
+				case ParseAs.Argument:
+					TrimString();
+					read.AddC(startR, read.From, ParseDictionary.Type.Arg); // color as argument
+					read.TrimStart(1);
+					if (read.GotoFirstFailed(0, 2, [',', ':'], 1, out s, out _))
+						return false;
+					if (s == 0)
+						return true; // found ',', so return false to try read another argument
+					// found ':', so try to read argument default new([..expr]) is to let it reference already read arguments:
+					read.TrimStart(1);
+					r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
+					goto default; // after reading the defArd, go try read ',' again, but with ':' not allowed again
+				default:
+					return !read.GotoFirstFailed(0, 2, [','], 1, out s, out _);
+					void TrimString() => r.String = TrimEnd(read.Uncomment(startR, read.From), 1); // remember string before ':'
+				}
+			}
 			bool Char(char c, byte offset = 0) {
 				var o = read.From + offset;
 				var test = read.Text.Length > o && read.Text[o] == c;
@@ -478,7 +481,7 @@ public abstract partial class Comparser<T> {
 			}
 		}
 		// encapsulate a value
-		protected Expression(Comparser<T> context, Value t, int cache = 0) {
+		public Expression(Comparser<T> context, Value t, int cache = 0) {
 			_cache = new(cache);
 			Context = context;
 			V = new([new(t.Leaf, t.Op, t.Arg, t.Term, t.Operand, t.Op.Negative, t.String)], t.Error, t.Text);

@@ -12,7 +12,8 @@ public abstract partial class Comparser<T>{
 		// Argument index binding (if non-negative, it will get replaced by the argument value with this Arg index)
 		public readonly int[] Arg = [];
 		// 1 = stack overflow
-		public int Error;
+		public FailReason Error;
+		
 		// special type
 		public object? Data;
 		// After parsing will contain the original parsed text, even if error occurs (this also naturally works with argument parsing and matching)
@@ -22,20 +23,33 @@ public abstract partial class Comparser<T>{
 		// In constant/variable/argument bindings, this is the alias name that will get replaced with the Leaf value whenever it is detected
 		// In a string data type, it contains the string value
 		public string String; // The original text that this input has been parsed from, even if it fails parsing
-		public override string ToString() => CollapseScalar(this).Pv(-1);
-		public string ToString(int decimals, bool pure) => pure ? CollapseScalar(this).Pv(decimals) : Text + " = " + CollapseScalar(this).Pv(decimals);
-		private string Pv(int decimals, string a = "", string b = "") {
+		public override string ToString() => CollapseScalar(this).Pv(-1, true);
+		public string ToString(int decimals, bool pure, int type) => pure 
+			? CollapseScalar(this).Pv(decimals, pure, type)
+			: Text + " = " +  CollapseScalar(this).Pv(decimals, pure, type);
+		private string Pv(int decimals, bool pure, int type = 0, string a = "", string b = "") {
 			if (Values.Length <= 0)
-				return Error > 0 ? PrintError() : Leaf.IsNaN() ? String != "" ? String : Text != "" ? Text :  Leaf.ToString(decimals) : Leaf.ToString(decimals);
+				return Error > 0 ? PrintError() 
+					: Leaf.IsNaN() && type != 1 
+						? type == 2 
+							? DrawString(String) 
+							: String != "" 
+								? DrawString(String, '\"') 
+								: Text != "" 
+									? DrawString(Text, '\'') 
+									:  Leaf.ToString(decimals) 
+						: Leaf.ToString(decimals);
 			var s = a;
 			for (var i = 0; i < Values.Length; ++i) {
 				Values[i] = CollapseScalar(Values[i]);
 				if (i > 0) s += ", ";
-				s += Values[i].Pv(decimals, "(", ")");
+				s += Values[i].Pv(decimals, pure, type, "(", ")");
 			}
 			return s + b;
+			string DrawString(string s, char? c = null) => pure && c != null ? s : c + s + c;
 		}
-		private string PrintError() => (Error & 1) > 0 ? "Stack Overflow." :(Error & 2) > 0 ? "Bad Expression" : "";
+
+		private string PrintError() => Numbers.Static.Errors[(byte)Error];// (Error & 1) > 0 ? "Stack Overflow." :(Error & 2) > 0 ? "Bad Expression" : "";
 		private string Tl() {
 			if (Values.Length <= 0)
 				return Text;
@@ -57,9 +71,9 @@ public abstract partial class Comparser<T>{
 			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg ?? [];
 			String = str ?? text; Text = text;
 		}
-		public Value(T value, int error = 0, string text = "") { Error = error; Leaf = value; String = Text = text; }
-		public Value(int error = 0, string text = "") { Error = error; String = Text = text; }
-		public Value(Value[] values, int error = 0, string text = "", string? str = null) { Error = error; Values = values;
+		public Value(T value, FailReason error = FailReason.Success, string text = "") { Error = error; Leaf = value; String = Text = text; }
+		public Value(FailReason error = FailReason.Success, string text = "") { Error = error; String = Text = text; }
+		public Value(Value[] values, FailReason error = FailReason.Success, string text = "", string? str = null) { Error = error; Values = values;
 			String = str ?? text; Text = text; }
 		public Value(string text, int[] arg) { Arg = arg; String = Text = text; }
 		#endregion
@@ -67,18 +81,19 @@ public abstract partial class Comparser<T>{
 		public bool Match(Value a) => MatchP(UnCollapseScalar(a));
 		private bool MatchP(Value a) { // defArguments.Match(callArguments)
 			if (!Leaf.IsNaN())
-				return a.Leaf.IsNaN() || T.AreEqual(Leaf, a.Leaf); 
+				return /*a.*/Leaf.IsNaN() || T.AreEqual(Leaf, a.Leaf); 
 			if (Values.Length == 0) return true; // callArguments always starts with Values
 			if (Values.Length < a.Values.Length) return false;
 			if (Values.Length > a.Values.Length) {
 				var newVal = new Value[Values.Length];
 				// copy missing arguments:
 				for (int i = 0; i < a.Values.Length; ++i)
-					newVal[i] = a.Values[i];
+					(newVal[i] = a.Values[i]).Operand = Values[i].Operand;
 				for (int i = a.Values.Length; i < Values.Length; ++i)
-					newVal[i] = Values[i];
+					newVal[i] =  new(T.NaN()) { Operand =  Values[i].Operand }; // put nans into unsupplied values
 				a.Values = newVal;
-			}
+			}else for(int i = 0; i < Values.Length;++i)
+				a.Values[i].Operand = Values[i].Operand;
 			var m = true;
 			var to = Math.Min(Values.Length, a.Values.Length);
 			for (var i = 0; i < to; ++i)
@@ -119,7 +134,7 @@ public abstract partial class Comparser<T>{
 			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
 			for (int a = 0; a < s; ++a) {
 				vals.Values[a] = ( /*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? o(vA[a], data) : OperateValue(vA[a], o, data);
-				vals.Values[a].Error |= vA[a].Error;
+				Expression.Err(ref vals.Values[a].Error, vA[a]);
 			}
 			if (s != 0)
 				return vals;
@@ -194,7 +209,8 @@ public abstract partial class Comparser<T>{
 			else {
 				vals.Leaf = o(av.Leaf, bv.Leaf);
 				vals.String = so(av.String, bv.String);
-				vals.Error = av.Error | bv.Error;
+				Expression.Err(ref vals.Error, av);
+				Expression.Err(ref vals.Error, bv);
 			}
 			return vals;
 
@@ -230,7 +246,45 @@ public abstract partial class Comparser<T>{
 				return vals;
 			vals.Leaf = o(av.Leaf, bv.Leaf, cv.Leaf);
 			vals.String = av.String;
-			vals.Error = av.Error | bv.Error | cv.Error;
+			Expression.Err(ref vals.Error, av);
+			Expression.Err(ref vals.Error, bv);
+			Expression.Err(ref vals.Error, cv);
+			return vals;
+		}
+		public static Value Operate4(Value av, Value bv, Value cv, Value dv, Func<T, T, T, T, T> o) {
+			Value[] vA = (av = CollapseScalar(av)).Values, vB = (bv = CollapseScalar(bv)).Values, 
+				vC = (cv = CollapseScalar(cv)).Values, vD = (dv = CollapseScalar(dv)).Values;
+			int a = 0, b = 0, c = 0, d = 0, s = Math.Max(Math.Max(vC.Length, vD.Length), Math.Max(vA.Length, vB.Length));
+			Value vals = new(new Value[s]);
+			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
+			if (vB.Length == 0) vB = [new(bv.Leaf, bv.Error, bv.String)];
+			if (vC.Length == 0) vC = [new(cv.Leaf, cv.Error, cv.String)];
+			if (vD.Length == 0) vD = [new(dv.Leaf, dv.Error, dv.String)];
+			for (int i = 0; i < s; ++i) {
+				int an, bn, cn, dn;
+				vals.Values[i] = (an = (vA[a] = CollapseScalar(vA[a])).Values.Length) 
+					+ (bn = (vB[b] = CollapseScalar(vB[b])).Values.Length) 
+					+ (cn = (vC[c] = CollapseScalar(vC[c])).Values.Length)
+					+ (dn = (vD[d] = CollapseScalar(vD[d])).Values.Length)== 0 
+						? new(o(vA[a].Leaf, vB[b].Leaf, vC[c].Leaf, vD[d].Leaf), vA[a].Error | vB[b].Error | vC[c].Error | vD[d].Error) 
+						: Operate4(
+							an == 0 ? new([new(vA[a].Leaf, vA[a].Error)]) : vA[a],
+							bn == 0 ? new([new(vB[b].Leaf, vB[b].Error)]) : vB[b],
+							cn == 0 ? new([new(vC[c].Leaf, vC[c].Error)]) : vC[c],
+							dn == 0 ? new([new(vD[d].Leaf, vD[d].Error)]) : vD[d],o);
+				a = (a + 1) % vA.Length;
+				b = (b + 1) % vB.Length;
+				c = (c + 1) % vC.Length;
+				d = (d + 1) % vD.Length;
+			}
+			if (s != 0)
+				return vals;
+			vals.Leaf = o(av.Leaf, bv.Leaf, cv.Leaf, dv.Leaf);
+			vals.String = av.String;
+			Expression.Err(ref vals.Error, av);
+			Expression.Err(ref vals.Error, bv);
+			Expression.Err(ref vals.Error, cv);
+			Expression.Err(ref vals.Error, dv);
 			return vals;
 		}
 		public Value Copy() => new(Leaf, Op, Arg, Term, Operand, Op.Negative, Text, String) { Values = CopyValues(Values)/*, Terms = CopyValues(Terms)*/ };

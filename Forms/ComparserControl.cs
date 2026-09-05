@@ -14,12 +14,15 @@ public partial class ComparserControl : ParentControl {
 		_lines.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Top;
 		_lines.Height = codeBox.Height;
 		_lines.Width = 0;
-		codeBox.SizeChanged += (_, _) => UpdateLineNumbers();
-		codeBox.FontChanged += (_, _) => UpdateLineNumbers();
-		codeBox.VScroll += (_, _) => UpdateLineNumbers();
-		codeBox.Resize += (_, _) => UpdateLineNumbers();
-		codeBox.KeyUp += (_, _) => UpdateLineNumbers();
-		codeBox.MouseUp += (_, _) => UpdateLineNumbers();
+		// all the events that should update Line Numbers
+		codeBox.SizeChanged +=  (_, _) => RefreshLines();
+		codeBox.FontChanged += (_, _) => RefreshLines();
+		codeBox.VScroll += (_, _) => RefreshLines();
+		codeBox.Resize += (_, _) => RefreshLines();
+		codeBox.KeyUp += (_, _) => RefreshLines();
+		codeBox.MouseUp += (_, _) => RefreshLines();
+		// changing selection/moving caret should reset the build timer, only inactivity lets it tick
+		codeBox.SelectionChanged += (_, _) => _codeTime.Restart();
 		InitRichTextBox(codeBox, CodeBox_TextChanged);
 		splitContainer.Panel2.Controls.Add(_lines);
 		parent.SetMinSize();
@@ -40,7 +43,7 @@ public partial class ComparserControl : ParentControl {
 		CodeChanged = true;
 		buildButton.Text = "BUILD";
 		_codeTime.Restart();
-		UpdateLineNumbers();
+		RefreshLines();
 	}
 	
 	private Color GetForeColor() => Root?.Set?.Context?.GetColor().f ?? Color.White;
@@ -184,7 +187,7 @@ public partial class ComparserControl : ParentControl {
 		DrawLogsAndColors();
 	}
 
-	private void UpdateLineNumbers() {
+	private void RefreshLines() {
 		if (_lines == null)
 			return;
 		using var g = _lines.CreateGraphics();

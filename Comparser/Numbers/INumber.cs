@@ -154,12 +154,6 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T operator ^(double r, T t);
 	public static abstract T PowN1(T t);
 	public static abstract T PowI(T t);
-	public static T SoftMax(T a, T b) => T.Log(T.Exp(a) + T.Exp(b));
-	public static T SoftMin(T a, T b) => -T.Log(T.Exp(-a) + T.Exp(-b));
-	// SoftMax(x,0)
-	public static T SoftAbs(T t) => T.Log(1 + T.Exp(t));
-	// SoftMin(x,0)
-	public static T SoftNeg(T t) => -T.Log(1 + T.Exp(-t));
 	#endregion
 
 	#region Hyperbolics
@@ -224,10 +218,22 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static T C_Pi() => T.MakeR(Math.PI);
 	public static T C_Tau() => T.MakeR(Math.Tau);
 	public static T C_Gamma() => T.MakeR(0.57721566490153286060651209008240243104215933593992); // Euler's constant
-	public static T Log10(T t) => T.Log(t) / Static.Ln10;
+	public static T LogB(T t, T b) => T.Log(t) / T.Log(b);
+	public static T Log10(T t) => T.Log(t) / Ln10;
 	public static T Log2(T t) => T.Log(t) / Ln2;
+	public static T ExpB(T t, T b) => T.Exp(T.Log(b) * t);
 	public static T Exp10(T t) => T.Exp(Ln10 * t);
 	public static T Exp2(T t) => T.Exp(Ln2 * t);
+	public static T SoftMaxB(T t1, T t2, T b) => LogB(ExpB(t1, b) + ExpB(t2, b), b);
+	public static T SoftMinB(T t1, T t2, T b) => -LogB(ExpB(-t1, b) + ExpB(-t2, b), b);
+	public static T SoftMax(T a, T b) => T.Log(T.Exp(a) + T.Exp(b));
+	public static T SoftMin(T a, T b) => -T.Log(T.Exp(-a) + T.Exp(-b));
+	public static T SoftAbs(T t) => T.Log(1 + T.Exp(t));
+	public static T SoftAbsB(T t, T b) => LogB(1 + ExpB(t, b), b);
+	public static T SoftNeg(T t) => -T.Log(1 + T.Exp(-t));
+	public static T SoftNegB(T t, T b) => -LogB(1 + ExpB(-t, b), b);
+	public static T SoftClamp(T t, T min, T max) => t + SoftAbs(min - t) + SoftNeg(max - t);
+	public static T SoftClampB(T t, T min, T max, T b) => t + SoftAbsB(min - t, b) + SoftNegB(max - t, b);
 	public static T T_Re(T t) => T.MakeR(T.Re(t));
 	public static T Neg(T t) => -t;
 	public static T SqrAbs(T t) => T.MakeR(+t);

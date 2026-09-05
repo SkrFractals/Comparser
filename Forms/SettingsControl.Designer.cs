@@ -21,24 +21,24 @@ partial class SettingsControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		darkButton = new System.Windows.Forms.Button();
-		algebraBox = new System.Windows.Forms.ComboBox();
-		decLabel = new System.Windows.Forms.Label();
-		decimalBox = new System.Windows.Forms.TextBox();
-		autoButton = new System.Windows.Forms.Button();
-		reportButton = new System.Windows.Forms.Button();
-		autoLabel = new System.Windows.Forms.Label();
-		label3 = new System.Windows.Forms.Label();
-		autoBox = new System.Windows.Forms.TextBox();
-		reportBox = new System.Windows.Forms.TextBox();
+		darkButton = new Button();
+		algebraBox = new ComboBox();
+		decLabel = new Label();
+		decimalBox = new TextBox();
+		autoButton = new Button();
+		reportButton = new Button();
+		autoLabel = new Label();
+		label3 = new Label();
+		autoBox = new TextBox();
+		reportBox = new TextBox();
 		SuspendLayout();
 		// 
 		// darkButton
 		// 
-		darkButton.Anchor = ((System.Windows.Forms.AnchorStyles)(System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right));
-		darkButton.Location = new System.Drawing.Point(287, 3);
+		darkButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+		darkButton.Location = new Point(287, 3);
 		darkButton.Name = "darkButton";
-		darkButton.Size = new System.Drawing.Size(30, 23);
+		darkButton.Size = new Size(30, 23);
 		darkButton.TabIndex = 2;
 		darkButton.Text = "L";
 		darkButton.UseMnemonic = false;
@@ -47,12 +47,12 @@ partial class SettingsControl {
 		// 
 		// algebraBox
 		// 
-		algebraBox.Anchor = ((System.Windows.Forms.AnchorStyles)(System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right));
+		algebraBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 		algebraBox.FormattingEnabled = true;
 		algebraBox.Items.AddRange(new object[] { "REAL", "COMPLEX", "QUATERNION" });
-		algebraBox.Location = new System.Drawing.Point(163, 4);
+		algebraBox.Location = new Point(163, 4);
 		algebraBox.Name = "algebraBox";
-		algebraBox.Size = new System.Drawing.Size(118, 23);
+		algebraBox.Size = new Size(118, 23);
 		algebraBox.TabIndex = 1;
 		algebraBox.Text = "COMPLEX";
 		algebraBox.SelectedIndexChanged += AlgebraBox_SelectedIndexChanged;
@@ -60,30 +60,30 @@ partial class SettingsControl {
 		// decLabel
 		// 
 		decLabel.AutoSize = true;
-		decLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)238));
-		decLabel.Location = new System.Drawing.Point(3, 6);
+		decLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		decLabel.Location = new Point(3, 6);
 		decLabel.Name = "decLabel";
-		decLabel.Size = new System.Drawing.Size(60, 15);
+		decLabel.Size = new Size(60, 15);
 		decLabel.TabIndex = 3;
 		decLabel.Text = "Decimals:";
 		decLabel.UseMnemonic = false;
 		// 
 		// decimalBox
 		// 
-		decimalBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		decimalBox.Location = new System.Drawing.Point(100, 4);
+		decimalBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		decimalBox.Location = new Point(100, 4);
 		decimalBox.Name = "decimalBox";
-		decimalBox.Size = new System.Drawing.Size(57, 23);
+		decimalBox.Size = new Size(57, 23);
 		decimalBox.TabIndex = 0;
 		decimalBox.Text = "3";
 		decimalBox.TextChanged += DecimalBox_TextChanged;
 		// 
 		// autoButton
 		// 
-		autoButton.Anchor = ((System.Windows.Forms.AnchorStyles)(System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right));
-		autoButton.Location = new System.Drawing.Point(163, 33);
+		autoButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+		autoButton.Location = new Point(163, 33);
 		autoButton.Name = "autoButton";
-		autoButton.Size = new System.Drawing.Size(154, 23);
+		autoButton.Size = new Size(154, 23);
 		autoButton.TabIndex = 4;
 		autoButton.Text = "DELAYED AUTOMATIC";
 		autoButton.UseMnemonic = false;
@@ -92,10 +92,10 @@ partial class SettingsControl {
 		// 
 		// reportButton
 		// 
-		reportButton.Anchor = ((System.Windows.Forms.AnchorStyles)(System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right));
-		reportButton.Location = new System.Drawing.Point(163, 62);
+		reportButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+		reportButton.Location = new Point(163, 62);
 		reportButton.Name = "reportButton";
-		reportButton.Size = new System.Drawing.Size(154, 23);
+		reportButton.Size = new Size(154, 23);
 		reportButton.TabIndex = 6;
 		reportButton.Text = "ONGOING";
 		reportButton.UseMnemonic = false;
@@ -105,10 +105,10 @@ partial class SettingsControl {
 		// autoLabel
 		// 
 		autoLabel.AutoSize = true;
-		autoLabel.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)238));
-		autoLabel.Location = new System.Drawing.Point(3, 37);
+		autoLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		autoLabel.Location = new Point(3, 37);
 		autoLabel.Name = "autoLabel";
-		autoLabel.Size = new System.Drawing.Size(55, 15);
+		autoLabel.Size = new Size(55, 15);
 		autoLabel.TabIndex = 7;
 		autoLabel.Text = "Building:";
 		autoLabel.UseMnemonic = false;
@@ -116,39 +116,39 @@ partial class SettingsControl {
 		// label3
 		// 
 		label3.AutoSize = true;
-		label3.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)238));
-		label3.Location = new System.Drawing.Point(3, 66);
+		label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		label3.Location = new Point(3, 66);
 		label3.Name = "label3";
-		label3.Size = new System.Drawing.Size(80, 15);
+		label3.Size = new Size(80, 15);
 		label3.TabIndex = 9;
 		label3.Text = "Build Report:";
 		label3.UseMnemonic = false;
 		// 
 		// autoBox
 		// 
-		autoBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		autoBox.Location = new System.Drawing.Point(100, 33);
+		autoBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		autoBox.Location = new Point(100, 33);
 		autoBox.Name = "autoBox";
-		autoBox.Size = new System.Drawing.Size(57, 23);
+		autoBox.Size = new Size(57, 23);
 		autoBox.TabIndex = 10;
 		autoBox.Text = "5000";
 		autoBox.TextChanged += autoBox_TextChanged;
 		// 
 		// reportBox
 		// 
-		reportBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		reportBox.Location = new System.Drawing.Point(100, 62);
+		reportBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		reportBox.Location = new Point(100, 62);
 		reportBox.Name = "reportBox";
-		reportBox.Size = new System.Drawing.Size(57, 23);
+		reportBox.Size = new Size(57, 23);
 		reportBox.TabIndex = 12;
 		reportBox.Text = "1000";
 		reportBox.TextChanged += reportBox_TextChanged;
 		// 
 		// SettingsControl
 		// 
-		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
+		AutoScaleDimensions = new SizeF(7F, 15F);
+		AutoScaleMode = AutoScaleMode.Font;
+		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(reportBox);
 		Controls.Add(autoBox);
 		Controls.Add(label3);
@@ -159,6 +159,7 @@ partial class SettingsControl {
 		Controls.Add(decimalBox);
 		Controls.Add(algebraBox);
 		Controls.Add(darkButton);
+		Name = "SettingsControl";
 		ResumeLayout(false);
 		PerformLayout();
 	}

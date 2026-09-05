@@ -300,3 +300,79 @@ private static unsafe void Gamma_Stirling_Positive_Batched(T x, T* result, int u
 				return ee;
 			}
 		}*/
+		
+			/*void DrawLine(T s, T a) {
+        					
+        					if (s.r >= 0 && s.r < length)
+        						axis.r[(int)s.r] += a.r;
+        					if (s.i >= 0 && s.i < length)
+        						axis.i[(int)s.i] += a.i;
+        				}*/
+        				void Log(T eStart, T eEnd /*double sr, double er,double si, double ei, byte[] a, Func<T, double> take*/) {
+        					(eStart, eEnd) = (T.D2(eStart, eEnd, Math.Min), T.D2(eStart, eEnd, Math.Max));
+        					var scale = divBase * Lc(eEnd); // find some power of 10 that is above the ei bounds, to go down from there
+        					// main tiling squares (only this dividing should have equal distances visually)
+        					//double minS = T.Mix(eStart, eEnd, Math.Min);
+        					while (true /*scale > minS*/) {
+        						scale /= divBase;
+        						//byte f = 0;
+        						IndexLog(scale, 64);
+        						//T.IndexAndAddToRgb(field,T.Floor(ValueToScreen(scale)), 64 * T.One());
+        						Lg(scale, scale * divBase, 32);
+        						var s = divBase * scale;
+        						var es = eStart;
+        						
+        						if(T.Mix(s,Math.Max) < T.Mix(es, Math.Min))
+        							break;
+        					}
+        					return;
+        					// subdivisions of each subinterval into 10 linear pieces.
+        					void Lg(T from, T to, byte b) {
+        						if (b < 12)
+        							return;
+        						var newTo = from;
+        						for (double i = 0; i <= .95;) {
+        							var newFrom = newTo;
+        							IndexLog(newTo = (i += 1.0 / 9) * to + (1 - i) * from, b);
+        							//T.IndexAndAddToRgb(field,T.Floor(Vs(newTo = (i += 1.0 / 9) * to + (1 - i) * from)), b * T.One());
+        							//if(newFrom < ei && newTo > si)
+        							Lg(newFrom, newTo, ++b);
+        						}
+        					}
+        					void IndexLog(T v, byte b) => T.IndexAndAddToRgb(field,T.Floor(length * T.D2(T.D1(v, Math.Log) - start, end - start, Static.Div)), b * T.One());
+        					
+        					/*var scale = divBase*L(ei); // find some power of 10 that is above the ei bounds, to go down from there
+        					// main tiling squares (only this dividing should have equal distances visually)
+        					while (scale > si) {
+        						scale /= divBase;
+        						if (scale >= ei)
+        							continue;
+        						var screenSpaceLine = ValueToScreenLog(screenLength, scale, start, end);
+        						if(screenSpaceLine > 0 && screenSpaceLine < screenLength)
+        							a[screenSpaceLine] = Math.Max(lineB[0], a[screenSpaceLine]);
+        						if(divBase * scale > si)
+        							Lg(scale, scale * divBase, 0);
+        					}
+        					return;
+        					// subdivisions of each subinterval into 10 linear pieces.
+        					void Lg(double from, double to, byte b) {
+        						if (b >= lineB.Length)
+        							return;
+        						var newTo = from;
+        						for (double i = 0; i <= .95; ) {
+        							var newFrom = newTo;
+        							newTo = (i += 1.0 / 9) * to + (1 - i) * from;
+        							var screenSpaceLine = ValueToScreenLog(screenLength, newTo, start, end);
+        							if(screenSpaceLine > 0 && screenSpaceLine < screenLength)
+        								a[screenSpaceLine] = Math.Max(b, a[screenSpaceLine]);
+        							if(newFrom < ei && newTo > si)
+        								Lg(newFrom, newTo, --b);
+        						}
+        					}*/
+        					if (log) {
+                            					var eStart = T.D1(start, Math.Exp);
+                            					var eEnd = T.D1(end, Math.Exp);
+                            					Log(eStart, eEnd);
+                            					//Log(T.Re(eStart), T.Re(eEnd), T.Im(eStart), T.Im(eEnd));
+                            				} else { Lin(start, end); }
+                            									//T.D1(lEnd - lStart, (x) => Math.Pow(2,Math.Log(Math.Abs(x)) / Math.Log(divBase) % 1));

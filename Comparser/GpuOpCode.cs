@@ -33,6 +33,7 @@ public abstract partial class Comparser<T> {
 		Max,	// sorts
 		//Min,
 		SoftMax,
+		SoftMaxB,
 		//SoftMin,
 		//SoftAbs,
 		//SoftNeg,
@@ -129,10 +130,17 @@ public abstract partial class Comparser<T> {
 		SoftMin,	// = Neg(SoftMax(Neg(X)))
 		SoftAbs,	// = SoftMax(0,X)
 		SoftNeg,	// = Neg(SoftMax(0,Neg(X)))
+		SoftMinB,	// = Neg(SoftMaxB(Neg(X)))
+		SoftAbsB,	// = SoftMaxB(0,X)
+		SoftNegB,	// = Neg(SoftMaxB(0,Neg(X)))
+		ExpB,		// = Exp(Mul(Log(B),X))
 		Exp10,		// = Exp(Mul(ln10,X))
 		Exp2,		// = Exp(Mul(ln2,X))
 		Log10,		// = Div(Log(X),ln10)
 		Log2,		// = Div(Log(X),ln2)
+		LogB,		// = Div(Log(X),Log(B))
+		SoftClamp,	// = new([X,new(OpCode.SoftAbs,new([A,Neg(X)],OpCode.Add)), new(OpCode.SoftNeg(new([B,Neg(X)],OpCode.Add)))],OpCode.Add)
+		SoftClampB,	// = new([X,new(OpCode.SoftAbsB,new([A,Neg(X)],OpCode.Add)), new(OpCode.SoftNegB(new([B,Neg(X)],OpCode.Add)))],OpCode.Add)
 		Nsinhc,		// = X == 0 ? 1 : [A=Mul(pi,X)];Div(Sinh(A),A)
 		Sinhc,		// = X == 0 ? 1 : Div(Sinh(X),X)
 		Nsinc,		// = X == 0 ? 1 : [A=Mul(pi,X)];Div(Sin(A),A)

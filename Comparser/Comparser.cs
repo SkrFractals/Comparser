@@ -12,44 +12,87 @@ public interface IComparser {
 	//public object ParseEval(string text, ref int from, object? args = null);
 	// Parses and evaluates the text with selected arguments (without returning the parsed expression, only immediate one-time evaluation)
 	//public object ParseEval(string text, int from, object? args = null);
-	public string ToString(object value, int decimals = -1, bool pure = false);
+	public string ToString(object value, int decimals = -1, bool pure = false, int type = 0);
 	public void SetDarkMode(bool dark);
 	public void SetDecimals(int decimals);
 	public string ParsePeek();
 	public (Color b, Color f) GetColor();
 	public (Color e, Color s) GetErrorSuccessColor();
+	public IPlot GetPlot();
 	public List<(Color color, string log)> ReadCode(string text, CancellationToken cancel, out (int position, Color color)[] colors);
 }
 
-public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort stackOverflowLimit = 499, ushort doOverflowLimit = 499, ushort loopLimit = 499, ushort iteratorLimit = 499, bool allowParsePeek = true) : IComparser where T : unmanaged, INumber<T> {
+public abstract partial class Comparser<T> : IComparser where T : unmanaged, INumber<T> {
+
+	public Comparser(
+		bool caseInsensitive = true, 
+		bool operatorLess = true,
+		ushort stackOverflowLimit = 499, 
+		ushort doOverflowLimit = 499, 
+		ushort loopOverflowLimit = 499, 
+		ushort iteratorOverflowLimit = 499,
+		bool allowParsePeek = true
+	) {
+		_stackOverflowDef = stackOverflowLimit;
+		_doOverflowDef = doOverflowLimit;
+		_loopOverflowDef = loopOverflowLimit;
+		_iterOverflowDef = iteratorOverflowLimit;
+		_stackOverflow = stackOverflowLimit;
+		_doOverflow = doOverflowLimit;
+		_loopOverflow = loopOverflowLimit; 
+		_iterOverflow = iteratorOverflowLimit;
+		_caseInsensitive = caseInsensitive;
+		_allowParsePeek = allowParsePeek;
+		_operatorLessDef = operatorLess;
+		_operatorLess = operatorLess;
+		Plotter = new(this);
+			/*, [
+			new(false, T.Zero(), T.MakeR(1)), 
+			new(false, T.Zero(), T.One() - T.MakeR(1))
+		], [new(
+			new(false, T.Zero(), T.MakeR(1)),
+			new(new CancellationTokenSource().Token, this, "z"),
+			Plot.PlotOutput.ColorMode.Hsv, new(this, None), new(this, None))]);*/
+	}
+
 	private Reader? _currentReader;
 	
 	#region Interface
-	private static Value AsInput(object? e) => e as Value ?? new();
+	public static Value AsValue(object? e) => e as Value ?? new();
+	public static double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
 	//public object Parse(string text, int from, object? args) => new Expression(this, text, AsInput(args), from);
-	public object Eval(object exp, object? args) => exp is Expression e ? e.Eval(0, AsInput(args)) : None;
+	public object Eval(object exp, object? args) => exp is Expression e ? e.Eval(0, AsValue(args)) : None;
 	//public object ParseEval(string text, int from, out object expr, object? args) { var e = (Expression)Parse(text, from, args); expr = e; return e.Eval(0, AsInput(args)); }
 	public object ParseEval(CancellationToken cancel, string text, int from, out object expr, out (int position, Color color)[] colors, object? args) {
 		var read = new Reader(this, text, cancel, from);
-		var e = new Expression(read, out _, AsInput(args), from);
+		var e = new Expression(read, out _, AsValue(args), from);
 		expr = e; // export expression
 		colors = read.GetColors(); // export colors
-		return e.Eval(0, AsInput(args));
+		return e.Eval(0, AsValue(args));
 	}
 	//public object ParseEval(string text, ref int from, object? args) => new Expression(this, text, ref from, out _, AsInput(args)).Eval(0, AsInput(args));
 	//public object ParseEval(string text, int from, object? args) => ParseEval(text, ref from, args);
-	public string ToString(object value, int decimals = -1, bool pure = false) => AsInput(value).ToString(decimals, pure);
+	public string ToString(object value, int decimals = -1, bool pure = false, int type = 0) => AsValue(value).ToString(decimals, pure, type);
 	public void SetDarkMode(bool dark) => _darkMode = dark;
 	public void SetDecimals(int decimals) => _decimals = decimals;
+	public IPlot GetPlot() => Plotter;
 	public string ParsePeek() => _allowParsePeek ? _currentReader == null ? "No current reader." : _currentReader.Text[_currentReader.From..] : "Parse Peek disabled.";
 	public List<(Color, string)> ReadCode(string text, CancellationToken cancel, out (int, Color)[] colors) {
-
+		// reset settings to default
+		_operatorLess = _operatorLessDef;
+		_doOverflow = _doOverflowDef;
+		_iterOverflow = _iterOverflowDef;
+		_loopOverflow = _loopOverflowDef;
+		_stackOverflow = _stackOverflowDef;
+		// clear the previous build
 		Context.Clear();
+		// put defaults back in
 		FillDefault(); // collects the default functions and constants into the Dictionary
 		Dictionary<string, List<(Value input, Expression def, Expression? cond)>> parsedF = [];
+		// temporary dictionary for parsed constants (will be put into a better dictionary that can parse characters as it eats)
 		Dictionary<string, Value> parsedC = [];
-		var brackets = 0;
-		var reader = _currentReader = new(this, _caseInsensitive ? text.ToLower() : text, cancel);
+		var brackets = 0; // start as not being inside any block yet
+		var reader = _currentReader = new(this, text, cancel); // initiate reader
 		List<(int i, int c)> back = [];
 		string e;
 		List<(Color, string)> log = [];
@@ -69,7 +112,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 				// constantName:<constantExpression>
 				// actionName:<actionArgumentExpression>
 
-				int beforeI = 0, cache = 1;
+				int beforeI = 0, cache = 1;// skipStart = read.From;
 				Value eval;
 				if (read.TrimStart(1))
 					return;
@@ -82,35 +125,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						Cl(FailReason.Unexpected);
 					break;
 				case '}': // this must be and out of a branch I'm in, just ignore it
-					if (--brackets < 0) {
-						Cl(FailReason.Unexpected); // closing a bracket that wasn't started
-						break;
-					}
-					var bb = back[brackets];
-					var (bi, bc) = (bb.i, bb.c + 1);
-					if (bi >= 0) {
-						// at the end of while
-						if (bc <= _loop) {
-							// repeat
-							read.From = bi; // goto */
-							back[brackets] = (bi, bc); // increment stack overflow counter
-							break;
-						}
-						//fail exit
-						back[brackets] = (-1, 1);
-						e = "WHILE loop limit exceeded.";
-						Lg();
-					}
-					++read.From; // eat end bracket
-					if (back[brackets].c > 0) {
-						// no else expected
-						back[brackets] = (bi, 0);
-						break;
-					}
-					if (read.GotoFirstFailed([':'], 1, out _, out _))
-						break;
-					beforeI = read.From;
-					if ("_N" != (e = read.GotoFirstFailed(0, 2, ['{'], 1, out _, out _) ? "Failed to find a START BRACKET after ELSE." : SkipElses())) { FailEnd(); }
+					EndBracket();
 					break;
 				case ';': // separator
 				case '\t': // space
@@ -125,7 +140,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					read.TrimStart();
 					beforeI = read.From;
 					var name = "";
-					int f,s;
+					int f, s;
 					bool action = true, doContinue = false;
 					if ("" != (e = LoadDef())) {
 						if (s > 1) --read.From; // if we got trigger by a separator, go back to keep it for the error forward
@@ -134,28 +149,31 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						break;
 					}
 					if (args.Values.Length == 0) { // it is a constant or code call:
-						
+
 						if (cache != 1) {
 							e = name + " is a constant/call and doesn't support caching. Not fatal but doesn't do anything.";
 							Lg();
 						}
-						var actionCode = name switch {
-							"print" => Actions.Print,
-							"printvalue" => Actions.PrintValue,
-							//"printnumber" => Actions.PrintNumber,
-							//"printstring" => Actions.PrintString,
+						var actionCode = name switch { // f(x) : "returned"+"string", 1+1 
+							"print" => Actions.Print, // prints the expression and it's value with its type.								f(x) = "returnedstring", 2
+							"printvalue" => Actions.PrintValue, // prints just the value, without type (number > string > expression).		returnedString, 2
+							"printnumber" => Actions.PrintNumber, // prints just the numerical value, without fallback to string values.	NaN + NaNi, 2
+							"printstring" => Actions.PrintString, // prints only the string value, even if there's a numeric value			returnedString, '1+1'
 							"do" => Actions.Do,
 							"if" => Actions.If,
 							"while" => Actions.While,
 							"return" => Actions.Return,
 							"break" => Actions.Break,
 							"continue" => Actions.Continue,
+							"stackoverflow" => Actions.StackOverflow,
+							"iteratoroverflow" => Actions.IterOverflow,
+							"whileoverflow" => Actions.WhileOverflow,
+							"dooverflow" => Actions.DoOverflow,
+							"operatorless" => Actions.Operator,
 							_ => Actions.None
 						};
 						read.AddC(beforeI, beforeI + name.Length, actionCode == Actions.None ? ParseDictionary.Type.UserC : ParseDictionary.Type.Action);
-						read.TrimStart(1);
-						var expression = new Expression(read, out _, args);
-						eval = expression.Eval(0, None);
+						ReadExpression();
 						switch (actionCode) {
 						case Actions.Print:
 							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals)));
@@ -163,16 +181,16 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							break;
 						case Actions.PrintValue:
 							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true)));
-							Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.Error & 2) > 0 ? FailReason.BadExpression : FailReason.Success);
+							Cl(eval.Error); //Cl((eval.Error & 2) > 0 ? FailReason.StackOverflow : (eval.Error & 4) > 0 ? FailReason.BadExpression : FailReason.Success);
 							break;
-						/*case Actions.PrintNumber:
-							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true)));
-							Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.GetLeaf().IsNaN() || (eval.Error & 2) > 0) ? FailReason.BadExpression : FailReason.Success);
+						case Actions.PrintNumber:
+							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true, 1)));
+							Cl(eval.Error);
 							break;
 						case Actions.PrintString:
-							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true)));
+							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true, 2)));
 							Cl(FailReason.Success);
-							break;*/
+							break;
 						case Actions.Do:
 							if (pref.Length > _doOverflow) {
 								e = "DO overflow limit exceeded.";
@@ -191,7 +209,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							break;
 						case Actions.While:
 							var b = GetBack();
-							Conditional(b.i < 0 ? (read.From, 0) : (read.From, b.c));
+							Conditional(b.i < 0 ? (beforeI, 0) : (beforeI, b.c));
 							break;
 						case Actions.Return:
 							EndLoop(false);
@@ -202,6 +220,21 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						case Actions.Continue:
 							EndLoop(true, false);
 							break;
+						case Actions.StackOverflow:
+							_stackOverflow = (ushort)T.Re(eval.GetLeaf());
+							break;
+						case Actions.IterOverflow:
+							_iterOverflow = (ushort)T.Re(eval.GetLeaf());
+							break;
+						case Actions.WhileOverflow:
+							_loopOverflow = (ushort)T.Re(eval.GetLeaf());
+							break;
+						case Actions.DoOverflow:
+							_doOverflow = (ushort)T.Re(eval.GetLeaf());
+							break;
+						case Actions.Operator:
+							_operatorLess = INumber<T>.IsTrue(eval.GetLeaf());
+							break;
 						default:
 							action = false;
 							break;
@@ -210,17 +243,19 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 								for (var loops = (int)T.Re(eval.GetLeaf()); loops > 0;) {
 									if (cancel.IsCancellationRequested)
 										return;
-									if (0 < brackets-- || read.GotoFirstFailed([], 1, out _, out _, false, 1)) {
+									int startSkip = read.From;
+									if (0 > brackets-- || read.GotoFirstFailed([], 1, out _, out _, false, 1)) {
 										e = "Couldn't find an END bracket to escape from.";
 										FailEnd();
 									}
+									read.AddC(startSkip, read.From, ParseDictionary.Type.Skip);
 									if (onlyLoops && back[brackets].i < 0)
 										continue; // not a loop, don't count that
 									if (loops == 1) {
 										--read.From; // go back to the end bracket
-										++brackets;
 										if (dontContinue)
 											back[brackets] = (-1, 0);
+										++brackets;
 										doContinue = true;
 										return;
 									}
@@ -235,7 +270,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						if (action)
 							break;
 						eval.Text = name;
-						Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.Error & 2) > 0? FailReason.BadExpression : FailReason.Success);
+						Cl(eval.Error); //Cl((eval.Error & 1) > 0 ? FailReason.StackOverflow : (eval.Error & 2) > 0? FailReason.BadExpression : FailReason.Success);
 						if (parsedC.TryGetValue(name, out var exists)) {
 							// mutate existing
 							exists.Values = eval.Values;
@@ -247,7 +282,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						break;
 					} // it is a function:
 					var failFunc = FailReason.Success;
-					read.AddC(beforeI, beforeI + name.Length,ParseDictionary.Type.UserF);
+					read.AddC(beforeI, beforeI + name.Length, ParseDictionary.Type.UserF);
 					if (!UserFunctions.ContainsKey(name)) // create the custom function if this is its first definition
 						Context.Insert(new(UserFunctions[name] = new CallCustom([]), ParseDictionary.Type.UserF), name);
 					LoadTernary();
@@ -255,7 +290,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					void LoadTernary() {
 						List<(Expression, Expression)> conditionals = [];
 						LoadFunc(out var defaultBranch);
-						while (!read.GotoFirstFailed(0,2, ['?'], 1, out _, out _)) {
+						while (!read.GotoFirstFailed(0, 2, ['?'], 1, out _, out _)) {
 							if (cancel.IsCancellationRequested)
 								return;
 							LoadFunc(out var trueExp);
@@ -268,36 +303,40 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 						}
 						AddF(args, conditionals, defaultBranch); // no if
 					}
+					void ReadExpression() {
+						//skipStart = read.From;
+						read.TrimStart(1);
+						var expression = new Expression(read, out _, args);
+						eval = expression.Eval(0, None);
+					}
 					string LoadDef() {
 						var stage = 0;
 						var foundCantBeNext = Static.FindName;
 						while (true) {
 							int found;
-							while (!read.GotoFirstFailed(0, 2,['(', ':', '\n', ';'], 1, out s, out found, false, 0, false, stage > 0, foundCantBeNext) 
+							while (!read.GotoFirstFailed(0, 2, ['(', ':', '\n', ';'], 1, out s, out found, false, 0, false, stage > 0, foundCantBeNext)
 								&& s == 2) ;
 							switch (s) {
 							case 0: // '('
 								switch (++stage) {
-									case 1: // name and args
-										foundCantBeNext = Static.FindArgs;
-										e = GetName();
-										if (e != "") return e;
-										if(FailArgs(out args)) return "Failed to parse ARGUMENTS.";
-										break;
-									case 2: // cache
-										if ("" != (e = FailEvalClose(out eval) ? "Failed to parse CACHE size."
-											: eval.Values.Length != 1 ? "Multiple values in the CACHE size expression: " + eval
-											: eval.Values[0].Leaf.IsNaN() ? "CACHE size evaluated as NaN." : "")) {
-											return e;
-										}
-										cache = (int)Math.Round(T.Re(eval.Values[0].Leaf));
-										break;
-									default:
-										return "unexpected third parenthesis after cache size.";
+								case 1: // name and args
+									foundCantBeNext = Static.FindArgs;
+									e = GetName(); // TODO parse as definition
+									if (e != "") return e;
+									if (FailArgs(out args)) return "Failed to parse ARGUMENTS.";
+									break;
+								case 2: // cache
+									if ("" != (e = FailEvalClose(out eval) ? "Failed to parse CACHE size."
+										: eval.Values.Length != 1 ? "Multiple values in the CACHE size expression: " + eval
+										: eval.Values[0].Leaf.IsNaN() ? "CACHE size evaluated as NaN." : "")) { return e; }
+									cache = (int)Math.Round(T.Re(eval.Values[0].Leaf));
+									break;
+								default:
+									return "unexpected third parenthesis after cache size.";
 								}
 								break;
 							case 1: //':'
-								return (++stage == 1) ? GetName() : "";
+								return (++stage == 1) ? GetName() : ""; // TODO parse as definition
 							default: return Fc();
 							}
 							continue;
@@ -311,16 +350,12 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							return;
 						read.AddC(beforeI, read.From, ParseDictionary.Type.Error);
 						failFunc = FailReason.BadExpression;
-						
+
 					}
 					void LoadFunc(out Expression expression) {
 						read.TrimStart(1);
 						beforeI = read.From;
 						IsFailed(expression = new(read, out _, args, cache));
-					}
-					void FailEnd() {
-						Lg();
-						Cl(FailReason.Success);
 					}
 					void AddF(Value input, List<(Expression ifTrue, Expression question)> conditional, Expression? dBranch = null) {
 						if (parsedF.TryGetValue(name, out var pfn)) {
@@ -363,42 +398,104 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 								var failCond = INumber<T>.IsFalse(eval.Leaf);
 								if (read.GotoFirstFailed(['{'], 1, out _, out _))
 									return "Failed to find a START BRACKET.";
-								if (rb.c > 0)
-									return SkipElses();
 								if (!failCond)
 									return "_T"; // enter true block
-								if (read.GotoFirstFailed([], 1, out _, out _, false, 1)) // skip this block
-									return "Failed to find an END BRACKET after skipping a failed condition";
-								if (read.GotoFirstFailed([':'], 1, out _, out _))
+								//back[brackets]
+								//read.AddC(skipStart, read.From-1, ParseDictionary.Type.Skip);
+								if (rb.c > 0)
+									return SkipElses(1);
+								back[brackets] = (-1, -1); // failed condition should disable while goback, if it's set up
+								if ("" != (e = SkipBlock()))
+									return e;
+								if (read.GotoFirstFailed(0,2,[':'], 1, out _, out _))
 									return "_N"; // No else block
+								//skipStart = read.From;
+								ReadExpression(); // read else condition
 							}
 						}
-						
-					}
-					string SkipElses() {
-						do {
-							if (cancel.IsCancellationRequested)
-								return "Cancelled";
-							e = read.GotoFirstFailed([], 1, out _, out _, false, 1) ? "Failed to find an END BRACKET after WHILE ELSE." : "_W";
-							if (e != "_W") return e;
-						} while ("" == (e = read.GotoFirstFailed([':'], 1, out _, out _) ? "_N" : read.GotoFirstFailed(['{'], 1, out _, out _) ? "Failed to find a START BRACKET." : "" ));
-						return e;
 					}
 				}
 				continue;
-				bool FailEval(out Value evaluated, bool isArg = false) {
-					var expression = new Expression(read, out _, None, 0, 0, isArg);
+				void FailEnd() {
+					Lg();
+					Cl(FailReason.Success);
+				}
+				string SkipBlock(bool color = true) {
+					int skipStart = read.From;
+					if (read.GotoFirstFailed([], 1, out _, out _, false, 1)) // skip this block
+						return "Failed to find an END BRACKET after skipping a failed condition";
+					if(color)
+						read.AddC(skipStart - 1, read.From, ParseDictionary.Type.Skip);
+					return "";
+				}
+				string SkipElses(int dontSkipCol = 0) {
+					int skipStart = read.From;
+					do {
+						bool dont = --dontSkipCol < 0;
+						if ("" != (e = cancel.IsCancellationRequested ? "Cancelled" : SkipBlock(dont))) return e;
+						if(!dont)
+							skipStart = read.From;
+					} while ("" == (e = read.GotoFirstFailed(0,2,[':'], 1, out _, out _) ? "_N" 
+						: read.GotoFirstFailed(['{'], 1, out _, out _, false, 0, false, false, [false]) 
+							? "Failed to find a START BRACKET." : "" ));
+					if(--dontSkipCol < 0)
+						read.AddC(skipStart, read.From, ParseDictionary.Type.Skip);
+					return e;
+				}
+				bool FailEval(out Value evaluated, Expression.ParseAs parseAs = Expression.ParseAs.Expression) {
+					var expression = new Expression(read, out _, None, 0, 0, parseAs);
 					evaluated = UnCollapseScalar(expression.Eval(0, None));
 					return false;
 				}
-				bool FailEvalClose(out Value evaluated, bool isArg = false) => FailEval(out evaluated, isArg) || read.GotoFirstFailed(0, 2,[')'], 1, out _, out _);
-				void Cl(FailReason reason,bool fromError = false) {
+				bool FailEvalClose(out Value evaluated, Expression.ParseAs parseAs = Expression.ParseAs.Expression) 
+					=> FailEval(out evaluated, parseAs) || read.GotoFirstFailed(0, 2,[')'], 1, out _, out _);
+				void EndBracket() {
+					if (--brackets < 0) {
+						Cl(FailReason.Unexpected); // closing a bracket that wasn't started
+						return;
+					}
+					var bb = back[brackets];
+					var (bi, bc) = (bb.i, bb.c + 1);
+					if (bi >= 0) {
+						// at the end of while
+						if (bc <= _loopOverflow) {
+							// repeat
+							read.From = bi; // goto */
+							back[brackets] = (bi, bc); // increment stack overflow counter
+							return;
+						}
+						//fail exit
+						back[brackets] = (-1, 1);
+						e = "WHILE loop limit exceeded.";
+						Lg();
+					}
+					++read.From; // eat end bracket
+					if (back[brackets].c > 0) {
+						// no else expected
+						back[brackets] = (bi, 0);
+						return;
+					}
+					if (read.GotoFirstFailed(0,2, [':'], 1, out _, out _))
+						return;
+					beforeI = read.From;
+					if ("_N" != (e = read.GotoFirstFailed(0, 2, ['{'], 1, out _, out _, false, 0, false, false, [false])
+						? "Failed to find a START BRACKET after ELSE." : SkipElses()))
+						FailEnd();
+					else read.AddC(beforeI - 1, read.From, ParseDictionary.Type.Skip);
+				}
+				void Cl(FailReason reason, bool fromError = false) {
 					read.TrimStart();
 					var before = read.From;
-					var fail = read.GotoFirstFailed(['}', ';', '\n'], 0, out _, out var found) /* && i < codeL.Length*/;
+					var fail = read.GotoFirstFailed(['}', ';', '\n'], 0, out var s, out var found) /* && i < codeL.Length*/;
+					if (s == 0) { // move back to the bracket and process it:
+						--read.From;
+						EndBracket(); 
+					}
 					var initialBefore = beforeI;
 					if (reason != FailReason.Success || fail && /*i*/before < read.Text.Length) {
-						e = reason switch { FailReason.Unexpected => "Unexpected text: ", FailReason.BadExpression => "Bad expression: ", FailReason.StackOverflow => "Stack overflow: ", _ => "?" }
+						e = Static.Errors[(byte)reason]
+							/*reason switch { FailReason.Unexpected => "Unexpected text: ", FailReason.BadExpression => "Bad expression: ",
+								FailReason.StackOverflow => "Stack overflow: ", _ => "?" }*/
 							+ read.Text[Math.Max(read.From - 12, 0)..read.From].Replace("\n", "") + "|" + read.Text[read.From..Math.Min(read.From + 12, read.Text.Length)].Replace("\n", ""); 
 						GotoNext();
 						read.AddC(reason != FailReason.Success ? initialBefore : beforeI, read.From, ParseDictionary.Type.Error);
@@ -409,6 +506,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 							read.AddC(beforeI, read.From, ParseDictionary.Type.Error);
 					}
 					read.TrimStart(2);
+
 					return;
 					void GotoNext() {
 						if (!fail)
@@ -429,7 +527,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 					e = "";
 				}
 				string Fc() => "Missing definition colon.";
-				bool FailArgs(out Value args) => FailEvalClose(out args, true) || FailArgValues(args.Values); // || FailArgTerms(args.Values);
+				bool FailArgs(out Value args) => FailEvalClose(out args, Expression.ParseAs.Argument) || FailArgValues(args.Values); // || FailArgTerms(args.Values);
 				static bool IsAlphaNumeric(string strToCheck) => MyRegex().IsMatch(strToCheck);
 				bool FailArgValues(Value[] v) {
 					if (v.Length == 0) return true;
@@ -453,34 +551,40 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 	//public Value T_ParseEval(string text, int from, Value? args = null) => T_ParseEval(text, ref from, args);
 	//public Value MakeArgs((string alias, T value)[] pairs) => new(pairs.Select(p => new Value(p.value, 0, p.alias)).ToArray());
 	#endregion
-
-
 	
 	#region Enums
 	public enum Actions : byte {
 		None = 0,
 		Print = 1,
 		PrintValue = 2,
-		//PrintNumber = 3,
-		//PrintString = 4,
+		PrintNumber = 3,
+		PrintString = 4,
 		Do = 5,
 		If = 6,
 		While = 7,
 		Return = 8,
 		Break = 9,
 		Continue = 10,
+		StackOverflow = 11, 
+		IterOverflow = 12,
+		WhileOverflow = 13,
+		DoOverflow = 14,
+		Operator = 15
 	}
 	public enum FailReason : byte {
 		Success = 0,
-		Unexpected = 1,
-		BadExpression = 2,
-		StackOverflow = 3
+		NaN = 1,
+		StackOverflow = 2,
+		BadExpression = 3,
+		Unexpected = 4
 	}
 	#endregion
 	
 	#region Content
 	private bool _darkMode = true;
 	private int _decimals = 3;
+	public Plot Plotter;
+	
 	private Color GetColor(ParseDictionary.Type type) => _darkMode ? _darkColors[type] : _lightColors[type];
 
 	public (Color b, Color f) GetColor() =>_darkMode ?  (_darkColors[ParseDictionary.Type.Back], _darkColors[ParseDictionary.Type.Fore]) 
@@ -500,6 +604,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		[ParseDictionary.Type.Text] = Color.White,
 		[ParseDictionary.Type.Comment] =  Color.FromArgb(64,64,64),
 		[ParseDictionary.Type.String] =  Color.FromArgb(255, 0, 255),
+		[ParseDictionary.Type.Skip] =  Color.FromArgb(64, 0, 0),
 		[ParseDictionary.Type.Error] = Color.Red,
 		[ParseDictionary.Type.Success] = Color.Green,
 		[ParseDictionary.Type.Back] = Color.Black,
@@ -517,6 +622,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		[ParseDictionary.Type.Text] = Color.Black,
 		[ParseDictionary.Type.Comment] = Color.FromArgb(192,192,192),
 		[ParseDictionary.Type.String] = Color.Purple,
+		[ParseDictionary.Type.Skip] =  Color.FromArgb(96, 0, 0),
 		[ParseDictionary.Type.Error] = Color.FromArgb(192,0, 0),
 		[ParseDictionary.Type.Success] = Color.FromArgb(0,128,0),
 		[ParseDictionary.Type.Back] = Color.White,
@@ -541,10 +647,11 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 			Comment = (1 << 5) + 3,	// not dictionary, just for parsing colors - comment
 			String = (1 << 5) + 4,	// not dictionary, just for parsing colors - "string"
 			PointerF = (1 << 5) + 5,// not dictionary, just for parsing colors - function pointer
-			Error = (1 << 5) + 6,	// not dictionary, just for parsing colors - error
-			Success = (1 << 5) + 7,	// not dictionary, just for parsing colors - success
-			Back = (1 << 5) + 8,	// not dictionary, just for parsing colors - background
-			Fore = (1 << 5) + 9		// not dictionary, just for parsing colors - non-code text
+			Skip = (1 << 5) + 6,	// not dictionary, just for parsing colors - skipped blocks/coditions
+			Error = (1 << 5) + 7,	// not dictionary, just for parsing colors - error
+			Success = (1 << 5) + 8,	// not dictionary, just for parsing colors - success
+			Back = (1 << 5) + 9,	// not dictionary, just for parsing colors - background
+			Fore = (1 << 5) + 10	// not dictionary, just for parsing colors - non-code text
 		}
 		private readonly List<S> _d = [];
 		private readonly Dictionary<char, ParseDictionary> _next = [];
@@ -599,18 +706,20 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		}
 	}
 
-	private readonly ushort _stackOverflow = stackOverflowLimit, _doOverflow = doOverflowLimit, _loop = loopLimit, _iterLimit = iteratorLimit;
-	private readonly bool _caseInsensitive = caseInsensitive, _allowParsePeek = allowParsePeek;
-	static protected readonly Value None = new();
-	private static readonly Value StackOverflow = new(1);
+	private readonly ushort _stackOverflowDef, _doOverflowDef, _loopOverflowDef, _iterOverflowDef;
+	private ushort _stackOverflow, _doOverflow, _loopOverflow, _iterOverflow;
+	private readonly bool _caseInsensitive, _allowParsePeek, _operatorLessDef;
+	private bool _operatorLess;
+	public static readonly Value None = new();
+	private static readonly Value StackOverflow = new(FailReason.StackOverflow);
 	private static readonly Cf OpFact = new(T.Factorial, OpCode.Factorial);
 	private static readonly Cf OpSqr = new(T.Sqr, OpCode.Sqr);
 	private static readonly Cf OpConj = new(INumber<T>.Conj, OpCode.Conj);
 	private static readonly Ce OpCount = new(typeof(FuncCount), 0);
 	private static readonly Ce OpCatCount = new(typeof(FuncCatCount), 0);
-	private static readonly Cf OpAbs = new((z) => T.MakeR(INumber<T>.Abs(z)), OpCode.Abs);
+	private static readonly Cf OpAbs = new(INumber<T>.T_Abs, OpCode.Abs);
 	private static readonly Cf OpSqrAbs = new(INumber<T>.SqrAbs, OpCode.SqrAbs);
-	private static readonly Cf OpAbsRi = new(T.AbsComp, OpCode.Absri);
+	private static readonly Cf OpCompAbs = new(T.AbsComp, OpCode.Absri);
 	private static readonly Cf OpSign = new(INumber<T>.Sign, OpCode.Sgn);
 	protected abstract Value GenericConstants();
 	protected readonly ParseDictionary Context = new();
@@ -625,7 +734,7 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 		public readonly Comparser<T> Context = context;
 		public int From = from, Line = 1;
 		public readonly CancellationToken Cancel = cancel;
-		public readonly string Text = text;
+		public readonly string Text = context._caseInsensitive ? text.ToLower() : text;
 		public readonly List<(int position, ParseDictionary.Type color)> Colors = [(0, ParseDictionary.Type.Text)];
 		private void GetChar(char c, out int location, int? i = null, string? dtext = null) {
 			int f = i ?? From;
@@ -901,164 +1010,141 @@ public abstract partial class Comparser<T>(bool caseInsensitive = true, ushort s
 	#endregion
 
 	private void FillDefault() {
-		C("π", INumber<T>.C_Pi());
-		C("pi", INumber<T>.C_Pi());
-		C("τ", INumber<T>.C_Pi());
-		C("tau", INumber<T>.C_Tau());
-		C("e", INumber<T>.C_E());
-		C("gamma", INumber<T>.C_Gamma());
-		C("γ", INumber<T>.C_Gamma());
-		C("one", T.One());
+		C(["π", "pi", "Pi", "PI"], INumber<T>.C_Pi());
+		C(["τ", "tau", "Tau", "TAU"], INumber<T>.C_Pi());
+		C(["e","E"], INumber<T>.C_E());
+		C(["γ", "gamma", "Gamma", "GAMMA"], INumber<T>.C_Gamma());
+		C(["one", "One", "ONE"], T.One());
 		foreach(var d in GenericConstants().Values)
-			C(d.String, d.Leaf);
+			C([d.String], d.Leaf);
 		
-		CallFunction min, max, mul, sum, prod, vec, ln, nsinhc, nsinc, re, im, neg, inv, compMod, cub, trunc, sinhc, ceil;
+		//CallFunction min, max, mul, sum, prod, vec, ln, nsinhc, nsinc, re, im, neg, inv, compMod, cub, trunc, sinhc, ceil;
 		// meta
-		A("eval", new Ce(typeof(FuncEval), 0)); // attempts to parse and evaluate every Text in the input
-		A("count", OpCount); // counts the number of elements in the vector
-		A("catcount", OpCatCount); // counts the total number of elements in the vector
-		A("totalcount", OpCatCount); // counts the total number of elements in the vector
-		A("concat", new Ce(typeof(FuncCat), 0)); // Un-nests the vectors: concat((1,2),3,((4,5),6)) = (1,2,3,4,5,6)
-		A("cat", new Ce(typeof(FuncCat), 0)); // Un-nests the vectors: concat((1,2),3,((4,5),6)) = (1,2,3,4,5,6)
+		A(["eval", "Eval"], new Ce(typeof(FuncEval), 0)); // attempts to parse and evaluate every Text in the input
+		A(["count", "Count"], OpCount); // counts the number of elements in the vector
+		A(["catcount", "CatCount", "Catcount", "totalcount", "TotalCount", "Totalcount"], OpCatCount); // counts the total number of elements in the vector
+		A(["cat", "Cat", "concat", "Concat", "concatenate", "Concatenate"], new Ce(typeof(FuncCat), 0)); // Un-nests the vectors: concat((1,2),3,((4,5),6)) = (1,2,3,4,5,6)
 
 		// double arguments:
-		A("minimum", min = new Cf2(T.Min, OpCode.Min)); // component-wise minimum
-		A("maximum", max = new Cf2(T.Max, OpCode.Max)); // component-wise maximum
-		A("min", min); // component-wise minimum
-		A("max", max); // component-wise maximum
-		A("softmax", new Cf2(INumber<T>.SoftMax, OpCode.SoftMax));
-		A("softmin", new Cf2(INumber<T>.SoftMin, OpCode.SoftMin));
-		A("add", new Cf2(INumber<T>.Add, OpCode.Add)); // adds all the top layer elements of the input vector
-		A("mul", mul = new Cf2(INumber<T>.Mul, OpCode.Mul)); // multiplies all the top layer elements of the input vector
-		A("multiply", mul);
-		A("icoef", new Cf2((x, y) => -x * y, OpCode.ImCoef)); // = re(-a*b), imaginary coefficient icoef(a+bi,i)=b, icoef(r+ai+bj+ck,j)=b, icoef(a+bi,1)=-a
-		A("compmod", compMod = new Cf2(INumber<T>.CompMod, OpCode.CompMod));
-		A("cmod", compMod); // component-wise remainder, returns 0 when dividing by zero
-
+		A(["min", "Min", "minimum", "Minimum"], new Cf2(T.Min, OpCode.Min)); // component-wise minimum
+		A(["max", "Max", "maximum", "Maximum"], new Cf2(T.Max, OpCode.Max)); // component-wise maximum
+		A(["softmax", "SoftMax", "Softmax", "sftmax", "SftMax", "Sftmax"], new Cf2(INumber<T>.SoftMax, OpCode.SoftMax));
+		A(["softmin", "SoftMin", "Softmin", "sftmin", "SftMin", "Sftmin"], new Cf2(INumber<T>.SoftMin, OpCode.SoftMin));
+		A(["add","Add"], new Cf2(INumber<T>.Add, OpCode.Add)); // adds all the top layer elements of the input vector
+		A(["mul", "Mul", "multiply", "Multiply"], new Cf2(INumber<T>.Mul, OpCode.Mul)); // multiplies all the top layer elements of the input vector
+		A(["icoef", "Icoef", "ICoef", "imagcoef", "ImagCoef", "Imagcoef"], new Cf2((x, y) => -x * y, OpCode.ImCoef)); // = re(-a*b), imaginary coefficient icoef(a+bi,i)=b, icoef(r+ai+bj+ck,j)=b, icoef(a+bi,1)=-a
+		A(["compmod", "CompMod", "Compmod", "cmod", "CMod", "Cmod"], new Cf2(INumber<T>.CompMod, OpCode.CompMod)); // component-wise remainder, returns 0 when dividing by zero
+		A(["expb", "ExpB", "Expb"], new Cf2(INumber<T>.ExpB, OpCode.ExpB)); // b^x
+		A(["logb", "LogB", "Logb"], new Cf2(INumber<T>.LogB, OpCode.LogB)); // log_b(x)
+		A(["softabsb", "SoftAbsb", "Softabsb", "sftabsb", "SftAbsb", "Sftabsb", "softplusb", "SoftPlusb", "Softplusb", "sftplusb", "SftPlusb", "Sftplusb"], new Cf2(INumber<T>.SoftAbsB, OpCode.SoftAbsB)); // = e^(1+ln(z))
+		A(["softnegb", "SoftNegb", "Softnegb", "sftnegb", "SftNegb", "Sftnegb", "softminusb", "SoftMinusb", "Softminusb", "sftminusb", "SftMinusb", "Sftminusb"], new Cf2(INumber<T>.SoftNegB, OpCode.SoftNegB)); // = e^(1+ln(z))
+		
 		// triple arguments
-		A("clamp", new Cf3(T.Clamp, OpCode.Clamp)); // component-wise clamp
-
+		A(["clamp", "Clamp"], new Cf3(T.Clamp, OpCode.Clamp)); // component-wise clamp
+		A(["softclamp", "SoftClamp", "Softclamp","sftclamp", "SftClamp", "Sftclamp" ], new Cf3(INumber<T>.SoftClamp, OpCode.SoftClamp)); // natural soft clamp
+		A(["softmaxb", "SoftMaxB", "Softmaxb", "sftmaxb", "SftMaxB", "Sftmaxb"], new Cf3(INumber<T>.SoftMaxB, OpCode.SoftMaxB));
+		A(["softminb", "SoftMinB", "Softminb", "sftminb", "SftMinB", "Sftminb"], new Cf3(INumber<T>.SoftMinB, OpCode.SoftMinB));
+		
 		// quadruple arguments
-		A("product", prod = new Ce(typeof(Product), 0)); // iterative product
-		A("prod", prod); // iterative product
-		A("Π", prod); // iterative product
-		A("sum", sum = new Ce(typeof(Sum), 0)); // iterative sum
-		A("Σ", sum);
-		A("vector", vec = new Ce(typeof(Vector), 0)); // iterative vector builder
-		A("vec", vec); // iterative vector builder
-
+		A(["product", "Product", "prod", "Prod", "Π"], new Ce(typeof(Product), 0)); // iterative product
+		A(["sum", "Sum", "Σ"], new Ce(typeof(Sum), 0)); // iterative sum
+		A(["vector", "Vector", "vec", "Vec"], new Ce(typeof(Vector), 0)); // iterative vector builder
+		A(["softclampb", "SoftClampB", "Softclampb", "sftclampb", "SftClampB", "Sftclampb"], new Cf4(INumber<T>.SoftClampB, OpCode.SoftClampB)); // soft clamp with a custom base
+		
 		// exp/log
-		A("exp10", new Cf(INumber<T>.Exp10, OpCode.Exp10)); // 10^x
-		A("exp2", new Cf(INumber<T>.Exp2, OpCode.Exp2)); // 2^x
-		A("exp", new Cf(T.Exp, OpCode.Exp)); // e^x
-		A("log10", new Cf(INumber<T>.Log10, OpCode.Log10)); // log_10(x)
-		A("log2", new Cf(INumber<T>.Log2, OpCode.Log2)); // log_2(x)
-		A("log", ln = new Cf(T.Log, OpCode.Log)); // ln(x)
-		A("ln", ln); // ln(x)
+		A(["exp10", "Exp10", "expdec", "ExpDec", "Expdec"], new Cf(INumber<T>.Exp10, OpCode.Exp10)); // 10^x
+		A(["exp2", "Exp2", "expbin", "ExpBin", "Expbin"], new Cf(INumber<T>.Exp2, OpCode.Exp2)); // 2^x
+		A(["exp", "Exp", "exponential", "Exponential"], new Cf(T.Exp, OpCode.Exp)); // e^x
+		A(["log10", "Log10", "logdec", "LogDec", "Logdec"], new Cf(INumber<T>.Log10, OpCode.Log10)); // log_10(x)
+		A(["log2", "Log2", "logbin", "LogBin", "Logbin"], new Cf(INumber<T>.Log2, OpCode.Log2)); // log_2(x)
+		A(["ln", "log", "Ln", "Log", "logarithm", "Logarithm"], new Cf(T.Log, OpCode.Log)); // ln(x)
 
 		// sincs
-		A("nsinhc", nsinhc = new Cf(INumber<T>.Nsinhc, OpCode.Nsinhc));
-		A("sinchpi", nsinhc);
-		A("sinhc", sinhc = new Cf(INumber<T>.Sinhc, OpCode.Sinhc));
-		A("sinch", sinhc);
-		A("nsinc", nsinc = new Cf(INumber<T>.Nsinc, OpCode.Nsinc));
-		A("sincpi", nsinc);
-		A("sinc", new Cf(INumber<T>.Sinc, OpCode.Sinc));
+		A(["sinhc", "sinhc", "Sinch", "Sinch"], new Cf(INumber<T>.Sinhc, OpCode.Sinhc));
+		A(["nsinhc", "Nsinhc", "nsinch", "Nsinch", "sinchpi", "SinchPi", "Sinchpi", "sinhcpi", "SinhcPi", "Sinhcpi"], new Cf(INumber<T>.Nsinhc, OpCode.Nsinhc));
+		A(["sinc", "Sinc"], new Cf(INumber<T>.Sinc, OpCode.Sinc));
+		A(["nsinc", "Nsinc", "sincpi", "SincPi", "Sincpi"], new Cf(INumber<T>.Nsinc, OpCode.Nsinc));
 
 		// coscs
-		A("coshc", new Cf(INumber<T>.Coshc, OpCode.Coshc));
-		A("coshcpi", new Cf(INumber<T>.Ncoshc, OpCode.Ncoshc));
-		A("ncoshc", new Cf(INumber<T>.Ncoshc, OpCode.Ncoshc));
-		A("cosc", new Cf(INumber<T>.Cosc, OpCode.Cosc));
-		A("coscpi", new Cf(INumber<T>.Ncosc, OpCode.Ncosc));
-		A("ncosc", new Cf(INumber<T>.Ncosc, OpCode.Ncosc));
+		A(["coshc", "coshc", "Cosch", "Cosch"], new Cf(INumber<T>.Coshc, OpCode.Coshc));
+		A(["ncoshc", "Ncoshc", "ncosch", "Ncosch", "coschpi", "CoschPi", "Coschpi", "coshcpi", "CoshcPi", "Coscpi"], new Cf(INumber<T>.Ncoshc, OpCode.Ncoshc));
+		A(["cosc", "Cosc"], new Cf(INumber<T>.Cosc, OpCode.Cosc));
+		A(["ncosc", "Ncosc", "coscpi", "CoscPi", "Coscpi"], new Cf(INumber<T>.Ncosc, OpCode.Ncosc));
 
 		// arc hyperbolics
-		A("acosh", new Cf(T.Acosh, OpCode.Acosh));
-		A("asinh", new Cf(T.Asinh, OpCode.Asinh));
-		A("atanh", new Cf(T.Atanh, OpCode.Atanh));
-		A("asech", new Cf(INumber<T>.Asech, OpCode.Asech));
-		A("acsch", new Cf(INumber<T>.Acsch, OpCode.Acsch));
-		A("acoth", new Cf(T.Acoth, OpCode.Acoth));
+		A(["acosh", "Acosh", "arccosh", "ArcCosh", "Arccosh"], new Cf(T.Acosh, OpCode.Acosh));
+		A(["asinh", "Asinh", "arcsinh", "ArcSinh", "Arcsinh"], new Cf(T.Asinh, OpCode.Asinh));
+		A(["atanh", "Atanh", "arctanh", "ArcTanh", "Arctanh"], new Cf(T.Atanh, OpCode.Atanh));
+		A(["asech", "Asech", "arcsech", "ArcSech", "Arcsech"], new Cf(INumber<T>.Asech, OpCode.Asech));
+		A(["acsch", "Acsch", "arccsch", "ArcCsch", "Arccsch"], new Cf(INumber<T>.Acsch, OpCode.Acsch));
+		A(["acoth", "Acoth", "arccoth", "ArcCoth", "Arccoth"], new Cf(T.Acoth, OpCode.Acoth));
 
 		// hyperbolics
-		A("cosh", new Cf(T.Cosh, OpCode.Cosh));
-		A("sinh", new Cf(T.Sinh, OpCode.Sinh));
-		A("tanh", new Cf(T.Tanh, OpCode.Tanh));
-		A("sech", new Cf(INumber<T>.Sech, OpCode.Sech));
-		A("csch", new Cf(INumber<T>.Csch, OpCode.Csch));
-		A("coth", new Cf(T.Coth, OpCode.Coth));
+		A(["cosh", "Cosh"], new Cf(T.Cosh, OpCode.Cosh));
+		A(["sinh", "Sinh"], new Cf(T.Sinh, OpCode.Sinh));
+		A(["tanh", "Tanh"], new Cf(T.Tanh, OpCode.Tanh));
+		A(["sech", "Sech"], new Cf(INumber<T>.Sech, OpCode.Sech));
+		A(["csch", "Csch"], new Cf(INumber<T>.Csch, OpCode.Csch));
+		A(["coth", "Coth"], new Cf(T.Coth, OpCode.Coth));
 
 		// arc trigs
-		A("acos", new Cf(T.Acos, OpCode.Acos));
-		A("asin", new Cf(T.Asin, OpCode.Asin));
-		A("atan", new Cf(T.Atan, OpCode.Atan));
-		A("asec", new Cf(INumber<T>.Asec, OpCode.Asec));
-		A("acsc", new Cf(INumber<T>.Acsc, OpCode.Acsc));
-		A("acot", new Cf(T.Acot, OpCode.Acot));
+		A(["acos", "Acos", "arccos", "ArcCos", "Arccos"], new Cf(T.Acos, OpCode.Acos));
+		A(["asin", "Asin", "arcsin", "ArcSin", "Arcsin"], new Cf(T.Asin, OpCode.Asin));
+		A(["atan", "Atan", "arctan", "ArcTan", "Arctan"], new Cf(T.Atan, OpCode.Atan));
+		A(["asec", "Asec", "arcsec", "ArcSec", "Arcsec"], new Cf(INumber<T>.Asec, OpCode.Asec));
+		A(["acsc", "Acsc", "arccsc", "ArcCsc", "Arccsc"], new Cf(INumber<T>.Acsc, OpCode.Acsc));
+		A(["acot", "Acot", "arccot", "ArcCot", "Arccot"], new Cf(T.Acot, OpCode.Acot));
 
 		// trigs
-		A("cos", new Cf(T.Cos, OpCode.Cos));
-		A("sin", new Cf(T.Sin, OpCode.Sin));
-		A("tan", new Cf(T.Tan, OpCode.Tan));
-		A("sec", new Cf(INumber<T>.Sec, OpCode.Sec));
-		A("csc", new Cf(INumber<T>.Csc, OpCode.Csc));
-		A("cot", new Cf(T.Cot, OpCode.Cot));
+		A(["cos", "Cos"], new Cf(T.Cos, OpCode.Cos));
+		A(["sin", "Sin"], new Cf(T.Sin, OpCode.Sin));
+		A(["tan", "Tan"], new Cf(T.Tan, OpCode.Tan));
+		A(["sec", "Sec"], new Cf(INumber<T>.Sec, OpCode.Sec));
+		A(["csc", "Csc"], new Cf(INumber<T>.Csc, OpCode.Csc));
+		A(["cot", "Cot"], new Cf(T.Cot, OpCode.Cot));
 
 		// unary
-		A("true", new Cf((x) => T.MakeR(T.Re(INumber<T>.SqrAbs(x)) >= 1 ? 1 : 0), OpCode.True)); // = size >= 1
-		A("false", new Cf((x) => T.MakeR(T.Re(INumber<T>.SqrAbs(x)) < 1 ? 1 : 0), OpCode.False)); // = size < 1
-		A("real", re = new Cf(INumber<T>.T_Re, OpCode.Re)); // real part: re(a+bi) = a
-		A("re", re); // real part
-		A("imag", im = new Cf(INumber<T>.T_I, OpCode.Im)); // imaginary sum: im(r+ai+bj+ck) = a+b+c
-		A("im", im); // imaginary sum
-		A("immg", new Cf((x) => T.MakeR(T.ImMag(x)), OpCode.ImMag)); // imaginary magnitude immg(r+ai+bj+ck) = sqrt(a^2+b^2+c^2)
-		A("frac", new Cf(T.Frac, OpCode.Frac)); // = fractional part
-		A("trunc", trunc = new Cf(T.Trunc, OpCode.Trunc)); // = whole part
-		A("truncate", trunc); // = whole part
-		A("floor", new Cf(T.Floor, OpCode.Floor)); // = round down
-		A("round", new Cf(T.Round, OpCode.Round)); // = round
-		A("ceiling", ceil = new Cf(T.Ceil, OpCode.Ceil)); // = round up
-		A("ceil", ceil); // = round up
-		A("sign",OpSign); // = z/|z|
-		A("sgn", OpSign); // = z/|z|
-		A("negative", neg = new Cf(INumber<T>.Neg, OpCode.Neg)); // = -z
-		A("neg", neg); // = -z
-		A("inverse", inv = new Cf(T.Inv, OpCode.Inv)); // = 1/z
-		A("inv", inv); // = 1/z
-		A("absri", OpAbsRi); // component-abs: absri(a+bi) = |a|+|b|i
-		A("compabs", OpAbsRi); // component-abs
-		A("cabs", OpAbsRi); // component-abs
-		A("sqrabs", OpSqrAbs); // = |z|^2; sqrabs(a+bi) = a^2+b^2
-		A("absolute", OpAbs); // = |z|
-		A("abs", OpAbs); // = |z|
-		A("norm", OpAbs); // = |z|
-		A("arg", new Cf(INumber<T>.T_Arg, OpCode.Arg)); // argument, the angle from (0,0). arg(-1)=pi
-		A("conjugate",OpConj);
-		A("conj", OpConj); // conjugate: negates all imaginary units, conj(r+ai+bj+dk) = r-ai-bj-bk
+		A(["true", "True"], new Cf((x) => T.MakeR(T.Re(INumber<T>.SqrAbs(x)) >= 1 ? 1 : 0), OpCode.True)); // = size >= 1
+		A(["false", "False"], new Cf((x) => T.MakeR(T.Re(INumber<T>.SqrAbs(x)) < 1 ? 1 : 0), OpCode.False)); // = size < 1
+		A(["real", "Real", "re", "Real"], new Cf(INumber<T>.T_Re, OpCode.Re)); // real part: re(a+bi) = a
+		A(["imag", "Imag", "im", "Im"], new Cf(INumber<T>.T_I, OpCode.Im)); // imaginary sum: im(r+ai+bj+ck) = a+b+c
+		A(["immg", "Immg", "ImMg", "immag", "ImMag", "Immag"], new Cf((x) => T.MakeR(T.ImMag(x)), OpCode.ImMag)); // imaginary magnitude immg(r+ai+bj+ck) = sqrt(a^2+b^2+c^2)
+		A(["frac", "Frac"], new Cf(T.Frac, OpCode.Frac)); // = fractional part
+		A(["trunc", "Trunc", "truncate", "Truncate"], new Cf(T.Trunc, OpCode.Trunc)); // = whole part
+		A(["floor", "Floor"], new Cf(T.Floor, OpCode.Floor)); // = round down
+		A(["round", "Round", "rnd", "Rnd"], new Cf(T.Round, OpCode.Round)); // = round
+		A(["ceiling", "Ceiling", "ceil", "Ceil"], new Cf(T.Ceil, OpCode.Ceil)); // = round up
+		A(["sign", "Sign", "sgn", "Sgn"],OpSign); // = z/|z|
+		A(["neg", "Neg", "negative", "Negative"], new Cf(INumber<T>.Neg, OpCode.Neg)); // = -z
+		A(["inv","Inv", "inverse", "Inverse"], new Cf(T.Inv, OpCode.Inv)); // = 1/z
+		A(["compabs", "CompAbs", "Compabs", "cabs", "CAbs", "Cabs"], OpCompAbs); // component-abs: absri(a+bi) = |a|+|b|i
+		A(["sqrabs", "SqrAbs", "Sqrabs", "sqrnorm", "SqrNorm", "Sqrnorm"], OpSqrAbs); // = |z|^2; sqrabs(a+bi) = a^2+b^2
+		A(["abs", "Abs", "absolute", "Absolute", "norm", "Norm"], OpAbs); // = |z|
+		A(["arg", "Arg", "argument", "Argument", "phase", "Phase", "angle", "Angle"], new Cf(INumber<T>.T_Arg, OpCode.Arg)); // argument, the angle from (0,0). arg(-1)=pi
+		A(["conj","Conj","conjugate","Conjugate"],OpConj);// conjugate: negates all imaginary units, conj(r+ai+bj+dk) = r-ai-bj-bk
+		A(["softabs", "SoftAbs", "Softabs", "sftabs", "SftAbs", "Sftabs", "softplus", "SoftPlus", "Softplus", "sftplus", "SftPlus", "Sftplus"], new Cf(INumber<T>.SoftAbs, OpCode.SoftAbs)); // = e^(1+ln(z))
+		A(["softneg", "SoftNeg", "Softneg", "sftneg", "SftNeg", "Sftneg", "softminus", "SoftMinus", "Softminus", "sftminus", "SftMinus", "Sftminus"], new Cf(INumber<T>.SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
 		// powers
-		A("sqrt", new Cf(T.Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
-		A("sqr", OpSqr); // square = z^2
-		A("cbrt", new Cf(INumber<T>.Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
-		A("cube", cub = new Cf(T.Cub, OpCode.Cub)); // cube = z^3
-		A("cub", cub); // cube
-		A("quart", new Cf(T.Quart, OpCode.Quart)); // z^4
+		A(["sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(T.Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
+		A(["sqr", "Sqr", "square", "Square"], OpSqr); // square = z^2
+		A(["cbrt", "Cbrt", "cuberoot", "CubeRoot", "Cuberoot"], new Cf(INumber<T>.Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
+		A(["cube", "Cube"], new Cf(T.Cub, OpCode.Cub)); // cube = z^3
+		A(["quart", "hypercube", "HyperCube", "Hypercube", "tesseract", "Tesseract"], new Cf(T.Quart, OpCode.Quart)); // z^4
 
 		// specials
-		A("fact", OpFact); // factorial
-		A("factorial", OpFact); // factorial
-		A("gauss", new Cf(T.Gauss, OpCode.Gauss)); // gauss e^(-z^2)
-		A("Γ", new Cf(T.Gamma, OpCode.Gamma)); // gamma function = (xz1)!
-		A("gamma", new Cf(T.Gamma, OpCode.Gamma)); // gamma function = (xz1)!
-		A("ζ", new Cf(T.Zeta, OpCode.Zeta)); // riemann zeta function
-		A("zeta", new Cf(T.Zeta, OpCode.Zeta)); // riemann zeta function
-		A("softabs", new Cf(INumber<T>.SoftAbs, OpCode.SoftAbs)); // = e^(1+ln(z))
-		A("softneg", new Cf(INumber<T>.SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
+		A(["fact", "Fact", "factorial", "Factorial"], OpFact); // factorial
+		A(["gauss", "Gauss"], new Cf(T.Gauss, OpCode.Gauss)); // gauss e^(-z^2)
+		A(["Γ", "gamma", "Gamma"], new Cf(T.Gamma, OpCode.Gamma)); // gamma function = (xz1)!
+		A(["gamma"], new Cf(T.Gamma, OpCode.Gamma)); // gamma function = (xz1)!
+		A(["ζ", "zeta", "Zeta", "riemannzeta","RiemannZeta", "Riemannzeta"], new Cf(T.Zeta, OpCode.Zeta)); // riemann zeta function
 		return;
-		void C(string name, T v) => Context.Insert(new(new Value(v, 0, name), ParseDictionary.Type.DefaultC), name);
-		void A(string name, CallFunction c) {
-			DefaultFunctions[name] = c;
-			Context.Insert(new(c, ParseDictionary.Type.DefaultF), name);
+		void C(string[] name, T v) {
+			foreach (var n in name)if(!_caseInsensitive || n.Equals(n, StringComparison.CurrentCultureIgnoreCase))
+				Context.Insert(new(new Value(v, 0, n), ParseDictionary.Type.DefaultC), n);
+		}
+		void A(string[] name, CallFunction c) {
+			foreach (var n in name) if(!_caseInsensitive || n.Equals(n, StringComparison.CurrentCultureIgnoreCase))
+				Context.Insert(new(DefaultFunctions[n] = c, ParseDictionary.Type.DefaultF), n);
 		}
 	}
 }

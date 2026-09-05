@@ -21,14 +21,14 @@ partial class ComparserControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		components = new System.ComponentModel.Container();
+		components = new Container();
 		fps = new System.Windows.Forms.Timer(components);
-		logButton = new System.Windows.Forms.Button();
-		logBox = new System.Windows.Forms.RichTextBox();
-		codeBox = new System.Windows.Forms.RichTextBox();
-		buildButton = new System.Windows.Forms.Button();
-		splitContainer = new System.Windows.Forms.SplitContainer();
-		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
+		logButton = new Button();
+		logBox = new RichTextBox();
+		codeBox = new RichTextBox();
+		buildButton = new Button();
+		splitContainer = new SplitContainer();
+		((ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
 		splitContainer.Panel2.SuspendLayout();
 		splitContainer.SuspendLayout();
@@ -41,9 +41,9 @@ partial class ComparserControl {
 		// 
 		// logButton
 		// 
-		logButton.Location = new System.Drawing.Point(3, 3);
+		logButton.Location = new Point(3, 3);
 		logButton.Name = "logButton";
-		logButton.Size = new System.Drawing.Size(67, 32);
+		logButton.Size = new Size(67, 32);
 		logButton.TabIndex = 1;
 		logButton.Text = "LOGS";
 		logButton.UseVisualStyleBackColor = true;
@@ -51,32 +51,32 @@ partial class ComparserControl {
 		// 
 		// logBox
 		// 
-		logBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
+		logBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 		logBox.AutoSize = true;
 		logBox.DetectUrls = false;
-		logBox.Font = new System.Drawing.Font("Consolas", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)238));
-		logBox.Location = new System.Drawing.Point(76, 3);
+		logBox.Font = new Font("Consolas", 10F, FontStyle.Regular, GraphicsUnit.Point, 238);
+		logBox.Location = new Point(76, 3);
 		logBox.Name = "logBox";
 		logBox.ReadOnly = true;
-		logBox.Size = new System.Drawing.Size(235, 69);
+		logBox.Size = new Size(235, 69);
 		logBox.TabIndex = 0;
 		logBox.Text = "[logs]";
 		// 
 		// codeBox
 		// 
-		codeBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		codeBox.Location = new System.Drawing.Point(3, 3);
-		codeBox.MinimumSize = new System.Drawing.Size(0, 32);
+		codeBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		codeBox.Location = new Point(3, 3);
+		codeBox.MinimumSize = new Size(0, 32);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new System.Drawing.Size(308, 205);
+		codeBox.Size = new Size(308, 189);
 		codeBox.TabIndex = 0;
 		codeBox.Text = "";
 		// 
 		// buildButton
 		// 
-		buildButton.Location = new System.Drawing.Point(3, 41);
+		buildButton.Location = new Point(3, 41);
 		buildButton.Name = "buildButton";
-		buildButton.Size = new System.Drawing.Size(67, 32);
+		buildButton.Size = new Size(67, 32);
 		buildButton.TabIndex = 2;
 		buildButton.Text = "OK";
 		buildButton.UseMnemonic = false;
@@ -85,10 +85,10 @@ partial class ComparserControl {
 		// 
 		// splitContainer
 		// 
-		splitContainer.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		splitContainer.Location = new System.Drawing.Point(3, 3);
+		splitContainer.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		splitContainer.Location = new Point(3, 3);
 		splitContainer.Name = "splitContainer";
-		splitContainer.Orientation = System.Windows.Forms.Orientation.Horizontal;
+		splitContainer.Orientation = Orientation.Horizontal;
 		// 
 		// splitContainer.Panel1
 		// 
@@ -99,21 +99,22 @@ partial class ComparserControl {
 		// splitContainer.Panel2
 		// 
 		splitContainer.Panel2.Controls.Add(codeBox);
-		splitContainer.Size = new System.Drawing.Size(314, 314);
+		splitContainer.Size = new Size(314, 314);
 		splitContainer.SplitterDistance = 75;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 3;
 		// 
 		// ComparserControl
 		// 
-		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
+		AutoScaleDimensions = new SizeF(7F, 15F);
+		AutoScaleMode = AutoScaleMode.Font;
+		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
+		Name = "ComparserControl";
 		splitContainer.Panel1.ResumeLayout(false);
 		splitContainer.Panel1.PerformLayout();
 		splitContainer.Panel2.ResumeLayout(false);
-		((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
+		((ISupportInitialize)splitContainer).EndInit();
 		splitContainer.ResumeLayout(false);
 		ResumeLayout(false);
 	}
