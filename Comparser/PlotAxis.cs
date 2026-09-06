@@ -1,47 +1,66 @@
 ﻿using Comparser.Comparser.Numbers;
 namespace Comparser.Comparser;
 public interface IPlotAxis {
-	public (string, string) SetS(object? v);
-	public (string, string) SetC(object? v);
-	public (string, string) SetE(object? v);
+	public (string c, string e) SetS(object? v);
+	public (string s, string e) SetC(object? v);
+	public (string s, string c) SetE(object? v);
+	public void SetL(int l);
 	//public string SetLog(bool l);
-	public void SetLength(int l);
+	public (string s, string c, string e) SetLength(int l);
 	public void SetLockRange(bool l); // TODO make control
-	public (string, string, string) GetSce(object? v);
+	public (string s, string c, string e) GetSce();
 	
 }
 public abstract partial class Comparser<T>{
 	public partial class Plot {
-		public class PlotAxis(T initStart, T initStep, int initLength = 0) : IPlotAxis {
-			public (string, string) SetS(object? v) {
+		public class PlotAxis(Comparser<T> c, T initStart, T initStep, int initLength = 0) : IPlotAxis {
+
+			private Comparser<T> _context = c;
+			public void SetL(int l) => _locked = l;
+
+			public (string c, string e) SetS(object? v) {
+				//if (_lc && _le)
+				//	return GetCe();
 				T t;
 				if (v is Value n && !(t=n.GetLeaf()).IsNaN())
 					start = t;
-				return (center.ToString()!, end.ToString()!);
+				return GetCe();
 			}
-			public (string, string) SetC(object? v){
+			public (string s, string e) SetC(object? v) {
+				//if (_ls && _le)
+				//	return GetSe();
 				T t;
 				if (v is Value n && !(t=n.GetLeaf()).IsNaN())
 					center = t;
-				return (start.ToString()!, end.ToString()!);
+				return GetSe();
 			}
-			public (string, string) SetE(object? v){
+			public (string s, string c) SetE(object? v) {
+				//if (_ls && _lc)
+				//	return GetSc();
 				T t;
 				if (v is Value n && !(t=n.GetLeaf()).IsNaN())
 					end = t;
-				return (start.ToString()!, center.ToString()!);
+				return GetSc();
 			}
 			//public string SetLog(bool l);
-			public void SetLength(int l) => length = l;
+			public (string s, string c, string e) SetLength(int l) {
+				var prevE = end;
+				length = l;
+				end = prevE;
+				return GetSce();
+			}
 			public void SetLockRange(bool l) => LockRange = l;
-			public (string, string, string) GetSce(object? v) => (start.ToString()!, center.ToString()!, end.ToString()!);
-			
+			public (string s, string c, string e) GetSce() => (start.ToString(_context.Decimals), center.ToString(_context.Decimals), end.ToString(_context.Decimals));
+			private (string c, string e) GetCe() => (center.ToString(_context.Decimals), end.ToString(_context.Decimals));
+			private (string s, string e) GetSe() => (start.ToString(_context.Decimals), end.ToString(_context.Decimals));
+			private (string s, string c) GetSc() => (start.ToString(_context.Decimals), center.ToString(_context.Decimals));
+
 			/*public bool log
 			{
 				get;
 				set
 				{
-					if (value == (field = value))
+					if (field == (field = value))
 						return;
 					DirtyL = true;
 					Sv = value ? ScreenToValueLog : ScreenToValueLin;
@@ -54,16 +73,22 @@ public abstract partial class Comparser<T>{
 				get;
 				set
 				{
-					if (T.AreEqual(value, field = value)) return;
+					var prevCenter = center;
+					var prevEnd = end;
+					if (T.AreEqual(field, field = value)) return;
+					switch (_locked) {
+						case 1: d = 2 * (prevCenter - value) / length;break;
+						case 2: d = (prevEnd - value) / length; break;
+					}
 					DirtyL = true;
 				}
 			} = initStart; // how many steps from 0 to the left/top edge?
 			public T d
 			{
 				get;
-				set
+				private set
 				{
-					if (T.AreEqual(value, field = value)) return;
+					if (T.AreEqual(field, field = value)) return;
 					DirtyL = true;
 				}
 			} = initStep; // how much T space will one pixel to the right move?
@@ -72,12 +97,38 @@ public abstract partial class Comparser<T>{
 			public T center
 			{
 				get => (start + end) / 2; // right/bottom edge in T space
-				set => start += center - value;
+				set {
+					T n;
+					switch (_locked) {
+						case 0:
+							n = 2 * (value - start) / length;
+							if (T.AreEqual(d, n)) return;
+							d = n;
+							return;
+						case 2: n = 2 * value - end; break;
+						default: n = start + value - center; break;
+					}
+					if (T.AreEqual(start, n)) return;
+					start = n;
+				}
 			}
 			public T end
 			{
 				get => Sample(length); // right/bottom edge in T space
-				set => d = (value - start) / length;
+				set {
+					T n;
+					switch (_locked) {
+						case 0:
+							n = (value - start) / length;
+							if (T.AreEqual(d, n)) return;
+							d = n;
+							return;
+						case 1: n = 2 * center - value; break;
+						default: n = start + value - end; break;
+					}
+					if (T.AreEqual(start, n)) return;
+					start = n;
+				} 
 			}
 			public Func<int, T, T, T> Sv = ScreenToValueLin;//initLog ? ScreenToValueLog : ScreenToValueLin;
 			public Func<T, T, T, int> Vs = ValueToScreenLin;//initLog ? ValueToScreenLog : ValueToScreenLin;
@@ -86,10 +137,11 @@ public abstract partial class Comparser<T>{
 				get;
 				set
 				{
-					if (value != (field = value)) DirtyL = true;
+					if (field != (field = value)) DirtyL = true;
 				}
 			} = initLength;
 			public bool DirtyL = true; //, _dirtyR = true; // Lines / PlotRange
+			private int _locked = -1;
 			public Color[] lines {
 				get
 				{
@@ -99,9 +151,12 @@ public abstract partial class Comparser<T>{
 					Lin(start, end);
 					return field;
 				
-				void Lin(T lStart, T lEnd) {
+				void Lin(T lStart, T lEnd) { 
+					field = new Color[length];
+					return; // TODO this
 					(lStart, lEnd) = (T.D2(lStart, lEnd, Math.Min), T.D2(lStart, lEnd, Math.Max));
 					var h = Lc(lEnd - lStart);
+					//if (lEnd.Equals(lStart)) return;
 					var mod = T.D1(lEnd - lStart, (x) => Math.Log(Math.Abs(x)) / Math.Log(divBase) % 1); 
 					byte divided = 64;
 					var lineB = new T[4];

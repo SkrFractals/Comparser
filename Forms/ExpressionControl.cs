@@ -12,7 +12,7 @@ public partial class ExpressionControl : ParentControl {
 	private const int InputSize = 64;
 	private readonly List<ExpRow> _expressionRows = [];
 	private readonly List<Button> _swaps = [];
-	public ExpressionControl() => InitializeComponent();
+	public ExpressionControl() : base() => InitializeComponent();
 	public ExpressionControl(MenuControl root, ParentForm parent) : base(root, parent){
 		InitializeComponent();
 		parent.SetMinSize();

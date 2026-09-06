@@ -25,13 +25,13 @@ partial class ParentControl {
 		// 
 		// ParentControl
 		// 
-		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
-		Dock = DockStyle.None;
-		MinimumSize = new System.Drawing.Size(320, 320);
-		MaximumSize = new System.Drawing.Size(320, 320);
-		Size = new System.Drawing.Size(320, 320);
+		BackColor = Color.FromArgb(64, 64, 64);
+		AutoScaleMode = AutoScaleMode.None;
+		AutoSize = false;
+		MaximumSize = new Size(320, 320);
+		MinimumSize = new Size(320, 320);
+		Name = "ParentControl";
+		Size = new Size(320, 320);
 		Load += ParentControl_Load;
 		ResumeLayout(false);
 	}

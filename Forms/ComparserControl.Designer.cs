@@ -52,7 +52,6 @@ partial class ComparserControl {
 		// logBox
 		// 
 		logBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		logBox.AutoSize = true;
 		logBox.DetectUrls = false;
 		logBox.Font = new Font("Consolas", 10F, FontStyle.Regular, GraphicsUnit.Point, 238);
 		logBox.Location = new Point(76, 3);
@@ -68,7 +67,7 @@ partial class ComparserControl {
 		codeBox.Location = new Point(3, 3);
 		codeBox.MinimumSize = new Size(0, 32);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new Size(308, 189);
+		codeBox.Size = new Size(308, 221);
 		codeBox.TabIndex = 0;
 		codeBox.Text = "";
 		// 
@@ -106,13 +105,11 @@ partial class ComparserControl {
 		// 
 		// ComparserControl
 		// 
-		AutoScaleDimensions = new SizeF(7F, 15F);
-		AutoScaleMode = AutoScaleMode.Font;
+		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
 		Name = "ComparserControl";
 		splitContainer.Panel1.ResumeLayout(false);
-		splitContainer.Panel1.PerformLayout();
 		splitContainer.Panel2.ResumeLayout(false);
 		((ISupportInitialize)splitContainer).EndInit();
 		splitContainer.ResumeLayout(false);

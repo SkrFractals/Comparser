@@ -21,30 +21,29 @@ partial class LogControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		logBox = new System.Windows.Forms.RichTextBox();
+		logBox = new RichTextBox();
 		SuspendLayout();
 		// 
 		// logBox
 		// 
-		logBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		logBox.AutoSize = true;
+		logBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 		logBox.DetectUrls = false;
-		logBox.Font = new System.Drawing.Font("Consolas", 10F);
-		logBox.Location = new System.Drawing.Point(3, 3);
+		logBox.Font = new Font("Consolas", 10F);
+		logBox.Location = new Point(3, 3);
 		logBox.Name = "logBox";
 		logBox.ReadOnly = true;
-		logBox.Size = new System.Drawing.Size(314, 314);
+		logBox.Size = new Size(314, 314);
 		logBox.TabIndex = 0;
 		logBox.Text = "[logs]";
 		// 
 		// LogControl
 		// 
-		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
+		BackColor = Color.FromArgb(64, 64, 64);
+		AutoScaleMode = AutoScaleMode.None;
+		AutoSize = false;
 		Controls.Add(logBox);
+		Name = "LogControl";
 		ResumeLayout(false);
-		PerformLayout();
 	}
 
 	#endregion

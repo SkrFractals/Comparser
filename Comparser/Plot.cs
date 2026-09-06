@@ -18,29 +18,66 @@ public interface IPlot {
 	public void Shift(int dx, int dy);
 	public Bitmap Update(int w, int h);
 	public IPlotAxis[] GetAxis();
+	public void DelOutput(int output);
+	public void AddOutput(string name, object? newRgb, object? newCode);
+	public void SetCode(int output, object? code);
+	public void SetRgb(int output, object? rgb);
+	public string[] GetOutputs();
+	public void SetDirty();
+	public void SetLockRatio(bool l);
 }
 public abstract partial class Comparser<T>{
 	public partial class Plot : IPlot {
-		
-		public class PlotOutput(PlotEval newEval, PlotOutput.ColorMode mode, Expression newRgb, Expression newHsv) {
+		public void SetLockRatio(bool l) => LockAspectRatio = l;
+		public void SetDirty() => _dirtyX = _dirtyXy = true;
+
+		public class PlotOutput(string name, PlotEval newEval, /*PlotOutput.ColorMode mode,*/ Expression? newRgb/*, Expression? newHsv*/) {
 			// TODO TextField?
-			public class ChannelProperties {
+			/*public class ChannelProperties {
 				public enum Bounds { Clamp, Loop }
 				public enum Scale { Lin, Log, Exp, Custom }
 				public Bounds B = Bounds.Clamp;
 				public Scale S = Scale.Lin;
 				public Expression? CustomScale;
-			}
-			public enum ColorMode { Rgb, Hsv }
-			public ColorMode Mode = mode;
-			public Expression ColorCodeRgb = newRgb; // default=rgb(value)
-			public Expression ColorCodeHsv = newHsv; // default=hsv(value)
+			}*/
+			//public enum ColorMode { Rgb, Hsv }
+
+			public string Name = name;
+			//public ColorMode Mode = mode;
+			public Expression? ColorCodeRgb = newRgb; // default=rgb(value)
+			//public Expression? ColorCodeHsv = newHsv; // default=hsv(value)
 			//public PlotAxis A = newA; // axis
 			public PlotEval Eval = newEval; // evaluator (code, default=z)
 			public Value[] Values = []; // evaluated value buffer
-			public ChannelProperties R = new(), G = new(), B = new(), H = new(), S = new(), V = new();
-			public Color ProcessColor(T value) => Color.White; // TODO process the Hsv/RgbColor
+										//public ChannelProperties R = new(), G = new(), B = new(), H = new(), S = new(), V = new();
+			public Color ProcessColor(T? value) {
+				Value args = new([new(value ?? T.Zero())], FailReason.Success);
+				var rgb = ColorCodeRgb?.Eval(0, args);
+				if (rgb is null)
+					return Color.Black;
+				if (rgb.Values.Length >= 3)
+					return Color.FromArgb(Get(0), Get(1), Get(2));
+				if (rgb.Values.Length != 1)
+					return Color.Black;
+				var l = Get(0);
+				return Color.FromArgb(l, l, l);
+							
+				byte Get(int i) => (byte)Math.Clamp(255 * T.Re(rgb.Values[i].GetLeaf()), 0, 255);
+
+			} //Color.White; // TODO process the Hsv/RgbColor
 		}
+
+
+		public void DelOutput(int output) => OutputR.RemoveAt(output);
+		public void AddOutput(string name, object? newRgb, object? newCode) => OutputR.Add(new(name, new(newCode), newRgb as Expression));
+		public void SetCode(int output, object? code) => OutputR[output].Eval = new(code);
+		public void SetRgb(int output, object? rgb) => OutputR[output].ColorCodeRgb = rgb as Expression;
+		public string[] GetOutputs() {
+			string[] r = new string[OutputR.Count];
+			for (int i = 0; i < OutputR.Count; ++i) r[i] = OutputR[i].Name;
+			return r;
+		}
+
 		public IPlotAxis[] GetAxis() => _axis;
 		public readonly PlotAxis InputX, InputY, InputT, OutputY;
 		//public PlotControl.AxisControls ControlInputX, ControlInputY, ControlInputT, ControlOutputY;
@@ -57,10 +94,10 @@ public abstract partial class Comparser<T>{
 		private bool _dirtyX = true, _dirtyXy = true;
 		private readonly IPlotAxis[] _axis;
 		public Plot(Comparser<T> context, int width = 0, int height = 0) {
-			_axis = [InputX = new(T.Zero(), T.MakeR(1)),
-				InputY = new(T.Zero(), T.One() - T.MakeR(1)),
-				InputT = new(T.Zero(), T.MakeR(1)),
-				OutputY = new(T.Zero(), T.MakeR(1))];
+			_axis = [InputX = new(context, T.Zero(), T.MakeR(1), 1),
+				InputY = new(context, T.Zero(), T.One() - T.MakeR(1), 1),
+				InputT = new(context, T.Zero(), T.MakeR(1), 1),
+				OutputY = new(context, T.Zero(), T.MakeR(1), 1)];
 			OutputR = [];
 			Context = context;
 			//Eval = [new(Context = comparser, "x!")];
@@ -73,18 +110,18 @@ public abstract partial class Comparser<T>{
 			Update(InputX.length, InputY.length);
 		}
 		public void SetFixedY(object? yf) {
-			FixedY = AsDouble(yf);
+			FixedY = Context.AsDouble(yf);
 			_dirtyX = true;
 		}
 		public void SetFrame(object? t) {
-			Frame = (int)AsDouble(t);
+			Frame = (int)Context.AsDouble(t);
 			_dirtyX = true;
 		}
 		public void Resize(int w, int h) { // on screen panel resize
-			int pw = InputX.length, ph = InputY.length, s = w * h;
+			int pw = InputX.length, ph = InputY.length;//, s = w * h;
 			if (ResizeX() && ResizeY())
 				return;
-			_bmp = new(w, h);
+			_bmp = w <= 0 || h <= 0 ? new(1,1) : new(w, h);
 			int r;
 			if (LockAspectRatio && (r = pw * h - ph * w) != 0) {
 				// TODO finish this
@@ -98,6 +135,7 @@ public abstract partial class Comparser<T>{
 					}
 					OutputY.Adjust(a);
 				} else InputX.Adjust((double)pw * h / (ph * w));
+				_dirtyX = _dirtyXy = true;
 				return;
 			}
 			_dirtyX = _dirtyXy = true;
@@ -113,7 +151,7 @@ public abstract partial class Comparser<T>{
 			bool ResizeY() {
 				if (h == _linesY.Length)
 					return true;
-				_linesY = new Color[w];
+				_linesY = new Color[h];
 				_dirtyXy = true;
 				InputY.length = h;
 				return false;
@@ -141,6 +179,7 @@ public abstract partial class Comparser<T>{
 			if (OutputY.Shift(dx) && Mode == PlotMode.Xy)
 				_dirtyXy = true;
 		}
+		
 		public Bitmap Update(int w, int h) {
 			Resize(w, h); // if size changed, it will resize everything and mark things dirty
 			var dirty = InputX.DirtyL;
@@ -176,8 +215,9 @@ public abstract partial class Comparser<T>{
 				break;
 
 				void Lines(PlotAxis a, Color[] axis) {
-					if (axis.Length != a.length)
-						throw new("given the axis a different length of colors to draw axes to, than the last length it was set to.");
+						if (axis.Length != a.length)
+							axis = new Color[a.length];//a.length = axis.Length;
+						//throw new("given the axis a different length of colors to draw axes to, than the last length it was set to.");
 					for (var i = 0; i < axis.Length; ++i) // combine axis lines
 						axis[i] = Max(axis[i], a.lines[i]);
 				}
@@ -186,8 +226,8 @@ public abstract partial class Comparser<T>{
 				return _bmp;
 			dirty = false;
 			unsafe {
-				if (_bmp.Width != _linesX.Length || _bmp.Height != _linesY.Length)
-					return _bmp;
+				if (_bmp is null || _bmp.Width != _linesX.Length || _bmp.Height != _linesY.Length)
+					return new(1,1);
 				var l = _bmp.LockBits(new(0, 0, _bmp.Width, _bmp.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				byte* p, ptr = (byte*)(void*)l.Scan0;
 				var intPtr = 0;

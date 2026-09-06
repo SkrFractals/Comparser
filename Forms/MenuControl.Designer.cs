@@ -21,69 +21,70 @@ partial class MenuControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		setButton = new System.Windows.Forms.Button();
-		codeButton = new System.Windows.Forms.Button();
-		expButton = new System.Windows.Forms.Button();
-		plotButton = new System.Windows.Forms.Button();
+		setButton = new Button();
+		codeButton = new Button();
+		expButton = new Button();
+		plotButton = new Button();
 		SuspendLayout();
 		// 
 		// setButton
 		// 
-		setButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		setButton.Location = new System.Drawing.Point(3, 3);
+		setButton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		setButton.Location = new Point(3, 3);
 		setButton.Name = "setButton";
-		setButton.Size = new System.Drawing.Size(314, 32);
+		setButton.Size = new Size(314, 32);
 		setButton.TabIndex = 0;
 		setButton.Text = "SETTINGS";
-		setButton.UseVisualStyleBackColor = true;
 		setButton.UseMnemonic = false;
+		setButton.UseVisualStyleBackColor = true;
 		setButton.Click += SetButton_Click;
 		// 
 		// codeButton
 		// 
-		codeButton.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		codeButton.Location = new System.Drawing.Point(3, 41);
+		codeButton.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		codeButton.Location = new Point(3, 41);
 		codeButton.Name = "codeButton";
-		codeButton.Size = new System.Drawing.Size(314, 200);
+		codeButton.Size = new Size(314, 200);
 		codeButton.TabIndex = 2;
 		codeButton.Text = "CODE";
-		codeButton.UseVisualStyleBackColor = true;
 		codeButton.UseMnemonic = false;
+		codeButton.UseVisualStyleBackColor = true;
 		codeButton.Click += CodeButton_Click;
 		// 
 		// expButton
 		// 
-		expButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		expButton.Location = new System.Drawing.Point(3, 247);
+		expButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		expButton.Location = new Point(3, 247);
 		expButton.Name = "expButton";
-		expButton.Size = new System.Drawing.Size(314, 32);
+		expButton.Size = new Size(314, 32);
 		expButton.TabIndex = 3;
 		expButton.Text = "EXPRESSIONS";
-		expButton.UseVisualStyleBackColor = true;
 		expButton.UseMnemonic = false;
+		expButton.UseVisualStyleBackColor = true;
 		expButton.Click += ExpButton_Click;
 		// 
 		// plotButton
 		// 
-		plotButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		plotButton.Location = new System.Drawing.Point(3, 285);
+		plotButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		plotButton.Location = new Point(3, 285);
 		plotButton.Name = "plotButton";
-		plotButton.Size = new System.Drawing.Size(314, 32);
+		plotButton.Size = new Size(314, 32);
 		plotButton.TabIndex = 4;
 		plotButton.Text = "PLOT";
-		plotButton.UseVisualStyleBackColor = true;
 		plotButton.UseMnemonic = false;
+		plotButton.UseVisualStyleBackColor = true;
 		plotButton.Click += PlotButton_Click;
 		// 
 		// MenuControl
 		// 
-		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
+		BackColor = Color.FromArgb(64, 64, 64);
+		AutoScaleMode = AutoScaleMode.None;
+		AutoSize = false;
 		Controls.Add(setButton);
 		Controls.Add(codeButton);
 		Controls.Add(expButton);
 		Controls.Add(plotButton);
+		Name = "MenuControl";
 		ResumeLayout(false);
 	}
 

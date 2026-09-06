@@ -6,7 +6,7 @@ public partial class SettingsControl : ParentControl {
 	private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	public IComparser? Context;
 	private bool _darkMode;
-	public SettingsControl() => InitializeComponent();
+	public SettingsControl() : base() => InitializeComponent();
 	public SettingsControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		Context = _algebras[Algebra];
 		InitializeComponent();
@@ -35,8 +35,9 @@ public partial class SettingsControl : ParentControl {
 	}
 	private void AlgebraBox_SelectedIndexChanged(object? sender, EventArgs e) {
 		Algebra = algebraBox.SelectedIndex;
-		Context = _algebras[Algebra];
 		Root?.Code?.CodeChanged = true; // reparse
+		Context = _algebras[Algebra];
+		Root?.Plot?.SetContext();
 	}
 	
 	private void darkButton_Click(object sender, EventArgs e) {

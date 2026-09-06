@@ -22,7 +22,7 @@
     <Compile Update="Forms\ParentForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="Forms\PlotControlO.cs">
+    <Compile Update="Forms\PlotSettings.cs">
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="Forms\SettingsControl.cs">

@@ -28,7 +28,7 @@ partial class SettingsControl {
 		autoButton = new Button();
 		reportButton = new Button();
 		autoLabel = new Label();
-		label3 = new Label();
+		reportLabel = new Label();
 		autoBox = new TextBox();
 		reportBox = new TextBox();
 		SuspendLayout();
@@ -113,16 +113,16 @@ partial class SettingsControl {
 		autoLabel.Text = "Building:";
 		autoLabel.UseMnemonic = false;
 		// 
-		// label3
+		// reportLabel
 		// 
-		label3.AutoSize = true;
-		label3.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		label3.Location = new Point(3, 66);
-		label3.Name = "label3";
-		label3.Size = new Size(80, 15);
-		label3.TabIndex = 9;
-		label3.Text = "Build Report:";
-		label3.UseMnemonic = false;
+		reportLabel.AutoSize = true;
+		reportLabel.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		reportLabel.Location = new Point(3, 66);
+		reportLabel.Name = "reportLabel";
+		reportLabel.Size = new Size(80, 15);
+		reportLabel.TabIndex = 9;
+		reportLabel.Text = "Build Report:";
+		reportLabel.UseMnemonic = false;
 		// 
 		// autoBox
 		// 
@@ -146,12 +146,12 @@ partial class SettingsControl {
 		// 
 		// SettingsControl
 		// 
-		AutoScaleDimensions = new SizeF(7F, 15F);
-		AutoScaleMode = AutoScaleMode.Font;
+		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
+		AutoSize = false;
 		Controls.Add(reportBox);
 		Controls.Add(autoBox);
-		Controls.Add(label3);
+		Controls.Add(reportLabel);
 		Controls.Add(autoLabel);
 		Controls.Add(reportButton);
 		Controls.Add(autoButton);
@@ -164,7 +164,7 @@ partial class SettingsControl {
 		PerformLayout();
 	}
 	private System.Windows.Forms.Label autoLabel;
-	private System.Windows.Forms.Label label3;
+	private System.Windows.Forms.Label reportLabel;
 	private System.Windows.Forms.TextBox autoBox;
 	private System.Windows.Forms.TextBox reportBox;
 	private System.Windows.Forms.Button reportButton;

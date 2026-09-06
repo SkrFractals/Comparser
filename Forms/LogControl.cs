@@ -1,6 +1,6 @@
 ﻿namespace Comparser.Forms;
 public partial class LogControl : ParentControl {
-	public LogControl() => InitializeComponent();
+	public LogControl() : base() => InitializeComponent();
 	public LogControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
 		parent.SetMinSize();

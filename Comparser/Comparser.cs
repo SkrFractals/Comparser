@@ -2,7 +2,7 @@
 using System.Text.RegularExpressions;
 namespace Comparser.Comparser;
 public interface IComparser {
-	//public object Parse(string text, int from, object? args = null);
+	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null);
 	// Re-evaluates already parsed expression with new arguments
 	public object Eval(object exp, object? args = null);
 	// Parses and evaluates the text with selected arguments (and returns the expression for possible re-evaluation)
@@ -19,6 +19,7 @@ public interface IComparser {
 	public (Color b, Color f) GetColor();
 	public (Color e, Color s) GetErrorSuccessColor();
 	public IPlot GetPlot();
+	public double AsDouble(object? e);
 	public List<(Color color, string log)> ReadCode(string text, CancellationToken cancel, out (int position, Color color)[] colors);
 }
 
@@ -59,8 +60,13 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	
 	#region Interface
 	public static Value AsValue(object? e) => e as Value ?? new();
-	public static double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
-	//public object Parse(string text, int from, object? args) => new Expression(this, text, AsInput(args), from);
+	public double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
+	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null) {
+		var read = new Reader(this, text, cancel, from);
+		var e = new Expression(read, out _, AsValue(args), from);
+		colors = read.GetColors(); // export colors
+		return e;
+	}
 	public object Eval(object exp, object? args) => exp is Expression e ? e.Eval(0, AsValue(args)) : None;
 	//public object ParseEval(string text, int from, out object expr, object? args) { var e = (Expression)Parse(text, from, args); expr = e; return e.Eval(0, AsInput(args)); }
 	public object ParseEval(CancellationToken cancel, string text, int from, out object expr, out (int position, Color color)[] colors, object? args) {
@@ -72,9 +78,10 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	}
 	//public object ParseEval(string text, ref int from, object? args) => new Expression(this, text, ref from, out _, AsInput(args)).Eval(0, AsInput(args));
 	//public object ParseEval(string text, int from, object? args) => ParseEval(text, ref from, args);
-	public string ToString(object value, int decimals = -1, bool pure = false, int type = 0) => AsValue(value).ToString(decimals, pure, type);
+	public string ToString(object value, int decimals = int.MinValue, bool pure = false, int type = 0) 
+		=> AsValue(value).ToString(decimals == int.MinValue ? Decimals : decimals, pure, type);
 	public void SetDarkMode(bool dark) => _darkMode = dark;
-	public void SetDecimals(int decimals) => _decimals = decimals;
+	public void SetDecimals(int decimals) => Decimals = decimals;
 	public IPlot GetPlot() => Plotter;
 	public string ParsePeek() => _allowParsePeek ? _currentReader == null ? "No current reader." : _currentReader.Text[_currentReader.From..] : "Parse Peek disabled.";
 	public List<(Color, string)> ReadCode(string text, CancellationToken cancel, out (int, Color)[] colors) {
@@ -176,19 +183,19 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 						ReadExpression();
 						switch (actionCode) {
 						case Actions.Print:
-							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals)));
+							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, Decimals)));
 							Cl(FailReason.Success);
 							break;
 						case Actions.PrintValue:
-							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true)));
+							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, Decimals, true)));
 							Cl(eval.Error); //Cl((eval.Error & 2) > 0 ? FailReason.StackOverflow : (eval.Error & 4) > 0 ? FailReason.BadExpression : FailReason.Success);
 							break;
 						case Actions.PrintNumber:
-							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true, 1)));
+							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, Decimals, true, 1)));
 							Cl(eval.Error);
 							break;
 						case Actions.PrintString:
-							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, _decimals, true, 2)));
+							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, Decimals, true, 2)));
 							Cl(FailReason.Success);
 							break;
 						case Actions.Do:
@@ -582,7 +589,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	
 	#region Content
 	private bool _darkMode = true;
-	private int _decimals = 3;
+	public int Decimals = 3;
 	public Plot Plotter;
 	
 	private Color GetColor(ParseDictionary.Type type) => _darkMode ? _darkColors[type] : _lightColors[type];

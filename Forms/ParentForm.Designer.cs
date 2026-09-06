@@ -47,10 +47,10 @@ partial class ParentForm {
 		// 
 		// ParentForm
 		// 
-		AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
-		AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+		AutoScaleMode = AutoScaleMode.None;
 		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
 		ClientSize = new System.Drawing.Size(350, 350);
+		AutoSize = false;
 		Controls.Add(outerPanel);
 		Text = "Comparser - Complex Computer Parser";
 		FormClosing += ParentForm_FormClosing;

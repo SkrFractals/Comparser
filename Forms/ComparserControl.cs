@@ -2,7 +2,24 @@
 using System.Diagnostics;
 namespace Comparser.Forms;
 public partial class ComparserControl : ParentControl {
-	public ComparserControl() => InitializeComponent();
+
+	protected override void OnLayout(LayoutEventArgs e) {
+		base.OnLayout(e);
+
+		Debug.WriteLine(
+			$"LAYOUT: {Width}x{Height}, " +
+			$"split={splitContainer.Size}, " +
+			$"panel2={splitContainer.Panel2.ClientSize}, " +
+			$"code={codeBox.Bounds}");
+	}
+	protected override void OnSizeChanged(EventArgs e) {
+		base.OnSizeChanged(e);
+
+		Debug.WriteLine(
+			$"SIZE: {Size}, code={codeBox.Bounds}");
+	}
+
+	public ComparserControl() : base() => InitializeComponent();
 	public ComparserControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
 		splitContainer.Panel1MinSize = 3 * Pad + 2 * RowHeight;
@@ -179,6 +196,7 @@ public partial class ComparserControl : ParentControl {
 		TransferLog();
 		// evaluate expression fields with this newly parsed program
 		Root?.Exp?.ReEval();
+		Root?.Plot?.ReEval(Root?.Set?.Context?.GetPlot()!);
 		codeBox.TextChanged += CodeBox_TextChanged;
 	}
 	public override Size GetSize() => new((Pad << 1) + 64, 120);

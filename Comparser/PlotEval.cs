@@ -1,19 +1,20 @@
 ﻿namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public partial class PlotEval {
-		private Expression _exp;
-		private string _text;
+		private Expression? _exp;
+		//private string _text;
 		private T _mSt = T.NaN();
 		private T _mDt = T.NaN();
 		private int _mLt;
-		private readonly Comparser<T> _context;
+		//private readonly Comparser<T> _context;
 
 		private static readonly Value Xyt = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "t")]);
-		public PlotEval(CancellationToken cancel, Comparser<T> context, string text) => _exp = new(new(_context = context, _text = text, cancel), out _, Xyt);
-		public void ReParse(CancellationToken cancel, string text) {
+		public PlotEval(object? exp) => _exp = exp as Expression;
+		//public PlotEval(CancellationToken cancel, Comparser<T> context, string text) => _exp = new(new(_context = context, exp = text, cancel), out _, Xyt);
+		/*public void ReParse(CancellationToken cancel, string text) {
 			if (_text == (_text = text)) return;
 			_exp = new(new(_context, text, cancel), out _, Xyt);
-		}
+		}*/
 		private PlotFrame[] _plot = [];
 
 		// Axis is a Complex base range struct, the plot coord bases are each a complex/quat number, generic T.
@@ -24,12 +25,14 @@ public abstract partial class Comparser<T> {
 		// basically the frame want to plot a function f(x,y,t), with x = T.Lerp(axisX.S,axisX.S+axisX.step*axisX.length,screen.x/screen.width), same for y, and t = T.Lerp(axisT.S, ..., frame/animationLength) 
 		public Value[] GetPlotX(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, double y, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
 			if (recallTolerance >= 1) throw new("tolerance must be less than a full pixel, otherwise we could get memory transfer indexing mismatches!");
+			if (_exp is null) throw new("No expression");
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
 			return _plot[frame].GetPlotX(out changed, _exp, ax, ay,  at, y, _mSt + frame * _mDt, recallTolerance);
 		}
 		public Value[] GetPlotXy(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+			if (_exp is null) throw new("No expression");
 			if (recallTolerance >= 1) throw new("tolerance must be less than a full pixel, otherwise we could get memory transfer indexing mismatches!");
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
