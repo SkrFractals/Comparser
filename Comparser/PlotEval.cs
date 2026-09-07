@@ -8,7 +8,7 @@ public abstract partial class Comparser<T> {
 		private int _mLt;
 		//private readonly Comparser<T> _context;
 
-		private static readonly Value Xyt = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "t")]);
+		//private static readonly Value Xyt = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "t")]);
 		public PlotEval(object? exp) => _exp = exp as Expression;
 		//public PlotEval(CancellationToken cancel, Comparser<T> context, string text) => _exp = new(new(_context = context, exp = text, cancel), out _, Xyt);
 		/*public void ReParse(CancellationToken cancel, string text) {
@@ -16,6 +16,7 @@ public abstract partial class Comparser<T> {
 			_exp = new(new(_context, text, cancel), out _, Xyt);
 		}*/
 		private PlotFrame[] _plot = [];
+		public bool Null() => _exp == null;
 
 		// Axis is a Complex base range struct, the plot coord bases are each a complex/quat number, generic T.
 		// x: (S = input x value on the left side of the screen, step = step value, pixel[x]-pixel[x-1], length = screen width, S + step*length = input x value on the right side of the screen)
@@ -29,7 +30,7 @@ public abstract partial class Comparser<T> {
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
-			return _plot[frame].GetPlotX(out changed, _exp, ax, ay,  at, y, _mSt + frame * _mDt, recallTolerance);
+			return _plot[frame].GetPlotX(out changed, _exp, ax, ay,  at, y, frame, _mSt + frame * _mDt, recallTolerance);
 		}
 		public Value[] GetPlotXy(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
 			if (_exp is null) throw new("No expression");
@@ -37,7 +38,7 @@ public abstract partial class Comparser<T> {
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
-			return _plot[frame].GetPlotXy(out changed, _exp, ax, ay, at, _mSt + frame * _mDt, recallTolerance);
+			return _plot[frame].GetPlotXy(out changed, _exp, ax, ay, at, frame, _mSt + frame * _mDt, recallTolerance);
 		}
 		public class AxisOverlap {
 			public static bool New(Plot.PlotAxis a, T mSa, T mDa, int mLa, /*int memoryLength,*/ double recallTolerance, out AxisOverlap o)
@@ -49,7 +50,7 @@ public abstract partial class Comparser<T> {
 				_ae = a.start + (Da = (A = a).size);  // _ae = end of asked axis line, Da = size of the asked line (directional vector)
 				var ds = a.start - Ms;
 				var de = _ae - _me; // dm = memory vector, da = axis vector, ds,de = memory -> axis (between starts and ends)
-				if (+ds <= (SqrE = +a.d * recallTolerance) && +de <= SqrE) // |t.step| is the pixel size, as long as the difference is smaller that than, I'll accept it
+				if (+ds <= (SqrE = +a.d * recallTolerance) && mLa == a.length && +de <= SqrE) // |t.step| is the pixel size, as long as the difference is smaller that than, I'll accept it
 					return; // axis almost identical to memory, no need to change anything
 				Dmm = +Dm;
 				Daa = +Da;

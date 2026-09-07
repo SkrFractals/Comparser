@@ -2,23 +2,6 @@
 using System.Diagnostics;
 namespace Comparser.Forms;
 public partial class ComparserControl : ParentControl {
-
-	protected override void OnLayout(LayoutEventArgs e) {
-		base.OnLayout(e);
-
-		Debug.WriteLine(
-			$"LAYOUT: {Width}x{Height}, " +
-			$"split={splitContainer.Size}, " +
-			$"panel2={splitContainer.Panel2.ClientSize}, " +
-			$"code={codeBox.Bounds}");
-	}
-	protected override void OnSizeChanged(EventArgs e) {
-		base.OnSizeChanged(e);
-
-		Debug.WriteLine(
-			$"SIZE: {Size}, code={codeBox.Bounds}");
-	}
-
 	public ComparserControl() : base() => InitializeComponent();
 	public ComparserControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
@@ -244,7 +227,7 @@ public partial class ComparserControl : ParentControl {
 	public static void InitRichTextBox(RichTextBox box, EventHandler? textChanged) {
 		box.WordWrap = box.DetectUrls = false;
 		box.AllowDrop = true;//box.EnableAutoDragDrop = true;
-		box.Font = new("Consolas", 15.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		box.Font = new("Consolas", 12, FontStyle.Bold, GraphicsUnit.Point, 238);
 		_ = box.Handle;
 		box.KeyDown += Override_KeyDown;
 		box.DragEnter += Override_DragEnter;

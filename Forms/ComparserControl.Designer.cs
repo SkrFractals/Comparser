@@ -53,21 +53,21 @@ partial class ComparserControl {
 		// 
 		logBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 		logBox.DetectUrls = false;
-		logBox.Font = new Font("Consolas", 10F, FontStyle.Regular, GraphicsUnit.Point, 238);
+		logBox.Font = new Font("Consolas", 12, FontStyle.Regular, GraphicsUnit.Point, 238);
 		logBox.Location = new Point(76, 3);
 		logBox.Name = "logBox";
 		logBox.ReadOnly = true;
-		logBox.Size = new Size(235, 69);
+		logBox.Size = new Size(241, 68);
 		logBox.TabIndex = 0;
 		logBox.Text = "[logs]";
 		// 
 		// codeBox
 		// 
-		codeBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		codeBox.Dock = DockStyle.Fill;
 		codeBox.Location = new Point(3, 3);
 		codeBox.MinimumSize = new Size(0, 32);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new Size(308, 221);
+		codeBox.Size = new Size(314, 228);
 		codeBox.TabIndex = 0;
 		codeBox.Text = "";
 		// 
@@ -84,8 +84,8 @@ partial class ComparserControl {
 		// 
 		// splitContainer
 		// 
-		splitContainer.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		splitContainer.Location = new Point(3, 3);
+		splitContainer.Dock = DockStyle.Fill;
+		splitContainer.Location = new Point(0, 0);
 		splitContainer.Name = "splitContainer";
 		splitContainer.Orientation = Orientation.Horizontal;
 		// 
@@ -98,8 +98,8 @@ partial class ComparserControl {
 		// splitContainer.Panel2
 		// 
 		splitContainer.Panel2.Controls.Add(codeBox);
-		splitContainer.Size = new Size(314, 314);
-		splitContainer.SplitterDistance = 75;
+		splitContainer.Size = new Size(320, 320);
+		splitContainer.SplitterDistance = 74;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 3;
 		// 
@@ -109,6 +109,7 @@ partial class ComparserControl {
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
 		Name = "ComparserControl";
+		Size = new Size(320, 320);
 		splitContainer.Panel1.ResumeLayout(false);
 		splitContainer.Panel2.ResumeLayout(false);
 		((ISupportInitialize)splitContainer).EndInit();

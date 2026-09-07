@@ -3,6 +3,8 @@ namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public partial class PlotEval {
 		public class PlotFrame(bool centerPixels = true) {
+			// z = coordinate Z input, t = coordinate TIME input, x = screen space x, y = screenspace y, f = frame, w = screen width, h = screen height, l = frame count 
+			Value args = new([new(T.NaN(), 0, "z"), new(T.NaN(), 0, "t"), new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "f"), new(T.NaN(), 0, "w"), new(T.NaN(), 0, "h"), new(T.NaN(), 0, "l")]);
 			private readonly double _c = centerPixels ? .5 : 0;
 			private static Complex MapC((Complex s, Complex x, Complex y) a, int x, int y) => a.s + (x + .5) * a.x + (y + .5) * a.y;
 			private static Complex Map((Complex s, Complex x, Complex y) a, int x, int y) => a.s + x * a.x + y * a.y;
@@ -18,7 +20,7 @@ public abstract partial class Comparser<T> {
 			private T _mSx1 = T.NaN(), _mDx1 = T.NaN(), _mY1 = T.NaN(), _t1 = T.NaN(); // ax.S, ax.d, yC, frame
 			private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
-			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, T frame, double recallTolerance, bool refresh = false) {
+			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, bool refresh = false) {
 				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.Zero();
 				int mLx = 0, mLy = 0, x = 0, y = 0, yw = 0;
 				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
@@ -33,11 +35,15 @@ public abstract partial class Comparser<T> {
 					return _plotXy;
 				}
 				changed = true;
-				Value args = new([new(T.NaN(), 0, "z"), new(_t2 = frame, 0, "t")]);
+				// (z,t,x,y,f,w,h,l)
+				args.Values[1].Leaf = _t2 = memFrame; // t
+				args.Values[4].Leaf = T.MakeR(frame); // f
+				args.Values[5].Leaf = T.MakeR(ax.length); // w
+				args.Values[6].Leaf = T.MakeR(ay.length); // h
+				args.Values[7].Leaf = T.MakeR(at.length); // l
 				if (refresh) // refresh completely without trying to transfer anything from memory
 					return Rows(ay.length, Finish);
 				double dXs = +ax.d, dYs = +ay.d;
-				_t2 = frame;
 				(Complex s, Complex x, Complex y) pm, mp;
 				if (Math.Min(mLx, mLy) == 0 || FailAffineMap(mSx + mSy, Math.Min(dXs, dYs)))
 					return Rows(ay.length, Finish); // Planes don't coincide.
@@ -148,7 +154,13 @@ public abstract partial class Comparser<T> {
 				Value[] Rows(int ye, Action a) { for (; y < ye; a(), ++y) (x, yw) = (0, y * ax.length); return _plotXy; }
 				void Begin() { int e = Math.Min(ax.length, (int)bounds.R); for (x = 0, yw = y * ax.length; x < e; ++x) E(); } // to the left of the outer bounds
 				void Finish() { for (; x < ax.length; ++x) E(); } // to the right of the outer bounds
-				Value Eval() { var l = args.Values; l[0].Leaf = ax.Sample(x) + ay.Sample(y); return exp.Eval(0, args); }
+				Value Eval() {
+					var l = args.Values;
+					l[0].Leaf = ax.Sample(x) + ay.Sample(y);
+					l[2].Leaf = T.MakeR(x);
+					l[3].Leaf = T.MakeR(y);
+					return exp.Eval(0, args); 
+				}
 				void E() => _plotXy[x + yw] = Eval();
 				bool FailAffineMap(T mS, double e) {
 					T s; double xx = +mDx, xy = mDx | mDy, yy = +mDy, d = xx * yy - xy * xy; // Gram matrix of the old plot's two basis vectors.
@@ -173,20 +185,24 @@ public abstract partial class Comparser<T> {
 				}
 			}
 
-			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, T frame, double recallTolerance, bool refresh = false) {
+			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, T memFrame, double recallTolerance, bool refresh = false) {
 				Value[] memY = []; changed = true;
 				int memYo = -1, mLx = 0;
 				T mSx = T.Zero(), mDx = T.Zero(), yC = ay.Sample(y); // y coordinate
 				var sqrEy = +at.d * recallTolerance;
 				(_plotX, _memX) = (_memX, _plotX); // swap mem
-				if (_plotX.Length != (_mLx1 = ax.length)) _plotX = new Value[ax.length]; // length mismatch: re-alloc
-
-				// remember this evaluated X axis
+				if (_plotX.Length != ax.length) _plotX = new Value[ax.length]; // length mismatch: re-alloc
+				 // remember this evaluated X axis
 				Remember(); // fetch a 
 				_mY1 = yC;
-				Value args = new([new(T.NaN(), 0, "z"), new(_t1 = frame, 0, "t")]);
-				_mY1 = yC;
-				_t1 = frame;
+				_mLx1 = ax.length;
+				// (z,t,x,y,f,w,h,l)
+				args.Values[1].Leaf = _t1 = memFrame; // t
+				args.Values[3].Leaf = T.MakeR(y); // y
+				args.Values[4].Leaf = T.MakeR(frame); // f
+				args.Values[5].Leaf = T.MakeR(ax.length); // w
+				args.Values[6].Leaf = T.MakeR(ay.length); // h
+				args.Values[7].Leaf = T.MakeR(at.length); // l
 				if (memYo < 0) return ReEval(); // no memory
 				(_mSx1, _mDx1) = (ax.start, ax.d);
 				// we have some memory Y match
@@ -225,7 +241,7 @@ public abstract partial class Comparser<T> {
 					if (!(+(frame - _t1) < sqrEy)) return;
 					// the time of this frame is within tolerance to the memorized time
 					if (+(_mY1 - yC) <= +sqrEy) {
-						(memY, memYo, mSx, mDx, mLx) = (_plotX, 0, _mSx1, _mDx1, _mLx1); // 1D memory Y match
+						(memY, memYo, mSx, mDx, mLx) = (_memX, 0, _mSx1, _mDx1, _mLx1); // 1D memory Y match
 						return;
 					}
 					//if (!CrossDimensionalMemory)
@@ -254,6 +270,7 @@ public abstract partial class Comparser<T> {
 				}
 				Value Eval(int x) {
 					args.Values[0].Leaf = ax.Sample(x) + yC;
+					args.Values[2].Leaf = T.MakeR(x);
 					return exp.Eval(0, args);
 				}
 			}

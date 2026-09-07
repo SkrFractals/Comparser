@@ -71,9 +71,11 @@ public abstract partial class Comparser<T>{
 			Leaf = value; Term = term; Operand = operand; Op = op; Op.Negative = negative; Arg = arg ?? [];
 			String = str ?? text; Text = text;
 		}
-		public Value(T value, FailReason error = FailReason.Success, string text = "") { Error = error; Leaf = value; String = Text = text; }
+		public Value(T value, FailReason error, string text = "") : this(error, text) { Leaf = value; }
+		public Value(T value, string text = "") : this(value, FailReason.Success, text) { }
 		public Value(FailReason error = FailReason.Success, string text = "") { Error = error; String = Text = text; }
-		public Value(Value[] values, FailReason error = FailReason.Success, string text = "", string? str = null) { Error = error; Values = values;
+		public Value(Value[] values, FailReason error = FailReason.Success, string text = "", string? str = null) { 
+			Error = error; Values = values;
 			String = str ?? text; Text = text; }
 		public Value(string text, int[] arg) { Arg = arg; String = Text = text; }
 		#endregion

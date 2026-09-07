@@ -4,8 +4,8 @@ public class CodeControl : RichTextBox {
 	public CodeControl() {
 		DetectUrls = false;
 		Multiline = true;
-		_myFont = new("Consolas", 12, FontStyle.Bold);
-		Font = new("Consolas", 12,  FontStyle.Bold);
+		_myFont = new("Consolas", 10, FontStyle.Bold);
+		Font = new("Consolas", 10,  FontStyle.Bold);
 	}
 	private Font _myFont;
 	public override sealed bool Multiline { get => base.Multiline; set => base.Multiline = value; }

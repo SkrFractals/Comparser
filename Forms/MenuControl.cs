@@ -15,6 +15,13 @@ public partial class MenuControl : ParentControl {
 		Exp = new(this, _expForm = new());
 		Set = new(this, _setForm = new());
 		Plot = new(this, _plotForm = new());
+		//ParentForm[] p = [LogForm, _codeForm, _expForm, _setForm, _plotForm];
+		//foreach (var i in p) i.Show();
+		_plotForm.Show(); // for some reason i have to do this, otherwise the plotter could have its splitContainer permanently docked wrong
+		_plotForm.Size = new(640, 480);
+		Set.SetDarkMode();
+		_plotForm.Close();
+		//foreach (var i in p) i.Close();
 		var m = FormStartPosition.Manual;
 		_codeForm?.StartPosition = m;
 		_expForm?.StartPosition = m;
@@ -22,8 +29,7 @@ public partial class MenuControl : ParentControl {
 		_plotForm?.StartPosition = m;
 		parent.SetMinSize();
 		parent.Text = "Comparser - Complex Computer Parser";
-
-		}
+	}
 	private void SetButton_Click(object sender, EventArgs e) => ShowC(_setForm, FormP);
 	private void CodeButton_Click(object sender, EventArgs e) => ShowC(_codeForm, FormP);
 	private void ExpButton_Click(object sender, EventArgs e) => ShowC(_expForm, FormP);

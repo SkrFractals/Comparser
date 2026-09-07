@@ -28,7 +28,6 @@ partial class ParentControl {
 		BackColor = Color.FromArgb(64, 64, 64);
 		AutoScaleMode = AutoScaleMode.None;
 		AutoSize = false;
-		MaximumSize = new Size(320, 320);
 		MinimumSize = new Size(320, 320);
 		Name = "ParentControl";
 		Size = new Size(320, 320);

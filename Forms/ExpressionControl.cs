@@ -83,7 +83,7 @@ public partial class ExpressionControl : ParentControl {
 				Name = "index" + si,
 				Text = "x=" + si + ":",
 				AutoSize = true,
-				Font = new("Consolas", RowHeight >> 1),
+				Font = new("Consolas", RowHeight / 3),
 				Anchor = a | AnchorStyles.Left,
 				Location = new(Pad, 0),
 				UseMnemonic = false,
@@ -100,7 +100,7 @@ public partial class ExpressionControl : ParentControl {
 			new() {
 				Name = "result" + si,
 				AutoSize = true,
-				Font = new("Consolas", RowHeight >> 1),
+				Font = new("Consolas", RowHeight / 3),
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
 				Location = new(Pad, 0),
 				UseMnemonic = false,
@@ -113,7 +113,7 @@ public partial class ExpressionControl : ParentControl {
 				Tag = i,
 				Location = new(0, 0),
 				UseMnemonic = false,
-				Size = new(RowHeight, (RowHeight << 1) + Pad)
+				Size = new(RowHeight, (RowHeight  / 3) + Pad)
 			}, ExpChanged);
 		if (i > 0) {
 			Button swap = new() {
@@ -123,7 +123,7 @@ public partial class ExpressionControl : ParentControl {
 				Tag = i - 1,
 				Location = new(0, 0),
 				UseMnemonic = false,
-				Size = new(RowHeight, (RowHeight << 1) + Pad)
+				Size = new(RowHeight, (RowHeight / 3) + Pad)
 			};
 			swap.Click += ExpSwapped;
 			_swaps.Add(swap);

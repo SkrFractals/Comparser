@@ -77,9 +77,8 @@ partial class MenuControl {
 		// 
 		// MenuControl
 		// 
-		BackColor = Color.FromArgb(64, 64, 64);
 		AutoScaleMode = AutoScaleMode.None;
-		AutoSize = false;
+		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(setButton);
 		Controls.Add(codeButton);
 		Controls.Add(expButton);

@@ -38,9 +38,9 @@ partial class PlotControl {
 		// 
 		// splitContainer
 		// 
-		splitContainer.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		splitContainer.FixedPanel = FixedPanel.Panel1;
-		splitContainer.Location = new Point(3, 3);
+		splitContainer.Dock = DockStyle.Fill;
+		splitContainer.FixedPanel = FixedPanel.Panel2;
+		splitContainer.Location = new Point(0, 0);
 		splitContainer.Name = "splitContainer";
 		// 
 		// splitContainer.Panel1
@@ -51,17 +51,17 @@ partial class PlotControl {
 		// 
 		splitContainer.Panel2.Controls.Add(plotBox);
 		splitContainer.Panel2.SizeChanged += Resized;
-		splitContainer.Size = new Size(314, 314);
-		splitContainer.SplitterDistance = 256;
+		splitContainer.Size = new Size(320, 320);
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 3;
 		// 
 		// plotBox
 		// 
-		plotBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		plotBox.Location = new Point(3, 3);
+		plotBox.Dock = DockStyle.Fill;
+		plotBox.Location = new Point(0, 0);
 		plotBox.Name = "plotBox";
-		plotBox.Size = new Size(0, 308);
+		plotBox.Size = new Size(258, 320);
+		plotBox.SizeMode = PictureBoxSizeMode.AutoSize;
 		plotBox.TabIndex = 1;
 		plotBox.TabStop = false;
 		// 
@@ -69,10 +69,10 @@ partial class PlotControl {
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
-		AutoSize = false;
 		Controls.Add(splitContainer);
 		Name = "PlotControl";
 		splitContainer.Panel2.ResumeLayout(false);
+		splitContainer.Panel2.PerformLayout();
 		((ISupportInitialize)splitContainer).EndInit();
 		splitContainer.ResumeLayout(false);
 		((ISupportInitialize)plotBox).EndInit();

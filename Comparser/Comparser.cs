@@ -2,6 +2,8 @@
 using System.Text.RegularExpressions;
 namespace Comparser.Comparser;
 public interface IComparser {
+	public object MakeArgs(string[] args);
+	public object MakeArgs((string alias, object value)[] args);
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null);
 	// Re-evaluates already parsed expression with new arguments
 	public object Eval(object exp, object? args = null);
@@ -57,8 +59,10 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	}
 
 	private Reader? _currentReader;
-	
+
 	#region Interface
+	public object MakeArgs((string alias, object value)[] pairs) => new Value([.. pairs.Select(p => new Value((T)p.value, 0, p.alias))]);
+	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(T.NaN(), 0, p)).ToArray());
 	public static Value AsValue(object? e) => e as Value ?? new();
 	public double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null) {
@@ -556,9 +560,9 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	//public Value T_ParseEval(string text, int from, out Expression expr, Value? args = null) { var e = T_Parse(text, from, args); expr = e; return e.Eval(0, args ?? None); }
 	//public Value T_ParseEval(string text, ref int from, Value? args = null) => new Expression(this, text, ref from, out _, args ?? None).Eval(0, args ?? None);
 	//public Value T_ParseEval(string text, int from, Value? args = null) => T_ParseEval(text, ref from, args);
-	//public Value MakeArgs((string alias, T value)[] pairs) => new(pairs.Select(p => new Value(p.value, 0, p.alias)).ToArray());
+
 	#endregion
-	
+
 	#region Enums
 	public enum Actions : byte {
 		None = 0,

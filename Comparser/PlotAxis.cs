@@ -16,7 +16,7 @@ public abstract partial class Comparser<T>{
 		public class PlotAxis(Comparser<T> c, T initStart, T initStep, int initLength = 0) : IPlotAxis {
 
 			private Comparser<T> _context = c;
-			public void SetL(int l) => _locked = l;
+			public void SetL(int l) => Locked = l;
 
 			public (string c, string e) SetS(object? v) {
 				//if (_lc && _le)
@@ -76,7 +76,7 @@ public abstract partial class Comparser<T>{
 					var prevCenter = center;
 					var prevEnd = end;
 					if (T.AreEqual(field, field = value)) return;
-					switch (_locked) {
+					switch (Locked) {
 						case 1: d = 2 * (prevCenter - value) / length;break;
 						case 2: d = (prevEnd - value) / length; break;
 					}
@@ -86,7 +86,7 @@ public abstract partial class Comparser<T>{
 			public T d
 			{
 				get;
-				private set
+				set
 				{
 					if (T.AreEqual(field, field = value)) return;
 					DirtyL = true;
@@ -99,14 +99,14 @@ public abstract partial class Comparser<T>{
 				get => (start + end) / 2; // right/bottom edge in T space
 				set {
 					T n;
-					switch (_locked) {
+					switch (Locked) {
 						case 0:
 							n = 2 * (value - start) / length;
 							if (T.AreEqual(d, n)) return;
 							d = n;
 							return;
-						case 2: n = 2 * value - end; break;
-						default: n = start + value - center; break;
+						case 2: n = 2 * value - end;  /*n = 2 * (end - value);*/ break;
+						default: n = start + value - center; /*n = value - .5 * length * d;*/ break;
 					}
 					if (T.AreEqual(start, n)) return;
 					start = n;
@@ -117,14 +117,14 @@ public abstract partial class Comparser<T>{
 				get => Sample(length); // right/bottom edge in T space
 				set {
 					T n;
-					switch (_locked) {
+					switch (Locked) {
 						case 0:
 							n = (value - start) / length;
 							if (T.AreEqual(d, n)) return;
 							d = n;
 							return;
-						case 1: n = 2 * center - value; break;
-						default: n = start + value - end; break;
+						case 1: n = 2 * center - value;/*value - .5 * length * d;*/break;
+						default:/* n = value - d * length; */n = start + value - end; break;
 					}
 					if (T.AreEqual(start, n)) return;
 					start = n;
@@ -141,7 +141,7 @@ public abstract partial class Comparser<T>{
 				}
 			} = initLength;
 			public bool DirtyL = true; //, _dirtyR = true; // Lines / PlotRange
-			private int _locked = -1;
+			public int Locked = -1;
 			public Color[] lines {
 				get
 				{
@@ -174,7 +174,7 @@ public abstract partial class Comparser<T>{
 				T Lc(T c) => T.D1(c, (x) => Math.Round(Math.Pow(divBase, Math.Floor(Math.Log(Math.Abs(x)) / Math.Log(divBase)))));
 				}
 			} = []; // plot lines
-			public bool Adjust(double zoomOut) { // called when resizing the window and not lock ranged, returns if it happened, when it does, it should keep the memory inside
+			/*public bool Adjust(double zoomOut) { // called when resizing the window and not lock ranged, returns if it happened, when it does, it should keep the memory inside
 				if (LockRange) return false;
 				// TODO change to step/start and calculate memory (the eval should remember its last start/shift/x/y and then look at the new ones and figure out which pixels are reused (move them and then reeval the rest))
 				T c = center, diff = start - c;
@@ -182,7 +182,7 @@ public abstract partial class Comparser<T>{
 				start = c + diff * zoomOut;
 				//_dirtyR = true;
 				return true;
-			}
+			}*/
 			public bool Zoom(int c, double zoomSize) {
 				if (LockRange) return false;
 				start = INumber<T>.Lerp(start, end, (double)c / length) + c * (d *= zoomSize);

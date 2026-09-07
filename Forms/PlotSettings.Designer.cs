@@ -67,7 +67,7 @@ partial class PlotSettings {
 		rgbBox = new RichTextBox();
 		splitContainer = new SplitContainer();
 		delButton = new Button();
-		ratioButton = new Button();
+		xRangeButton = new Button();
 		itsButton = new Button();
 		itcButton = new Button();
 		iteButton = new Button();
@@ -80,6 +80,10 @@ partial class PlotSettings {
 		oysButton = new Button();
 		oycButton = new Button();
 		oyeButton = new Button();
+		lockResButton = new Button();
+		yRangeButton = new Button();
+		tRangeButton = new Button();
+		oyRangeButton = new Button();
 		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
 		splitContainer.Panel2.SuspendLayout();
@@ -89,37 +93,37 @@ partial class PlotSettings {
 		// ixeLabel
 		// 
 		ixeLabel.AutoSize = true;
-		ixeLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		ixeLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		ixeLabel.Location = new Point(3, 300);
 		ixeLabel.Name = "ixeLabel";
-		ixeLabel.Size = new Size(63, 19);
+		ixeLabel.Size = new Size(56, 17);
 		ixeLabel.TabIndex = 46;
 		ixeLabel.Text = "X End:";
 		// 
 		// ixcLabel
 		// 
 		ixcLabel.AutoSize = true;
-		ixcLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		ixcLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		ixcLabel.Location = new Point(3, 267);
 		ixcLabel.Name = "ixcLabel";
-		ixcLabel.Size = new Size(90, 19);
+		ixcLabel.Size = new Size(80, 17);
 		ixcLabel.TabIndex = 45;
 		ixcLabel.Text = "X Center:";
 		// 
 		// ixsLabel
 		// 
 		ixsLabel.AutoSize = true;
-		ixsLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		ixsLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		ixsLabel.Location = new Point(3, 234);
 		ixsLabel.Name = "ixsLabel";
-		ixsLabel.Size = new Size(81, 19);
+		ixsLabel.Size = new Size(72, 17);
 		ixsLabel.TabIndex = 44;
 		ixsLabel.Text = "X Start:";
 		// 
 		// ixeBox
 		// 
 		ixeBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		ixeBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		ixeBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		ixeBox.Location = new Point(175, 300);
 		ixeBox.MinimumSize = new Size(32, 27);
 		ixeBox.Name = "ixeBox";
@@ -130,7 +134,7 @@ partial class PlotSettings {
 		// ixcBox
 		// 
 		ixcBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		ixcBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		ixcBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		ixcBox.Location = new Point(175, 267);
 		ixcBox.MinimumSize = new Size(32, 27);
 		ixcBox.Name = "ixcBox";
@@ -141,7 +145,7 @@ partial class PlotSettings {
 		// ixsBox
 		// 
 		ixsBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		ixsBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		ixsBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		ixsBox.Location = new Point(175, 234);
 		ixsBox.MinimumSize = new Size(32, 27);
 		ixsBox.Name = "ixsBox";
@@ -152,37 +156,37 @@ partial class PlotSettings {
 		// modeLabel
 		// 
 		modeLabel.AutoSize = true;
-		modeLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		modeLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		modeLabel.Location = new Point(3, 204);
 		modeLabel.Name = "modeLabel";
-		modeLabel.Size = new Size(90, 19);
+		modeLabel.Size = new Size(80, 17);
 		modeLabel.TabIndex = 40;
 		modeLabel.Text = "PlotMode:";
 		// 
 		// iteLabel
 		// 
 		iteLabel.AutoSize = true;
-		iteLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iteLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iteLabel.Location = new Point(3, 168);
 		iteLabel.Name = "iteLabel";
-		iteLabel.Size = new Size(81, 19);
+		iteLabel.Size = new Size(72, 17);
 		iteLabel.TabIndex = 39;
 		iteLabel.Text = "TimeEnd:";
 		// 
 		// itcLabel
 		// 
 		itcLabel.AutoSize = true;
-		itcLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		itcLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		itcLabel.Location = new Point(3, 135);
 		itcLabel.Name = "itcLabel";
-		itcLabel.Size = new Size(108, 19);
+		itcLabel.Size = new Size(96, 17);
 		itcLabel.TabIndex = 38;
 		itcLabel.Text = "TimeCenter:";
 		// 
 		// iteBox
 		// 
 		iteBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		iteBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		iteBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		iteBox.Location = new Point(175, 168);
 		iteBox.MinimumSize = new Size(32, 27);
 		iteBox.Name = "iteBox";
@@ -193,7 +197,7 @@ partial class PlotSettings {
 		// itcBox
 		// 
 		itcBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		itcBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		itcBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		itcBox.Location = new Point(175, 135);
 		itcBox.MinimumSize = new Size(32, 27);
 		itcBox.Name = "itcBox";
@@ -204,7 +208,7 @@ partial class PlotSettings {
 		// itsBox
 		// 
 		itsBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		itsBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		itsBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		itsBox.Location = new Point(175, 102);
 		itsBox.MinimumSize = new Size(32, 27);
 		itsBox.Name = "itsBox";
@@ -214,7 +218,7 @@ partial class PlotSettings {
 		// 
 		// prevButton
 		// 
-		prevButton.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		prevButton.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		prevButton.Location = new Point(62, 69);
 		prevButton.Name = "prevButton";
 		prevButton.Size = new Size(25, 27);
@@ -225,7 +229,7 @@ partial class PlotSettings {
 		// 
 		// itlBox
 		// 
-		itlBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		itlBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		itlBox.Location = new Point(3, 69);
 		itlBox.MaximumSize = new Size(0, 27);
 		itlBox.MinimumSize = new Size(32, 27);
@@ -236,7 +240,7 @@ partial class PlotSettings {
 		// 
 		// nextButton
 		// 
-		nextButton.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		nextButton.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		nextButton.Location = new Point(146, 69);
 		nextButton.Name = "nextButton";
 		nextButton.Size = new Size(25, 27);
@@ -247,7 +251,7 @@ partial class PlotSettings {
 		// 
 		// itfBox
 		// 
-		itfBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		itfBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		itfBox.Location = new Point(91, 69);
 		itfBox.MaximumSize = new Size(0, 27);
 		itfBox.MinimumSize = new Size(32, 27);
@@ -259,38 +263,38 @@ partial class PlotSettings {
 		// itsLabel
 		// 
 		itsLabel.AutoSize = true;
-		itsLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		itsLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		itsLabel.Location = new Point(3, 102);
 		itsLabel.Name = "itsLabel";
-		itsLabel.Size = new Size(99, 19);
+		itsLabel.Size = new Size(88, 17);
 		itsLabel.TabIndex = 30;
 		itsLabel.Text = "TimeStart:";
 		// 
 		// modeSelect
 		// 
 		modeSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		modeSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		modeSelect.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		modeSelect.FormattingEnabled = true;
-		modeSelect.Items.AddRange(new object[] { "Outline X", "Fill X", "RGB XY" });
+		modeSelect.Items.AddRange(new object[] { "Area X", "Line X", "RGB XY" });
 		modeSelect.Location = new Point(175, 201);
 		modeSelect.Name = "modeSelect";
-		modeSelect.Size = new Size(142, 27);
+		modeSelect.Size = new Size(142, 23);
 		modeSelect.TabIndex = 29;
 		// 
 		// heightLabel
 		// 
 		heightLabel.AutoSize = true;
-		heightLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		heightLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		heightLabel.Location = new Point(3, 36);
 		heightLabel.Name = "heightLabel";
-		heightLabel.Size = new Size(126, 19);
+		heightLabel.Size = new Size(112, 17);
 		heightLabel.TabIndex = 28;
 		heightLabel.Text = "ScreenHeight:";
 		// 
 		// heightBox
 		// 
 		heightBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		heightBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		heightBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		heightBox.Location = new Point(175, 36);
 		heightBox.MinimumSize = new Size(32, 27);
 		heightBox.Name = "heightBox";
@@ -301,17 +305,17 @@ partial class PlotSettings {
 		// widthLabel
 		// 
 		widthLabel.AutoSize = true;
-		widthLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		widthLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		widthLabel.Location = new Point(3, 3);
 		widthLabel.Name = "widthLabel";
-		widthLabel.Size = new Size(117, 19);
+		widthLabel.Size = new Size(104, 17);
 		widthLabel.TabIndex = 26;
 		widthLabel.Text = "ScreenWidth:";
 		// 
 		// animatedBox
 		// 
 		animatedBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		animatedBox.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		animatedBox.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		animatedBox.Location = new Point(177, 69);
 		animatedBox.Name = "animatedBox";
 		animatedBox.Size = new Size(140, 27);
@@ -321,7 +325,7 @@ partial class PlotSettings {
 		// widthBox
 		// 
 		widthBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		widthBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		widthBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		widthBox.Location = new Point(175, 3);
 		widthBox.MinimumSize = new Size(32, 27);
 		widthBox.Name = "widthBox";
@@ -331,30 +335,30 @@ partial class PlotSettings {
 		// 
 		// codeBox
 		// 
-		codeBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		codeBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		codeBox.Location = new Point(3, 3);
+		codeBox.Dock = DockStyle.Fill;
+		codeBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		codeBox.Location = new Point(0, 0);
 		codeBox.MinimumSize = new Size(32, 27);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new Size(314, 52);
+		codeBox.Size = new Size(320, 37);
 		codeBox.TabIndex = 63;
 		codeBox.Text = "";
 		// 
 		// fyLabel
 		// 
 		fyLabel.AutoSize = true;
-		fyLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		fyLabel.Location = new Point(3, 432);
+		fyLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		fyLabel.Location = new Point(3, 531);
 		fyLabel.Name = "fyLabel";
-		fyLabel.Size = new Size(81, 19);
+		fyLabel.Size = new Size(72, 17);
 		fyLabel.TabIndex = 62;
 		fyLabel.Text = "Y Fixed:";
 		// 
 		// fyBox
 		// 
 		fyBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		fyBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		fyBox.Location = new Point(175, 432);
+		fyBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		fyBox.Location = new Point(175, 531);
 		fyBox.MinimumSize = new Size(32, 27);
 		fyBox.Name = "fyBox";
 		fyBox.Size = new Size(142, 27);
@@ -364,50 +368,49 @@ partial class PlotSettings {
 		// outputSelect
 		// 
 		outputSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		outputSelect.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		outputSelect.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		outputSelect.FormattingEnabled = true;
-		outputSelect.Items.AddRange(new object[] { "Outline X", "Fill X", "RGB XY" });
-		outputSelect.Location = new Point(175, 465);
+		outputSelect.Location = new Point(175, 564);
 		outputSelect.Name = "outputSelect";
-		outputSelect.Size = new Size(142, 27);
+		outputSelect.Size = new Size(142, 23);
 		outputSelect.TabIndex = 60;
 		outputSelect.Text = "Name Output";
 		// 
 		// oyeLabel
 		// 
 		oyeLabel.AutoSize = true;
-		oyeLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		oyeLabel.Location = new Point(3, 403);
+		oyeLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oyeLabel.Location = new Point(3, 502);
 		oyeLabel.Name = "oyeLabel";
-		oyeLabel.Size = new Size(63, 19);
+		oyeLabel.Size = new Size(80, 17);
 		oyeLabel.TabIndex = 59;
-		oyeLabel.Text = "V End:";
+		oyeLabel.Text = "OutY End:";
 		// 
 		// oycLabel
 		// 
 		oycLabel.AutoSize = true;
-		oycLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		oycLabel.Location = new Point(3, 370);
+		oycLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oycLabel.Location = new Point(3, 469);
 		oycLabel.Name = "oycLabel";
-		oycLabel.Size = new Size(90, 19);
+		oycLabel.Size = new Size(104, 17);
 		oycLabel.TabIndex = 58;
-		oycLabel.Text = "V Center:";
+		oycLabel.Text = "OutY Center:";
 		// 
 		// oysLabel
 		// 
 		oysLabel.AutoSize = true;
-		oysLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		oysLabel.Location = new Point(3, 337);
+		oysLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oysLabel.Location = new Point(3, 436);
 		oysLabel.Name = "oysLabel";
-		oysLabel.Size = new Size(81, 19);
+		oysLabel.Size = new Size(96, 17);
 		oysLabel.TabIndex = 57;
-		oysLabel.Text = "V Start:";
+		oysLabel.Text = "OutY Start:";
 		// 
 		// oyeBox
 		// 
 		oyeBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		oyeBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		oyeBox.Location = new Point(175, 399);
+		oyeBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		oyeBox.Location = new Point(175, 498);
 		oyeBox.MinimumSize = new Size(32, 27);
 		oyeBox.Name = "oyeBox";
 		oyeBox.Size = new Size(142, 27);
@@ -417,8 +420,8 @@ partial class PlotSettings {
 		// oycBox
 		// 
 		oycBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		oycBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		oycBox.Location = new Point(175, 366);
+		oycBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		oycBox.Location = new Point(175, 465);
 		oycBox.MinimumSize = new Size(32, 27);
 		oycBox.Name = "oycBox";
 		oycBox.Size = new Size(142, 27);
@@ -428,8 +431,8 @@ partial class PlotSettings {
 		// oysBox
 		// 
 		oysBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		oysBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		oysBox.Location = new Point(175, 333);
+		oysBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		oysBox.Location = new Point(175, 432);
 		oysBox.MinimumSize = new Size(32, 27);
 		oysBox.Name = "oysBox";
 		oysBox.Size = new Size(142, 27);
@@ -439,37 +442,37 @@ partial class PlotSettings {
 		// iyeLabel
 		// 
 		iyeLabel.AutoSize = true;
-		iyeLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iyeLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iyeLabel.Location = new Point(3, 399);
 		iyeLabel.Name = "iyeLabel";
-		iyeLabel.Size = new Size(63, 19);
+		iyeLabel.Size = new Size(56, 17);
 		iyeLabel.TabIndex = 53;
 		iyeLabel.Text = "Y End:";
 		// 
 		// iycLabel
 		// 
 		iycLabel.AutoSize = true;
-		iycLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iycLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iycLabel.Location = new Point(3, 366);
 		iycLabel.Name = "iycLabel";
-		iycLabel.Size = new Size(90, 19);
+		iycLabel.Size = new Size(80, 17);
 		iycLabel.TabIndex = 52;
 		iycLabel.Text = "Y Center:";
 		// 
 		// iysLabel
 		// 
 		iysLabel.AutoSize = true;
-		iysLabel.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iysLabel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iysLabel.Location = new Point(3, 333);
 		iysLabel.Name = "iysLabel";
-		iysLabel.Size = new Size(81, 19);
+		iysLabel.Size = new Size(72, 17);
 		iysLabel.TabIndex = 51;
 		iysLabel.Text = "Y Start:";
 		// 
 		// iyeBox
 		// 
 		iyeBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		iyeBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		iyeBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		iyeBox.Location = new Point(175, 399);
 		iyeBox.MinimumSize = new Size(32, 27);
 		iyeBox.Name = "iyeBox";
@@ -480,7 +483,7 @@ partial class PlotSettings {
 		// iycBox
 		// 
 		iycBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		iycBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		iycBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		iycBox.Location = new Point(175, 366);
 		iycBox.MinimumSize = new Size(32, 27);
 		iycBox.Name = "iycBox";
@@ -491,7 +494,7 @@ partial class PlotSettings {
 		// iysBox
 		// 
 		iysBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		iysBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		iysBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
 		iysBox.Location = new Point(175, 333);
 		iysBox.MinimumSize = new Size(32, 27);
 		iysBox.Name = "iysBox";
@@ -501,8 +504,8 @@ partial class PlotSettings {
 		// 
 		// addButton
 		// 
-		addButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		addButton.Location = new Point(89, 465);
+		addButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		addButton.Location = new Point(89, 564);
 		addButton.Name = "addButton";
 		addButton.Size = new Size(80, 27);
 		addButton.TabIndex = 47;
@@ -511,19 +514,19 @@ partial class PlotSettings {
 		// 
 		// rgbBox
 		// 
-		rgbBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		rgbBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		rgbBox.Location = new Point(3, 3);
+		rgbBox.Dock = DockStyle.Fill;
+		rgbBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		rgbBox.Location = new Point(0, 0);
 		rgbBox.MinimumSize = new Size(32, 27);
 		rgbBox.Name = "rgbBox";
-		rgbBox.Size = new Size(314, 101);
+		rgbBox.Size = new Size(320, 74);
 		rgbBox.TabIndex = 64;
 		rgbBox.Text = "";
 		// 
 		// splitContainer
 		// 
 		splitContainer.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		splitContainer.Location = new Point(0, 498);
+		splitContainer.Location = new Point(0, 597);
 		splitContainer.Name = "splitContainer";
 		splitContainer.Orientation = Orientation.Horizontal;
 		// 
@@ -536,34 +539,34 @@ partial class PlotSettings {
 		// 
 		splitContainer.Panel2.Controls.Add(codeBox);
 		splitContainer.Panel2MinSize = 27;
-		splitContainer.Size = new Size(320, 177);
-		splitContainer.SplitterDistance = 107;
+		splitContainer.Size = new Size(320, 123);
+		splitContainer.SplitterDistance = 74;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 65;
 		// 
 		// delButton
 		// 
-		delButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		delButton.Location = new Point(3, 465);
+		delButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		delButton.Location = new Point(3, 564);
 		delButton.Name = "delButton";
 		delButton.Size = new Size(80, 27);
 		delButton.TabIndex = 66;
 		delButton.Text = "Remove";
 		delButton.UseVisualStyleBackColor = true;
 		// 
-		// ratioButton
+		// xRangeButton
 		// 
-		ratioButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		ratioButton.Location = new Point(146, 3);
-		ratioButton.Name = "ratioButton";
-		ratioButton.Size = new Size(25, 60);
-		ratioButton.TabIndex = 67;
-		ratioButton.Text = "🔒";
-		ratioButton.UseVisualStyleBackColor = true;
+		xRangeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		xRangeButton.Location = new Point(113, 234);
+		xRangeButton.Name = "xRangeButton";
+		xRangeButton.Size = new Size(25, 93);
+		xRangeButton.TabIndex = 67;
+		xRangeButton.Text = "🔒";
+		xRangeButton.UseVisualStyleBackColor = true;
 		// 
 		// itsButton
 		// 
-		itsButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		itsButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		itsButton.Location = new Point(144, 102);
 		itsButton.Name = "itsButton";
 		itsButton.Size = new Size(25, 27);
@@ -573,7 +576,7 @@ partial class PlotSettings {
 		// 
 		// itcButton
 		// 
-		itcButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		itcButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		itcButton.Location = new Point(144, 135);
 		itcButton.Name = "itcButton";
 		itcButton.Size = new Size(25, 27);
@@ -583,7 +586,7 @@ partial class PlotSettings {
 		// 
 		// iteButton
 		// 
-		iteButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iteButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iteButton.Location = new Point(144, 168);
 		iteButton.Name = "iteButton";
 		iteButton.Size = new Size(25, 27);
@@ -593,7 +596,7 @@ partial class PlotSettings {
 		// 
 		// ixsButton
 		// 
-		ixsButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		ixsButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		ixsButton.Location = new Point(144, 234);
 		ixsButton.Name = "ixsButton";
 		ixsButton.Size = new Size(25, 27);
@@ -603,7 +606,7 @@ partial class PlotSettings {
 		// 
 		// ixcButton
 		// 
-		ixcButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		ixcButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		ixcButton.Location = new Point(144, 267);
 		ixcButton.Name = "ixcButton";
 		ixcButton.Size = new Size(25, 27);
@@ -613,7 +616,7 @@ partial class PlotSettings {
 		// 
 		// ixeButton
 		// 
-		ixeButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		ixeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		ixeButton.Location = new Point(144, 300);
 		ixeButton.Name = "ixeButton";
 		ixeButton.Size = new Size(25, 27);
@@ -623,7 +626,7 @@ partial class PlotSettings {
 		// 
 		// iysButton
 		// 
-		iysButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iysButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iysButton.Location = new Point(144, 333);
 		iysButton.Name = "iysButton";
 		iysButton.Size = new Size(25, 27);
@@ -633,7 +636,7 @@ partial class PlotSettings {
 		// 
 		// iycButton
 		// 
-		iycButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iycButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iycButton.Location = new Point(144, 366);
 		iycButton.Name = "iycButton";
 		iycButton.Size = new Size(25, 27);
@@ -643,7 +646,7 @@ partial class PlotSettings {
 		// 
 		// iyeButton
 		// 
-		iyeButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		iyeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
 		iyeButton.Location = new Point(144, 399);
 		iyeButton.Name = "iyeButton";
 		iyeButton.Size = new Size(25, 27);
@@ -653,8 +656,8 @@ partial class PlotSettings {
 		// 
 		// oysButton
 		// 
-		oysButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		oysButton.Location = new Point(144, 333);
+		oysButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oysButton.Location = new Point(144, 432);
 		oysButton.Name = "oysButton";
 		oysButton.Size = new Size(25, 27);
 		oysButton.TabIndex = 77;
@@ -663,8 +666,8 @@ partial class PlotSettings {
 		// 
 		// oycButton
 		// 
-		oycButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		oycButton.Location = new Point(144, 366);
+		oycButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oycButton.Location = new Point(144, 465);
 		oycButton.Name = "oycButton";
 		oycButton.Size = new Size(25, 27);
 		oycButton.TabIndex = 78;
@@ -673,17 +676,62 @@ partial class PlotSettings {
 		// 
 		// oyeButton
 		// 
-		oyeButton.Font = new Font("Consolas", 12F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		oyeButton.Location = new Point(144, 399);
+		oyeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oyeButton.Location = new Point(144, 498);
 		oyeButton.Name = "oyeButton";
 		oyeButton.Size = new Size(25, 27);
 		oyeButton.TabIndex = 79;
 		oyeButton.Text = "🔓";
 		oyeButton.UseVisualStyleBackColor = true;
 		// 
+		// lockResButton
+		// 
+		lockResButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		lockResButton.Location = new Point(144, 3);
+		lockResButton.Name = "lockResButton";
+		lockResButton.Size = new Size(25, 60);
+		lockResButton.TabIndex = 80;
+		lockResButton.Text = "🔓";
+		lockResButton.UseVisualStyleBackColor = true;
+		// 
+		// yRangeButton
+		// 
+		yRangeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		yRangeButton.Location = new Point(113, 333);
+		yRangeButton.Name = "yRangeButton";
+		yRangeButton.Size = new Size(25, 93);
+		yRangeButton.TabIndex = 81;
+		yRangeButton.Text = "🔒";
+		yRangeButton.UseVisualStyleBackColor = true;
+		// 
+		// tRangeButton
+		// 
+		tRangeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		tRangeButton.Location = new Point(113, 102);
+		tRangeButton.Name = "tRangeButton";
+		tRangeButton.Size = new Size(25, 93);
+		tRangeButton.TabIndex = 82;
+		tRangeButton.Text = "🔒";
+		tRangeButton.UseVisualStyleBackColor = true;
+		// 
+		// oyRangeButton
+		// 
+		oyRangeButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		oyRangeButton.Location = new Point(113, 432);
+		oyRangeButton.Name = "oyRangeButton";
+		oyRangeButton.Size = new Size(25, 93);
+		oyRangeButton.TabIndex = 83;
+		oyRangeButton.Text = "🔒";
+		oyRangeButton.UseVisualStyleBackColor = true;
+		// 
 		// PlotSettings
 		// 
+		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
+		Controls.Add(oyRangeButton);
+		Controls.Add(tRangeButton);
+		Controls.Add(yRangeButton);
+		Controls.Add(lockResButton);
 		Controls.Add(oyeButton);
 		Controls.Add(oycButton);
 		Controls.Add(oysButton);
@@ -696,7 +744,7 @@ partial class PlotSettings {
 		Controls.Add(iteButton);
 		Controls.Add(itcButton);
 		Controls.Add(itsButton);
-		Controls.Add(ratioButton);
+		Controls.Add(xRangeButton);
 		Controls.Add(delButton);
 		Controls.Add(splitContainer);
 		Controls.Add(fyLabel);
@@ -740,9 +788,7 @@ partial class PlotSettings {
 		Controls.Add(widthBox);
 		MinimumSize = new Size(320, 640);
 		Name = "PlotSettings";
-		Size = new Size(320, 675);
-		AutoScaleMode = AutoScaleMode.None;
-		AutoSize = false;
+		Size = new Size(320, 720);
 		splitContainer.Panel1.ResumeLayout(false);
 		splitContainer.Panel2.ResumeLayout(false);
 		((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
@@ -762,7 +808,6 @@ partial class PlotSettings {
 	private Label itsLabel;
 	private Label heightLabel;
 	private Label widthLabel;
-	private Label fyLabel;
 	public Label iyeLabel;
 	public RichTextBox ixeBox;
 	public RichTextBox ixcBox;
@@ -790,7 +835,7 @@ partial class PlotSettings {
 	public Button addButton;
 	public RichTextBox rgbBox;
 	public Button delButton;
-	public Button ratioButton;
+	public Button xRangeButton;
 	public Button itsButton;
 	public Button itcButton;
 	public Button iteButton;
@@ -809,4 +854,9 @@ partial class PlotSettings {
 	public Label iycLabel;
 	public Label iysLabel;
 	public SplitContainer splitContainer;
+	public Button lockResButton;
+	public Button yRangeButton;
+	public Button tRangeButton;
+	public Label fyLabel;
+	public Button oyRangeButton;
 }

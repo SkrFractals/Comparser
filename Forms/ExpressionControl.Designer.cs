@@ -38,11 +38,11 @@ partial class ExpressionControl {
 		// 
 		// ExpressionControl
 		// 
-		BackColor = Color.FromArgb(64, 64, 64);
 		AutoScaleMode = AutoScaleMode.None;
-		AutoSize = false;
+		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(expBox);
 		Name = "ExpressionControl";
+		Size = new Size(320, 320);
 		ResumeLayout(false);
 	}
 
