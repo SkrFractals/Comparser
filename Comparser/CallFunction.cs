@@ -1,7 +1,7 @@
 ﻿using Comparser.Comparser.Numbers;
 namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
-		#region Call Functions
+	#region Call Functions
 	// abstract parent
 	public abstract class CallFunction(int cacheSize = 0) {
 		//protected readonly I[]? Def = def;
