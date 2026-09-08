@@ -2,6 +2,10 @@
 using System.Runtime.CompilerServices;
 namespace Comparser.Comparser.Numbers;
 public static class Static {
+
+	public const string LockedSymbol = "🔒";
+	public const string UnlockedSymbol = "🔓";
+
 	public static readonly bool[] FindName = [false, false, false, true];
 	public static readonly bool[] FindArgs = [true, true, false, true];
 	private const int Bernoullis = 20;

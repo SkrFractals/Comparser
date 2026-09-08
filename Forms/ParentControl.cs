@@ -22,7 +22,7 @@ public partial class ParentControl : UserControl {
 			Args = args ?? [];
 			ComparserControl.InitRichTextBox(Box = box, textChanged);
 		}
-		public string[] Args;
+		public string[] Args = [];
 		public object? Exp;
 		public object? ArgsV;
 		public object? Value;
@@ -33,7 +33,7 @@ public partial class ParentControl : UserControl {
 	public virtual Size GetSize() => new(0,0);
 	public virtual void SetDark(bool dark) {
 		//var c = dark ? (Root.Set.Context.GetColor(ParseDictionary.Type.Back), Color.White) : (Color.White, Color.Black);
-		DarkC(Controls, Root?.Set?.Context?.GetColor() ?? (Color.Black, Color.White));
+		DarkC(Controls, SettingsControl.Context?.GetColor() ?? (Color.Black, Color.White));
 	}
 	private void DarkC(ControlCollection c, (Color back, Color fore) color) {
 		foreach (var o in c) {
@@ -75,9 +75,9 @@ public partial class ParentControl : UserControl {
 	}
 	public virtual void PerformClose() { }
 	protected object? Eval(TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null)
-		=> !Enabled || field.Box == null || !(/*field.Box.Visible &&*/ field.Box.Enabled && !field.Box.ReadOnly) ? null : Eval(Root?.Set?.Context, field, cachedParse, args, cancel);
+		=> !Enabled || field.Box == null || !(/*field.Box.Visible &&*/ field.Box.Enabled && !field.Box.ReadOnly) ? null : Eval(SettingsControl.Context, field, cachedParse, args, cancel);
 	protected object? Parse(TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null)
-		=> Parse(Root?.Set?.Context, field, cachedParse, args, cancel);
+		=> Parse(SettingsControl.Context, field, cachedParse, args, cancel);
 	public static object? Eval(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { // TODO call re-eval together with expressionControl
 		if (c is null || field.Box is null)
 			return null;

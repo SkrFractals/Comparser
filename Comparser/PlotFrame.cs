@@ -1,10 +1,12 @@
 ﻿using Comparser.Comparser.Numbers;
+using Comparser.Forms;
 namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public partial class PlotEval {
 		public class PlotFrame(bool centerPixels = true) {
 			// z = coordinate Z input, t = coordinate TIME input, x = screen space x, y = screenspace y, f = frame, w = screen width, h = screen height, l = frame count 
-			Value args = new([new(T.NaN(), 0, "z"), new(T.NaN(), 0, "t"), new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "f"), new(T.NaN(), 0, "w"), new(T.NaN(), 0, "h"), new(T.NaN(), 0, "l")]);
+			//Value args = new([new(T.NaN(), 0, "z"), new(T.NaN(), 0, "t"), new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "f"), new(T.NaN(), 0, "w"), new(T.NaN(), 0, "h"), new(T.NaN(), 0, "l")]);
+			Value args = new([new(T.NaN(), 0, "z"), new(T.NaN(), 0, "t")]);
 			private readonly double _c = centerPixels ? .5 : 0;
 			private static Complex MapC((Complex s, Complex x, Complex y) a, int x, int y) => a.s + (x + .5) * a.x + (y + .5) * a.y;
 			private static Complex Map((Complex s, Complex x, Complex y) a, int x, int y) => a.s + x * a.x + y * a.y;
@@ -34,14 +36,14 @@ public abstract partial class Comparser<T> {
 					(_plotXy, _memXy) = (_memXy, _plotXy);
 					return _plotXy;
 				}
-				changed = true;
+				changed = true;	 
 				// (z,t,x,y,f,w,h,l)
 				args.Values[1].Leaf = _t2 = memFrame; // t
-				args.Values[4].Leaf = T.MakeR(frame); // f
-				args.Values[5].Leaf = T.MakeR(ax.length); // w
-				args.Values[6].Leaf = T.MakeR(ay.length); // h
-				args.Values[7].Leaf = T.MakeR(at.length); // l
-				if (refresh) // refresh completely without trying to transfer anything from memory
+				//args.Values[4].Leaf = T.MakeR(frame); // f
+				//args.Values[5].Leaf = T.MakeR(ax.length); // w
+				//args.Values[6].Leaf = T.MakeR(ay.length); // h
+				//args.Values[7].Leaf = T.MakeR(at.length); // l
+				if (!SettingsControl.MemXy || refresh) // refresh completely without trying to transfer anything from memory
 					return Rows(ay.length, Finish);
 				double dXs = +ax.d, dYs = +ay.d;
 				(Complex s, Complex x, Complex y) pm, mp;
@@ -157,8 +159,8 @@ public abstract partial class Comparser<T> {
 				Value Eval() {
 					var l = args.Values;
 					l[0].Leaf = ax.Sample(x) + ay.Sample(y);
-					l[2].Leaf = T.MakeR(x);
-					l[3].Leaf = T.MakeR(y);
+					//l[2].Leaf = T.MakeR(x);
+					//l[3].Leaf = T.MakeR(y);
 					return exp.Eval(0, args); 
 				}
 				void E() => _plotXy[x + yw] = Eval();
@@ -192,17 +194,17 @@ public abstract partial class Comparser<T> {
 				var sqrEy = +at.d * recallTolerance;
 				(_plotX, _memX) = (_memX, _plotX); // swap mem
 				if (_plotX.Length != ax.length) _plotX = new Value[ax.length]; // length mismatch: re-alloc
-				 // remember this evaluated X axis
+				// remember this evaluated X axis
 				Remember(); // fetch a 
 				_mY1 = yC;
 				_mLx1 = ax.length;
 				// (z,t,x,y,f,w,h,l)
 				args.Values[1].Leaf = _t1 = memFrame; // t
-				args.Values[3].Leaf = T.MakeR(y); // y
-				args.Values[4].Leaf = T.MakeR(frame); // f
-				args.Values[5].Leaf = T.MakeR(ax.length); // w
-				args.Values[6].Leaf = T.MakeR(ay.length); // h
-				args.Values[7].Leaf = T.MakeR(at.length); // l
+				//args.Values[3].Leaf = T.MakeR(y); // y
+				//args.Values[4].Leaf = T.MakeR(frame); // f
+				//args.Values[5].Leaf = T.MakeR(ax.length); // w
+				//args.Values[6].Leaf = T.MakeR(ay.length); // h
+				//args.Values[7].Leaf = T.MakeR(at.length); // l
 				if (memYo < 0) return ReEval(); // no memory
 				(_mSx1, _mDx1) = (ax.start, ax.d);
 				// we have some memory Y match
@@ -214,9 +216,8 @@ public abstract partial class Comparser<T> {
 					changed = false;
 					return _plotX;
 				}
-
 				// no overlap: jut re-eval everything
-				if (refresh || !(+o.Perp <= o.SqrE) || o.NoOverlap()) return ReEval();
+				if (refresh || !SettingsControl.MemX || !(+o.Perp <= o.SqrE) || o.NoOverlap()) return ReEval();
 				// eval 0-iaStart (that isn't in the memory)
 				ReEval(0, o.IaStart);
 				if (AxisMismatch(o, mDx, out var mt)) {

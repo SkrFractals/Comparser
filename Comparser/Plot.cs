@@ -12,7 +12,7 @@ public interface IPlot {
 	public void ChangeMode(PlotMode xy);
 	public (double, string) SetFixedY(object? yf);
 	public void SetFrame(object? t);
-	public void Resize(int w, int h, int l);
+	public bool Resize(int w, int h, int l);
 	public void ZoomContinuous(int x, int y, double size);
 	public void ZoomBinary(int x, int y, bool zoomIn) => ZoomContinuous(x, y, zoomIn ? .5 : 2);
 	public void Shift(int dx, int dy);
@@ -23,7 +23,6 @@ public interface IPlot {
 	public void SetCode(int output, object? code);
 	public void SetRgb(int output, object? rgb);
 	public string[] GetOutputs();
-	public void SetDirty();
 	public void LockRangeX(bool l);
 	public void LockRangeY(bool l);
 	public void LockRangeO(bool l);
@@ -37,7 +36,7 @@ public abstract partial class Comparser<T>{
 		public void LockRangeO(bool l) => LockedRangeO = l;
 		public void LockRangeT(bool l) => LockedRangeT = l;
 		public void SetLockRes(bool l) => LockedRes = l;
-		public void SetDirty() => _dirtyX = _dirtyXy = _dirtyRgb = true;
+		//public void SetDirty() => _dirtyX = _dirtyXy = _dirtyRgb = true;
 
 		public class PlotOutput(string name, PlotEval? newEval, /*PlotOutput.ColorMode mode,*/ Expression? newRgb/*, Expression? newHsv*/) {
 			// TODO TextField?
@@ -104,7 +103,7 @@ public abstract partial class Comparser<T>{
 		public void SetCode(int output, object? code) => OutputR[output].Eval = new(code);
 		public void SetRgb(int output, object? rgb) {
 			OutputR[output].ColorCodeRgb = rgb as Expression;
-			_dirtyRgb = true;
+			//_dirtyRgb = true;
 		}
 		public string[] GetOutputs() {
 			string[] r = new string[OutputR.Count];
@@ -125,7 +124,7 @@ public abstract partial class Comparser<T>{
 		public readonly Comparser<T> Context;
 		private Bitmap _bmp = new(1,1);
 		private Color[] _linesX = [], _linesY = [], _linesO = [], _linesT = [];
-		private bool _dirtyX = true, _dirtyXy = true, _dirtyRgb = true;
+		//private bool _dirtyX = true, _dirtyXy = true, _dirtyRgb = true;
 		private readonly IPlotAxis[] _axis;
 		public Plot(Comparser<T> context, int width = 0, int height = 0, int length = 1) {
 			_axis = [InputX = new(context, T.Zero(), T.MakeR(1), 1),
@@ -140,20 +139,22 @@ public abstract partial class Comparser<T>{
 		}
 		public void ChangeMode(PlotMode xy) {
 			Mode = xy;
-			_dirtyX = _dirtyXy = true;
+			//_dirtyX = _dirtyXy = true;
 			Update(InputX.length, InputY.length, InputT.length);
 		}
 		public (double, string) SetFixedY(object? yf) {
 			FixedY = Context.AsDouble(yf);
 			if (double.IsNaN(FixedY)) FixedY = 0;
-			_dirtyX = true;
+			//_dirtyX = true;
 			return (FixedY, InputY.Sample(FixedY).ToString(3));
 		}
 		public void SetFrame(object? t) {
 			Frame = (int)Context.AsDouble(t);
-			_dirtyX = true;
+			//_dirtyX = true;
 		}
-		public void Resize(int w, int h, int l) { // on screen panel resize
+		public bool Resize(int w, int h, int l) { // on screen panel resize
+			if (LockedRes)
+				return false;
 			bool r = false;
 			r |= Resize(LockedRangeX, w, ref _linesX, InputX);
 			r |= Resize(LockedRangeY, h, ref _linesY, InputY);
@@ -161,9 +162,10 @@ public abstract partial class Comparser<T>{
 			r |= Resize(LockedRangeT, l, ref _linesT, InputT);
 			if (r) {
 				_bmp = w < 1 || h < 1 ? new(1, 1) : new(w, h);
-				_dirtyX = _dirtyXy = true;
+				return true;
+				//_dirtyX = _dirtyXy = true;
 			}
-			return;
+			return false;
 
 			T NewBounds(PlotAxis a) => a.Locked switch { 0 => a.start, 2 => a.end, _ => a.center };
 			void Adjust(PlotAxis a, T sce) {
@@ -190,8 +192,7 @@ public abstract partial class Comparser<T>{
 				bool R(ref Color[] lines) {
 					if (size == lines.Length)
 						return true;
-					lines = new Color[size];
-					a.length = size;
+					lines = new Color[a.length = size];
 					return false;
 				}
 				/*var p = new int[a.Length];
@@ -219,45 +220,57 @@ public abstract partial class Comparser<T>{
 			}
 		}
 		public void ZoomContinuous(int x, int y, double size) {
-			if(InputX.Zoom(x, size))
+			InputX.Zoom(x, size);
+			InputY.Zoom(y, size);
+			OutputY.Zoom(y, size);
+			/*if (InputX.Zoom(x, size))
 				_dirtyXy = _dirtyX = true;
 			//var zy = (double)y / InputR[1].length;
 			if(InputY.Zoom(y, size))
 				_dirtyXy = true;;
 			if(OutputY.Zoom(y, size))
-				_dirtyXy = true;;
+				_dirtyXy = true;;*/
 			//foreach (var o in OutputR)
 			//	o.A.Zoom(y, size);
 		}
 		public void Shift(int dx, int dy) {
+			if (dx != 0)
+				InputX.Shift(dx);
+			if (dy == 0)
+				return;
+			InputY.Shift(dx);
+			OutputY.Shift(dx);
 			//double rx = (double)dx / InputR[0].length, ry = (double)dy / InputR[1].length;
-			if (dx != 0 && InputX.Shift(dx))
+			/*if (dx != 0 && InputX.Shift(dx))
 				_dirtyXy = _dirtyX = true;
 			if (dy == 0)
 				return;
 			if (InputY.Shift(dx) && Mode != PlotMode.Xy)
 				_dirtyXy = true;
 			if (OutputY.Shift(dx) && Mode == PlotMode.Xy)
-				_dirtyXy = true;
+				_dirtyXy = true;*/
 		}
 
 		public Bitmap Update(int w, int h, int l) {
-			if (!LockedRes)
-				Resize(w, h, l); // if size changed, it will resize everything and mark things dirty
-			var dirty = InputX.DirtyL;
-			// prepare axis lines and plot values if they are dirty
+			Resize(w, h, l); // if size changed, it will resize everything and mark things dirty
+								 //var dirty = InputX.DirtyL;
+								 // prepare axis lines and plot values if they are dirty
+			if (InputX.DirtyL)
+				Lines(InputX, _linesX);
 			switch (Mode) {
 				case PlotMode.XContour:
 				case PlotMode.XFill:
-					dirty |= _dirtyX;
+					/*dirty |= _dirtyX;
 					_dirtyX = false;
-					//foreach (var output in OutputR)
 					dirty |= OutputY.DirtyL;
 					if (dirty) {
 						Lines(InputX, _linesX);
 						//foreach (var l in OutputR)
 						Lines(OutputY, _linesY);
-					}
+					}*/
+					
+					if(OutputY.DirtyL)
+						Lines(OutputY, _linesY);
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						o.Values = o.Eval.GetPlotX(out var d, InputX, InputY, FixedY, InputT, (int)Frame);
@@ -265,26 +278,27 @@ public abstract partial class Comparser<T>{
 					}
 					break;
 				default: // XY mode:
-					dirty = InputY.DirtyL || _dirtyXy;
+					/*dirty = InputY.DirtyL || _dirtyXy;
 					_dirtyXy = false;
 					if (dirty) {
 						Lines(InputX, _linesX); // X input axis lines
 						Lines(InputY, _linesY); // Y input axis lines
-					}
+					}*/
+					if (InputY.DirtyL)
+						Lines(InputY, _linesY);
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						o.Values = o.Eval.GetPlotXy(out var d, InputX, InputY, InputT, (int)Frame);
 						dirty |= d; // Refresh 2D (X,Y) output values
 					}
 					break;
-
-					void Lines(PlotAxis a, Color[] axis) {
-						if (axis.Length != a.length)
-							axis = new Color[a.length];//a.length = axis.Length;
-													   //throw new("given the axis a different length of colors to draw axes to, than the last length it was set to.");
-						for (var i = 0; i < axis.Length; ++i) // combine axis lines
-							axis[i] = Max(axis[i], a.lines[i]);
-					}
+			}
+			void Lines(PlotAxis a, Color[] axis) {
+				//if (axis.Length != a.length)
+				//	axis = new Color[a.length];//a.length = axis.Length;
+				//throw new("given the axis a different length of colors to draw axes to, than the last length it was set to.");
+				for (var i = 0; i < axis.Length; ++i) // combine axis lines
+					axis[i] = Max(axis[i], a.lines[i]);
 			}
 			if (!dirty && !_dirtyRgb) // nothing has changed, no need to redraw the screen
 				return _bmp;

@@ -84,6 +84,9 @@ partial class PlotSettings {
 		yRangeButton = new Button();
 		tRangeButton = new Button();
 		oyRangeButton = new Button();
+		buildButton = new Button();
+		saveButton = new Button();
+		loadButton = new Button();
 		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
 		splitContainer.Panel2.SuspendLayout();
@@ -273,12 +276,12 @@ partial class PlotSettings {
 		// modeSelect
 		// 
 		modeSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		modeSelect.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		modeSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
 		modeSelect.FormattingEnabled = true;
 		modeSelect.Items.AddRange(new object[] { "Area X", "Line X", "RGB XY" });
 		modeSelect.Location = new Point(175, 201);
 		modeSelect.Name = "modeSelect";
-		modeSelect.Size = new Size(142, 23);
+		modeSelect.Size = new Size(142, 27);
 		modeSelect.TabIndex = 29;
 		// 
 		// heightLabel
@@ -340,7 +343,7 @@ partial class PlotSettings {
 		codeBox.Location = new Point(0, 0);
 		codeBox.MinimumSize = new Size(32, 27);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new Size(320, 37);
+		codeBox.Size = new Size(320, 57);
 		codeBox.TabIndex = 63;
 		codeBox.Text = "";
 		// 
@@ -357,7 +360,7 @@ partial class PlotSettings {
 		// fyBox
 		// 
 		fyBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		fyBox.Font = new Font("Consolas", 10F, FontStyle.Bold);
+		fyBox.Font = new Font("Consolas", 12F, FontStyle.Bold);
 		fyBox.Location = new Point(175, 531);
 		fyBox.MinimumSize = new Size(32, 27);
 		fyBox.Name = "fyBox";
@@ -368,11 +371,11 @@ partial class PlotSettings {
 		// outputSelect
 		// 
 		outputSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		outputSelect.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		outputSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
 		outputSelect.FormattingEnabled = true;
-		outputSelect.Location = new Point(175, 564);
+		outputSelect.Location = new Point(175, 597);
 		outputSelect.Name = "outputSelect";
-		outputSelect.Size = new Size(142, 23);
+		outputSelect.Size = new Size(142, 27);
 		outputSelect.TabIndex = 60;
 		outputSelect.Text = "Name Output";
 		// 
@@ -505,7 +508,7 @@ partial class PlotSettings {
 		// addButton
 		// 
 		addButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		addButton.Location = new Point(89, 564);
+		addButton.Location = new Point(89, 597);
 		addButton.Name = "addButton";
 		addButton.Size = new Size(80, 27);
 		addButton.TabIndex = 47;
@@ -519,14 +522,14 @@ partial class PlotSettings {
 		rgbBox.Location = new Point(0, 0);
 		rgbBox.MinimumSize = new Size(32, 27);
 		rgbBox.Name = "rgbBox";
-		rgbBox.Size = new Size(320, 74);
+		rgbBox.Size = new Size(320, 101);
 		rgbBox.TabIndex = 64;
 		rgbBox.Text = "";
 		// 
 		// splitContainer
 		// 
 		splitContainer.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		splitContainer.Location = new Point(0, 597);
+		splitContainer.Location = new Point(0, 630);
 		splitContainer.Name = "splitContainer";
 		splitContainer.Orientation = Orientation.Horizontal;
 		// 
@@ -539,15 +542,15 @@ partial class PlotSettings {
 		// 
 		splitContainer.Panel2.Controls.Add(codeBox);
 		splitContainer.Panel2MinSize = 27;
-		splitContainer.Size = new Size(320, 123);
-		splitContainer.SplitterDistance = 74;
+		splitContainer.Size = new Size(320, 170);
+		splitContainer.SplitterDistance = 101;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 65;
 		// 
 		// delButton
 		// 
 		delButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		delButton.Location = new Point(3, 564);
+		delButton.Location = new Point(3, 597);
 		delButton.Name = "delButton";
 		delButton.Size = new Size(80, 27);
 		delButton.TabIndex = 66;
@@ -724,10 +727,43 @@ partial class PlotSettings {
 		oyRangeButton.Text = "🔒";
 		oyRangeButton.UseVisualStyleBackColor = true;
 		// 
+		// buildButton
+		// 
+		buildButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		buildButton.Location = new Point(175, 564);
+		buildButton.Name = "buildButton";
+		buildButton.Size = new Size(142, 27);
+		buildButton.TabIndex = 84;
+		buildButton.Text = "Plot";
+		buildButton.UseVisualStyleBackColor = true;
+		// 
+		// saveButton
+		// 
+		saveButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		saveButton.Location = new Point(89, 564);
+		saveButton.Name = "saveButton";
+		saveButton.Size = new Size(80, 27);
+		saveButton.TabIndex = 85;
+		saveButton.Text = "Save";
+		saveButton.UseVisualStyleBackColor = true;
+		// 
+		// loadButton
+		// 
+		loadButton.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		loadButton.Location = new Point(3, 564);
+		loadButton.Name = "loadButton";
+		loadButton.Size = new Size(80, 27);
+		loadButton.TabIndex = 86;
+		loadButton.Text = "Load";
+		loadButton.UseVisualStyleBackColor = true;
+		// 
 		// PlotSettings
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
+		Controls.Add(loadButton);
+		Controls.Add(saveButton);
+		Controls.Add(buildButton);
 		Controls.Add(oyRangeButton);
 		Controls.Add(tRangeButton);
 		Controls.Add(yRangeButton);
@@ -788,7 +824,7 @@ partial class PlotSettings {
 		Controls.Add(widthBox);
 		MinimumSize = new Size(320, 640);
 		Name = "PlotSettings";
-		Size = new Size(320, 720);
+		Size = new Size(320, 800);
 		splitContainer.Panel1.ResumeLayout(false);
 		splitContainer.Panel2.ResumeLayout(false);
 		((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
@@ -859,4 +895,7 @@ partial class PlotSettings {
 	public Button tRangeButton;
 	public Label fyLabel;
 	public Button oyRangeButton;
+	public Button buildButton;
+	public Button saveButton;
+	public Button loadButton;
 }
