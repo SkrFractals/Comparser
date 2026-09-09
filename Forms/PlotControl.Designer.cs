@@ -52,6 +52,7 @@ partial class PlotControl {
 		splitContainer.Panel2.Controls.Add(plotBox);
 		splitContainer.Panel2.SizeChanged += Resized;
 		splitContainer.Size = new Size(320, 320);
+		splitContainer.SplitterDistance = 188;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 3;
 		// 
@@ -60,7 +61,7 @@ partial class PlotControl {
 		plotBox.Dock = DockStyle.Fill;
 		plotBox.Location = new Point(0, 0);
 		plotBox.Name = "plotBox";
-		plotBox.Size = new Size(258, 320);
+		plotBox.Size = new Size(120, 320);
 		plotBox.SizeMode = PictureBoxSizeMode.AutoSize;
 		plotBox.TabIndex = 1;
 		plotBox.TabStop = false;
@@ -70,8 +71,9 @@ partial class PlotControl {
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
-		Name = "PlotControl";
 		MaximumSize = new Size(320, 320);
+		MinimumSize = new Size(0, 0);
+		Name = "PlotControl";
 		splitContainer.Panel2.ResumeLayout(false);
 		splitContainer.Panel2.PerformLayout();
 		((ISupportInitialize)splitContainer).EndInit();

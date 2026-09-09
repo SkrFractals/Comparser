@@ -109,6 +109,7 @@ partial class ComparserControl {
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
 		MaximumSize = new Size(320, 320);
+		MinimumSize = new Size(0, 0);
 		Name = "ComparserControl";
 		splitContainer.Panel1.ResumeLayout(false);
 		splitContainer.Panel2.ResumeLayout(false);

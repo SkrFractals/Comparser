@@ -65,7 +65,8 @@ public partial class ParentControl : UserControl {
 		}
 	}
 	private void ParentControl_Load(object sender, EventArgs e) {
-		FormP?.MaximumSize = MinimumSize = MaximumSize = new(0, 0);
+		MinimumSize = MaximumSize = new(0, 0);
+		FormP?.MaximumSize = new(0, 0);
 		FormP?.MinimumSize = new(240, 160);
 		Dock = DockStyle.Fill;
 		Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right | AnchorStyles.Left;

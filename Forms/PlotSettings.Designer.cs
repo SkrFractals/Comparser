@@ -25,6 +25,7 @@ partial class PlotSettings {
 	/// </summary>
 	private void InitializeComponent() {
 		panel = new Panel();
+		clipSelect = new ComboBox();
 		oyRangeButton = new Button();
 		tRangeButton = new Button();
 		yRangeButton = new Button();
@@ -88,7 +89,6 @@ partial class PlotSettings {
 		nextButton = new Button();
 		itfBox = new RichTextBox();
 		animatedBox = new CheckBox();
-		clipSelect = new ComboBox();
 		panel.SuspendLayout();
 		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
@@ -98,6 +98,7 @@ partial class PlotSettings {
 		// 
 		// panel
 		// 
+		panel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 		panel.Controls.Add(clipSelect);
 		panel.Controls.Add(oyRangeButton);
 		panel.Controls.Add(tRangeButton);
@@ -157,6 +158,18 @@ partial class PlotSettings {
 		panel.Name = "panel";
 		panel.Size = new Size(320, 731);
 		panel.TabIndex = 86;
+		// 
+		// clipSelect
+		// 
+		clipSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		clipSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		clipSelect.FormattingEnabled = true;
+		clipSelect.Items.AddRange(new object[] { "Clamp", "Loop", "Overflow" });
+		clipSelect.Location = new Point(6, 527);
+		clipSelect.Name = "clipSelect";
+		clipSelect.Size = new Size(104, 27);
+		clipSelect.TabIndex = 84;
+		clipSelect.Text = "Name Output";
 		// 
 		// oyRangeButton
 		// 
@@ -821,18 +834,6 @@ partial class PlotSettings {
 		animatedBox.Size = new Size(140, 27);
 		animatedBox.TabIndex = 25;
 		animatedBox.Text = "Animate";
-		// 
-		// clipSelect
-		// 
-		clipSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		clipSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		clipSelect.FormattingEnabled = true;
-		clipSelect.Items.AddRange(new object[] { "Clamp", "Loop", "Overflow" });
-		clipSelect.Location = new Point(6, 527);
-		clipSelect.Name = "clipSelect";
-		clipSelect.Size = new Size(104, 27);
-		clipSelect.TabIndex = 84;
-		clipSelect.Text = "Name Output";
 		// 
 		// PlotSettings
 		// 
