@@ -8,7 +8,7 @@ public partial class SettingsControl : ParentControl {
 	private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	public static IComparser? Context;
 	private bool _darkMode = true;
-	public SettingsControl() : base() => InitializeComponent();
+	public SettingsControl() => InitializeComponent();
 	public SettingsControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		Context = _algebras[Algebra];
 		InitializeComponent();
@@ -69,9 +69,9 @@ public partial class SettingsControl : ParentControl {
 		AutoBuild = !AutoBuild;
 		UpdateAuto();
 	}
-	public int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000;
-	public Reporting ReportingMode = Reporting.Report;
-	public bool AutoBuild = true, AutoPlot = true;
+	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000;
+	public static Reporting ReportingMode = Reporting.Report;
+	public static bool AutoBuild = true, AutoPlot = true;
 	private void reportButton_Click(object sender, EventArgs e) {
 		ReportingMode = (Reporting)(((int)ReportingMode + 1) % 3);
 		UpdateReport();
@@ -100,9 +100,11 @@ public partial class SettingsControl : ParentControl {
 
 	private void xMemBox_CheckedChanged(object sender, EventArgs e) {
 		MemX = xMemBox.Checked;
+		MessageBox.Show("This feature is quite advanced and has not yet been fully debugged, it's only about 80% functional. I do not recommend turning this on yet.", "WARNING: Not debugged!");
 	}
 
 	private void xyMemBox_CheckedChanged(object sender, EventArgs e) {
 		MemXy = xyMemBox.Checked;
+		MessageBox.Show("This feature is quite advanced and has not yet been fully debugged, but may be functional.", "WARNING: Not debugged!");
 	}
 }

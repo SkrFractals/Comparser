@@ -24,6 +24,7 @@ partial class PlotSettings {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
+		panel = new Panel();
 		ixeLabel = new Label();
 		ixcLabel = new Label();
 		ixsLabel = new Label();
@@ -757,72 +758,81 @@ partial class PlotSettings {
 		loadButton.Text = "Load";
 		loadButton.UseVisualStyleBackColor = true;
 		// 
+		// panel
+		// 
+		panel.Font = new Font("Consolas", 10F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		panel.Location = new Point(0, 0);
+		panel.Name = "panel";
+		panel.Size = new Size(320, 1080);
+		panel.TabIndex = 86;
+		panel.Controls.Add(loadButton);
+		panel.Controls.Add(saveButton);
+		panel.Controls.Add(buildButton);
+		panel.Controls.Add(oyRangeButton);
+		panel.Controls.Add(tRangeButton);
+		panel.Controls.Add(yRangeButton);
+		panel.Controls.Add(lockResButton);
+		panel.Controls.Add(oyeButton);
+		panel.Controls.Add(oycButton);
+		panel.Controls.Add(oysButton);
+		panel.Controls.Add(iyeButton);
+		panel.Controls.Add(iycButton);
+		panel.Controls.Add(iysButton);
+		panel.Controls.Add(ixeButton);
+		panel.Controls.Add(ixcButton);
+		panel.Controls.Add(ixsButton);
+		panel.Controls.Add(iteButton);
+		panel.Controls.Add(itcButton);
+		panel.Controls.Add(itsButton);
+		panel.Controls.Add(xRangeButton);
+		panel.Controls.Add(delButton);
+		panel.Controls.Add(splitContainer);
+		panel.Controls.Add(fyLabel);
+		panel.Controls.Add(fyBox);
+		panel.Controls.Add(outputSelect);
+		panel.Controls.Add(oyeLabel);
+		panel.Controls.Add(oycLabel);
+		panel.Controls.Add(oysLabel);
+		panel.Controls.Add(oyeBox);
+		panel.Controls.Add(oycBox);
+		panel.Controls.Add(oysBox);
+		panel.Controls.Add(iyeLabel);
+		panel.Controls.Add(iycLabel);
+		panel.Controls.Add(iysLabel);
+		panel.Controls.Add(iyeBox);
+		panel.Controls.Add(iycBox);
+		panel.Controls.Add(iysBox);
+		panel.Controls.Add(addButton);
+		panel.Controls.Add(ixeLabel);
+		panel.Controls.Add(ixcLabel);
+		panel.Controls.Add(ixsLabel);
+		panel.Controls.Add(ixeBox);
+		panel.Controls.Add(ixcBox);
+		panel.Controls.Add(ixsBox);
+		panel.Controls.Add(modeLabel);
+		panel.Controls.Add(iteLabel);
+		panel.Controls.Add(itcLabel);
+		panel.Controls.Add(iteBox);
+		panel.Controls.Add(itcBox);
+		panel.Controls.Add(itsBox);
+		panel.Controls.Add(prevButton);
+		panel.Controls.Add(itlBox);
+		panel.Controls.Add(nextButton);
+		panel.Controls.Add(itfBox);
+		panel.Controls.Add(itsLabel);
+		panel.Controls.Add(modeSelect);
+		panel.Controls.Add(heightLabel);
+		panel.Controls.Add(heightBox);
+		panel.Controls.Add(widthLabel);
+		panel.Controls.Add(animatedBox);
+		panel.Controls.Add(widthBox);
+		// 
 		// PlotSettings
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
-		Controls.Add(loadButton);
-		Controls.Add(saveButton);
-		Controls.Add(buildButton);
-		Controls.Add(oyRangeButton);
-		Controls.Add(tRangeButton);
-		Controls.Add(yRangeButton);
-		Controls.Add(lockResButton);
-		Controls.Add(oyeButton);
-		Controls.Add(oycButton);
-		Controls.Add(oysButton);
-		Controls.Add(iyeButton);
-		Controls.Add(iycButton);
-		Controls.Add(iysButton);
-		Controls.Add(ixeButton);
-		Controls.Add(ixcButton);
-		Controls.Add(ixsButton);
-		Controls.Add(iteButton);
-		Controls.Add(itcButton);
-		Controls.Add(itsButton);
-		Controls.Add(xRangeButton);
-		Controls.Add(delButton);
-		Controls.Add(splitContainer);
-		Controls.Add(fyLabel);
-		Controls.Add(fyBox);
-		Controls.Add(outputSelect);
-		Controls.Add(oyeLabel);
-		Controls.Add(oycLabel);
-		Controls.Add(oysLabel);
-		Controls.Add(oyeBox);
-		Controls.Add(oycBox);
-		Controls.Add(oysBox);
-		Controls.Add(iyeLabel);
-		Controls.Add(iycLabel);
-		Controls.Add(iysLabel);
-		Controls.Add(iyeBox);
-		Controls.Add(iycBox);
-		Controls.Add(iysBox);
-		Controls.Add(addButton);
-		Controls.Add(ixeLabel);
-		Controls.Add(ixcLabel);
-		Controls.Add(ixsLabel);
-		Controls.Add(ixeBox);
-		Controls.Add(ixcBox);
-		Controls.Add(ixsBox);
-		Controls.Add(modeLabel);
-		Controls.Add(iteLabel);
-		Controls.Add(itcLabel);
-		Controls.Add(iteBox);
-		Controls.Add(itcBox);
-		Controls.Add(itsBox);
-		Controls.Add(prevButton);
-		Controls.Add(itlBox);
-		Controls.Add(nextButton);
-		Controls.Add(itfBox);
-		Controls.Add(itsLabel);
-		Controls.Add(modeSelect);
-		Controls.Add(heightLabel);
-		Controls.Add(heightBox);
-		Controls.Add(widthLabel);
-		Controls.Add(animatedBox);
-		Controls.Add(widthBox);
 		MinimumSize = new Size(320, 640);
+		Controls.Add(panel);
 		Name = "PlotSettings";
 		Size = new Size(320, 800);
 		splitContainer.Panel1.ResumeLayout(false);
@@ -834,7 +844,7 @@ partial class PlotSettings {
 	}
 
 	#endregion
-
+	private Panel panel;
 	private Label ixeLabel;
 	private Label ixcLabel;
 	private Label ixsLabel;

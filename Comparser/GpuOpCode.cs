@@ -38,7 +38,7 @@ public abstract partial class Comparser<T> {
 		//SoftAbs,
 		//SoftNeg,
 		Clamp,
-		Exp,	//explog
+		Exp,	//expLog
 		//Exp10,
 		//Exp2,
 		Log,

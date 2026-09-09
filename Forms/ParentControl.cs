@@ -8,13 +8,9 @@ public partial class ParentControl : UserControl {
 	protected ParentControl(MenuControl? root, ParentForm parent) : this() {
 		Root = root ?? (MenuControl)this;
 		(FormP = parent).Attach(this);
-		FormP?.MaximumSize = MinimumSize = MaximumSize = new(0, 0);
-		FormP?.MinimumSize = new(240, 160);
-		Dock = DockStyle.Fill;
-		Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right | AnchorStyles.Left;
 	}
 	public class TextField {
-		public TextField() { }
+		public TextField() => Box = new();
 		public TextField(RichTextBox box, EventHandler textChanged, string text = "", string[]? args = null) {
 			Exp = null;
 			Value = null;
@@ -22,12 +18,12 @@ public partial class ParentControl : UserControl {
 			Args = args ?? [];
 			ComparserControl.InitRichTextBox(Box = box, textChanged);
 		}
-		public string[] Args = [];
+		public readonly string[] Args = [];
 		public object? Exp;
 		public object? ArgsV;
 		public object? Value;
 		public string Text = "";
-		public RichTextBox? Box;
+		public readonly RichTextBox Box;
 	}
 	public virtual void CoreLayout() { }
 	public virtual Size GetSize() => new(0,0);
@@ -69,17 +65,18 @@ public partial class ParentControl : UserControl {
 		}
 	}
 	private void ParentControl_Load(object sender, EventArgs e) {
-		
-		
-		
+		FormP?.MaximumSize = MinimumSize = MaximumSize = new(0, 0);
+		FormP?.MinimumSize = new(240, 160);
+		Dock = DockStyle.Fill;
+		Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right | AnchorStyles.Left;
 	}
 	public virtual void PerformClose() { }
 	protected object? Eval(TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null)
-		=> !Enabled || field.Box == null || !(/*field.Box.Visible &&*/ field.Box.Enabled && !field.Box.ReadOnly) ? null : Eval(SettingsControl.Context, field, cachedParse, args, cancel);
+		=> !Enabled || !(/*field.Box.Visible &&*/ field.Box.Enabled && !field.Box.ReadOnly) ? null : Eval(SettingsControl.Context, field, cachedParse, args, cancel);
 	protected object? Parse(TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null)
 		=> Parse(SettingsControl.Context, field, cachedParse, args, cancel);
 	public static object? Eval(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { // TODO call re-eval together with expressionControl
-		if (c is null || field.Box is null)
+		if (c is null)
 			return null;
 		if (cachedParse && field.Exp != null && field.Text == field.Box.Text) 
 			return field.Value = c.Eval(field.Exp, args);
@@ -88,7 +85,7 @@ public partial class ParentControl : UserControl {
 		return field.Value;
 	}
 	public static object? Parse(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { // TODO call re-eval together with expressionControl
-		if (c is null || field.Box is null || cachedParse && field.Exp != null && field.Text == field.Box.Text)
+		if (c is null || cachedParse && field.Exp != null && field.Text == field.Box.Text)
 			return null;
 		field.Exp = c.Parse(cancel ?? new CancellationTokenSource().Token, field.Text = field.Box.Text, 0, out var colors, PrepareArgs(c, field, args));
 		ComparserControl.ApplyColors(colors, field.Box);

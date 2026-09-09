@@ -3,7 +3,7 @@
 public partial class ParentForm : Form {
 	private ParentControl? _myControl;
 	public bool ActuallyClose = false; // plot should set it to true
-	public ParentForm() : base() => InitializeComponent();
+	public ParentForm() => InitializeComponent();
 
 	public void Attach(ParentControl control) => innerPanel.Controls.Add(_myControl = control);
 	public void MakeLayout() {

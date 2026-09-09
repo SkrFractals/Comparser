@@ -7,7 +7,7 @@ public partial class MenuControl : ParentControl {
 	public readonly SettingsControl? Set;
 	public readonly PlotControl? Plot;
 	public readonly ExpressionControl? Exp;
-	public MenuControl() : base() => InitializeComponent();
+	public MenuControl() => InitializeComponent();
 	public MenuControl(MenuControl? root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
 		Log = new(this, LogForm = new());
@@ -17,7 +17,7 @@ public partial class MenuControl : ParentControl {
 		Plot = new(this, _plotForm = new());
 		//ParentForm[] p = [LogForm, _codeForm, _expForm, _setForm, _plotForm];
 		//foreach (var i in p) i.Show();
-		_plotForm.Show(); // for some reason i have to do this, otherwise the plotter could have its splitContainer permanently docked wrong
+		_plotForm.Show(); // for some reason I have to do this, otherwise the plotter could have its splitContainer permanently docked wrong
 		_plotForm.Size = new(640, 480);
 		Set.SetDarkMode();
 		_plotForm.Close();

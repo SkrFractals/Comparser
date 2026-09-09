@@ -27,7 +27,7 @@ public interface IComparser {
 
 public abstract partial class Comparser<T> : IComparser where T : unmanaged, INumber<T> {
 
-	public Comparser(
+	protected Comparser(
 		bool caseInsensitive = true, 
 		bool operatorLess = true,
 		ushort stackOverflowLimit = 499, 
@@ -63,7 +63,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	#region Interface
 	public object MakeArgs((string alias, object value)[] pairs) => new Value([.. pairs.Select(p => new Value((T)p.value, 0, p.alias))]);
 	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(T.NaN(), 0, p)).ToArray());
-	public static Value AsValue(object? e) => e as Value ?? new();
+	private static Value AsValue(object? e) => e as Value ?? new();
 	public double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null) {
 		var read = new Reader(this, text, cancel, from);
@@ -166,7 +166,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 							Lg();
 						}
 						var actionCode = name switch { // f(x) : "returned"+"string", 1+1 
-							"print" => Actions.Print, // prints the expression and it's value with its type.								f(x) = "returnedstring", 2
+							"print" => Actions.Print, // prints the expression, and it's value with its type.								f(x) = "returnedstring", 2
 							"printvalue" => Actions.PrintValue, // prints just the value, without type (number > string > expression).		returnedString, 2
 							"printnumber" => Actions.PrintNumber, // prints just the numerical value, without fallback to string values.	NaN + NaNi, 2
 							"printstring" => Actions.PrintString, // prints only the string value, even if there's a numeric value			returnedString, '1+1'

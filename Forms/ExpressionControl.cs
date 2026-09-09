@@ -12,7 +12,7 @@ public partial class ExpressionControl : ParentControl {
 	private const int InputSize = 64;
 	private readonly List<ExpRow> _expressionRows = [];
 	private readonly List<Button> _swaps = [];
-	public ExpressionControl() : base() => InitializeComponent();
+	public ExpressionControl() => InitializeComponent();
 	public ExpressionControl(MenuControl root, ParentForm parent) : base(root, parent){
 		InitializeComponent();
 		parent.SetMinSize();
@@ -26,13 +26,13 @@ public partial class ExpressionControl : ParentControl {
 		if (!Visible)
 			return;
 		var row = _expressionRows[index];
-		object? v, args = Root?.Set?.Algebra switch {
+		object? v, args = SettingsControl.Algebra switch {
 			1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), 0, "x")]),
 			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), 0, "x")]),
 			_ => new Comparser<Real>.Value([new(Real.MakeR(index), 0, "x")])
 		};
 		if((v = Eval(row.Field, cachedParse, args)) != null)
-			row.Result.Text = Root?.Set?.Context?.ToString(v,  Root.Set.Decimals);
+			row.Result.Text = SettingsControl.Context?.ToString(v, SettingsControl.Decimals);
 	}
 
 	public override void CoreLayout() {
@@ -43,7 +43,7 @@ public partial class ExpressionControl : ParentControl {
 		var tab = -1;
 		for (var i = 0; i < _expressionRows.Count; ++i, y += (RowHeight + Pad) << 1) {
 			var row = _expressionRows[i];
-			row.Index.Top = row.Field.Box.Top = row.Del.Top = y;
+			row.Index.Top = row.Del.Top = row.Field.Box.Top = y;
 			row.Result.Top = y + RowHeight + Pad;
 			row.Field.Box.TabIndex = ++tab;
 			row.Del.TabIndex = ++tab;
@@ -71,8 +71,8 @@ public partial class ExpressionControl : ParentControl {
 	}
 	private (int expW, int resW, int delL, int swapL) ExpDim() => (
 		Width - InputSize - (RowHeight << 1) - (Pad << 2) - Pad,
-		Width - (RowHeight << 1) - (((Pad << 1) + Pad) << 1),//innerPanel.Width - rSize - (rowHeight << 1) - pad - (pad << 1),
-		Width - ((RowHeight + Pad) << 1),
+		Width - (RowHeight << 1) - ((Pad << 1) + Pad << 1),//innerPanel.Width - rSize - (rowHeight << 1) - pad - (pad << 1),
+		Width - (RowHeight + Pad << 1),
 		Width - RowHeight - Pad);
 	private void ExpAdd(object? sender, EventArgs e) {
 		var i = _expressionRows.Count;
@@ -83,7 +83,7 @@ public partial class ExpressionControl : ParentControl {
 				Name = "index" + si,
 				Text = "x=" + si + ":",
 				AutoSize = true,
-				Font = new("Consolas", RowHeight / 3),
+				Font = new("Consolas", RowHeight / 3.0f),
 				Anchor = a | AnchorStyles.Left,
 				Location = new(Pad, 0),
 				UseMnemonic = false,
@@ -100,7 +100,7 @@ public partial class ExpressionControl : ParentControl {
 			new() {
 				Name = "result" + si,
 				AutoSize = true,
-				Font = new("Consolas", RowHeight / 3),
+				Font = new("Consolas", RowHeight / 3.0f),
 				Anchor = a | AnchorStyles.Left | AnchorStyles.Right,
 				Location = new(Pad, 0),
 				UseMnemonic = false,
@@ -113,7 +113,7 @@ public partial class ExpressionControl : ParentControl {
 				Tag = i,
 				Location = new(0, 0),
 				UseMnemonic = false,
-				Size = new(RowHeight, (RowHeight  / 3) + Pad)
+				Size = new(RowHeight, RowHeight  / 3 + Pad)
 			}, ExpChanged);
 		if (i > 0) {
 			Button swap = new() {
@@ -123,7 +123,7 @@ public partial class ExpressionControl : ParentControl {
 				Tag = i - 1,
 				Location = new(0, 0),
 				UseMnemonic = false,
-				Size = new(RowHeight, (RowHeight / 3) + Pad)
+				Size = new(RowHeight, RowHeight / 3 + Pad)
 			};
 			swap.Click += ExpSwapped;
 			_swaps.Add(swap);

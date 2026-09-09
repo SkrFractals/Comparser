@@ -1,7 +1,12 @@
 ﻿namespace Comparser.Forms;
 
 public partial class PlotSettings : UserControl {
-	public PlotSettings() : base() => InitializeComponent();
+	public PlotSettings() => InitializeComponent();
+	public void Block() => SetBlock(true);
+	public void Unblock() => SetBlock(false);
+	private void SetBlock(bool b) {
+		
+	}
 	/*public RichTextBox IxsBox => ixsBox;
 public RichTextBox IxcBox => ixcBox;
 public RichTextBox IxeBox => ixeBox;

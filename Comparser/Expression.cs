@@ -216,7 +216,7 @@ public abstract partial class Comparser<T> {
 				while (true) {
 					var fail = Fail((r.Operand = new(read, out o, args, cache, (r.Op = o).Order, parseAs)).V);
 					if (fail) {
-						if (parseAs != ParseAs.Expression && F()) // operand failed when we're looking for an argument - go back and take the string and try the defarg there 
+						if (parseAs != ParseAs.Expression && F()) // operand failed when we're looking for an argument - go back and take the string and try the defArg there 
 							break;
 						if (r.Op.EatOp > 0 && F())
 							return; // false; // failed to read operand
@@ -324,7 +324,7 @@ public abstract partial class Comparser<T> {
 						'^' => false, // pow
 						'$' => false, // root/log
 						'&' => false, // sqr
-						'|' => false, // absri
+						'|' => false, // absRi
 						'@' => false, // abs
 						'#' => false, // count
 						'~' => false, // conj

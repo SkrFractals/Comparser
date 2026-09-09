@@ -2,7 +2,7 @@
 using System.Diagnostics;
 namespace Comparser.Forms;
 public partial class ComparserControl : ParentControl {
-	public ComparserControl() : base() => InitializeComponent();
+	public ComparserControl() => InitializeComponent();
 	public ComparserControl(MenuControl root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
 		splitContainer.Panel1MinSize = 3 * Pad + 2 * RowHeight;
@@ -37,7 +37,8 @@ public partial class ComparserControl : ParentControl {
 	private string _toParse = "";
 	private CancellationTokenSource _cancel = new();
 	private CancellationToken _token;
-	private Stopwatch _buildTime = new(), _freeTime = new(), _codeTime = new();
+	private Stopwatch _buildTime = new();
+	private readonly Stopwatch _freeTime = new(), _codeTime = new();
 	private bool _dirtyResult;
 	private void CodeBox_TextChanged(object? sender, EventArgs e) {
 		CodeChanged = true;
@@ -46,13 +47,13 @@ public partial class ComparserControl : ParentControl {
 		RefreshLines();
 	}
 	
-	private Color GetForeColor() => Root?.Set?.Context?.GetColor().f ?? Color.White;
-	private Color GetErrorColor() => Root?.Set?.Context?.GetErrorSuccessColor().e ?? Color.Red;
-	private Color GetSuccessColor() => Root?.Set?.Context?.GetErrorSuccessColor().s ?? Color.Green;
+	private Color GetForeColor() => SettingsControl.Context?.GetColor().f ?? Color.White;
+	private Color GetErrorColor() => SettingsControl.Context?.GetErrorSuccessColor().e ?? Color.Red;
+	private Color GetSuccessColor() => SettingsControl.Context?.GetErrorSuccessColor().s ?? Color.Green;
 	private void Fps_Tick(object? sender, EventArgs e) {
-		var set = Root?.Set;
-		if(set == null)
-			return;
+		//var set = Root?.Set;
+		//if(set == null)
+		//	return;
 		
 		switch (_parsing) {
 		case ParseState.Finished:
@@ -69,20 +70,20 @@ public partial class ComparserControl : ParentControl {
 			}
 			break;
 		case ParseState.Parsing:
-			fps.Interval = (int)Math.Min(set.ReportingDelay, 100 + _buildTime.ElapsedMilliseconds);
-			if (logBox == null || set.ReportingMode == SettingsControl.Reporting.Silent)
+			fps.Interval = (int)Math.Min(SettingsControl.ReportingDelay, 100 + _buildTime.ElapsedMilliseconds);
+			if (logBox == null || SettingsControl.ReportingMode == SettingsControl.Reporting.Silent)
 				return;
 			var r = "BUILDING: " + Math.Floor(_buildTime.ElapsedMilliseconds / 1000.0) + "s\n";
-			if(set.ReportingMode >= SettingsControl.Reporting.Report)
-				r += "Remaining text:\n" + Root?.Set?.Context?.ParsePeek();
+			if(SettingsControl.ReportingMode >= SettingsControl.Reporting.Report)
+				r += "Remaining text:\n" + SettingsControl.Context?.ParsePeek();
 			UpdateLog(r);
 			break;
 		}
-		if (!CodeChanged || !set.AutoBuild)
+		if (!CodeChanged || !SettingsControl.AutoBuild)
 			return;
-		if (_codeTime.ElapsedMilliseconds < set.BuildDelay)
+		if (_codeTime.ElapsedMilliseconds < SettingsControl.BuildDelay)
 			return;
-		if (set.ReportingMode == SettingsControl.Reporting.Silent) 
+		if (SettingsControl.ReportingMode == SettingsControl.Reporting.Silent) 
 			UpdateLog("BUILDING...");
 		Build();
 	}
@@ -116,9 +117,9 @@ public partial class ComparserControl : ParentControl {
 	private void Parse() {
 		Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
 #if UNSAFEPARSE
-		_logs = Root?.Set?.Context?.ReadCode(_toParse, _token, out _colors) ?? [];
+		_logs = SettingsControl.Context?.ReadCode(_toParse, _token, out _colors) ?? [];
 #else
-		try { _logs = Root?.Set?.Context?.ReadCode(_toParse, token, out _colors) ?? []; } catch (Exception e) {
+		try { _logs =SettingsControl.Context?.ReadCode(_toParse, token, out _colors) ?? []; } catch (Exception e) {
 			_logs = [(Color.Red,e.Message), (Color.Red, e.StackTrace ?? "")];
 		}
 #endif
@@ -179,7 +180,7 @@ public partial class ComparserControl : ParentControl {
 		TransferLog();
 		// evaluate expression fields with this newly parsed program
 		Root?.Exp?.ReEval();
-		Root?.Plot?.ReEval(Root?.Set?.Context?.GetPlot()!);
+		Root?.Plot?.ReEval(/*SettingsControl.Context?.GetPlot()!*/);
 		codeBox.TextChanged += CodeBox_TextChanged;
 	}
 	public override Size GetSize() => new((Pad << 1) + 64, 120);

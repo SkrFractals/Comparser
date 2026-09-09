@@ -12,7 +12,7 @@ public interface IPlot {
 	public void ChangeMode(PlotMode xy);
 	public (double, string) SetFixedY(object? yf);
 	public void SetFrame(object? t);
-	public bool Resize(int w, int h, int l);
+	public void Resize(int w, int h, int l);
 	public void ZoomContinuous(int x, int y, double size);
 	public void ZoomBinary(int x, int y, bool zoomIn) => ZoomContinuous(x, y, zoomIn ? .5 : 2);
 	public void Shift(int dx, int dy);
@@ -22,7 +22,7 @@ public interface IPlot {
 	public void AddOutput(string name, object? newRgb, object? newCode);
 	public void SetCode(int output, object? code);
 	public void SetRgb(int output, object? rgb);
-	public string[] GetOutputs();
+	public object[] GetOutputs();
 	public void LockRangeX(bool l);
 	public void LockRangeY(bool l);
 	public void LockRangeO(bool l);
@@ -57,10 +57,11 @@ public abstract partial class Comparser<T>{
 			public PlotEval? Eval = newEval; // evaluator (code, default=z)
 			public Value[] Values = []; // evaluated value buffer
 										//public ChannelProperties R = new(), G = new(), B = new(), H = new(), S = new(), V = new();
-			private Value args = new();
+			private Value _args = new();
 			public void PrepareArgs(int w, int h, int l) {
-				args = new([
+				_args = new([
 					new(T.NaN(), FailReason.Success, "v"),
+					new(T.NaN(), FailReason.Success, "c"),
 					new(T.NaN(), FailReason.Success, "z"),
 					new(T.NaN(), FailReason.Success, "t"),
 					new(T.NaN(), FailReason.Success, "x"),
@@ -71,30 +72,28 @@ public abstract partial class Comparser<T>{
 					new(T.MakeR(l), FailReason.Success, "l")
 				], FailReason.Success);
 			}
-			
-			public Color ProcessColor(Value? value, T z, T t, double x, double y, double f) {
-				args.Values[0].Values = [value ?? new()];
-				args.Values[1].Leaf = z;
-				args.Values[2].Leaf = t;
-				args.Values[3].Leaf = T.MakeR(x);
-				args.Values[4].Leaf = T.MakeR(y);
-				args.Values[5].Leaf = T.MakeR(f);
-				var rgb = ColorCodeRgb?.Eval(0, args);
+			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, T z, T t, double x, double y, double f) {
+				_args.Values[0].Values = [value ?? new()];
+				_args.Values[1].Values = [new(T.MakeR(c.r)), new(T.MakeR(c.g)), new(T.MakeR(c.b))];
+				_args.Values[2].Leaf = z;
+				_args.Values[3].Leaf = t;
+				_args.Values[4].Leaf = T.MakeR(x);
+				_args.Values[5].Leaf = T.MakeR(y);
+				_args.Values[6].Leaf = T.MakeR(f);
+				var rgb = ColorCodeRgb?.Eval(0, _args);
 				if (rgb is null)
-					return Color.Black;
+					return (0,0,0);
 				if (rgb.Values.Length >= 3) {
-					var r = Color.FromArgb(Get(0), Get(1), Get(2));
+					var r = (Get(0), Get(1), Get(2));
 					return r;
 				}
-					
 				if (rgb.Values.Length != 1)
-					return Color.Black;
+					return (0,0,0);
 				var light = Get(0);
-				return Color.FromArgb(light, light, light);
-							
-				byte Get(int i) => (byte)Math.Clamp(255 * T.Re(rgb.Values[i].GetLeaf()), 0, 255);
-
-			} //Color.White; // TODO process the Hsv/RgbColor
+				return (light, light, light);
+				double Get(int i) => T.Re(rgb.Values[i].GetLeaf());
+				//byte Get(int i) => (byte)Math.Clamp(255 * T.Re(rgb.Values[i].GetLeaf()), 0, 255);
+			}
 		}
 
 
@@ -105,7 +104,7 @@ public abstract partial class Comparser<T>{
 			OutputR[output].ColorCodeRgb = rgb as Expression;
 			//_dirtyRgb = true;
 		}
-		public string[] GetOutputs() {
+		public object[] GetOutputs() {
 			string[] r = new string[OutputR.Count];
 			for (int i = 0; i < OutputR.Count; ++i) r[i] = OutputR[i].Name;
 			return r;
@@ -118,11 +117,12 @@ public abstract partial class Comparser<T>{
 			new(false, new(10),new(-10)), // first output (everywhere) [H]
 			new(false, new(0,10),new(0,-10))]; // second output (only X->Y modes) [H]*/
 		public PlotMode Mode = PlotMode.XContour;
-		public double FixedY, Frame;
+		public double FixedY;
+		public int Frame;
 		public int SelectedOutput = -1;
 		public bool LockedRangeX = true, LockedRangeY = true, LockedRangeO = true, LockedRangeT = true, LockedRes = false;
 		public readonly Comparser<T> Context;
-		private Bitmap _bmp = new(1,1);
+		//private Bitmap _bmp = new(1,1);
 		private Color[] _linesX = [], _linesY = [], _linesO = [], _linesT = [];
 		//private bool _dirtyX = true, _dirtyXy = true, _dirtyRgb = true;
 		private readonly IPlotAxis[] _axis;
@@ -152,20 +152,15 @@ public abstract partial class Comparser<T>{
 			Frame = (int)Context.AsDouble(t);
 			//_dirtyX = true;
 		}
-		public bool Resize(int w, int h, int l) { // on screen panel resize
+		public void Resize(int w, int h, int l) { // on screen panel resize
 			if (LockedRes)
-				return false;
-			bool r = false;
-			r |= Resize(LockedRangeX, w, ref _linesX, InputX);
-			r |= Resize(LockedRangeY, h, ref _linesY, InputY);
-			r |= Resize(LockedRangeO, h, ref _linesO, OutputY);
-			r |= Resize(LockedRangeT, l, ref _linesT, InputT);
-			if (r) {
-				_bmp = w < 1 || h < 1 ? new(1, 1) : new(w, h);
-				return true;
-				//_dirtyX = _dirtyXy = true;
-			}
-			return false;
+				return;
+			//bool r = false;
+			_dirty |= ResizeDim(LockedRangeX, w, ref _linesX, InputX);
+			_dirty |= ResizeDim(LockedRangeY, h, ref _linesY, InputY);
+			_dirty |= ResizeDim(LockedRangeO, h, ref _linesO, OutputY);
+			_dirty |= ResizeDim(LockedRangeT, l, ref _linesT, InputT);
+			return;
 
 			T NewBounds(PlotAxis a) => a.Locked switch { 0 => a.start, 2 => a.end, _ => a.center };
 			void Adjust(PlotAxis a, T sce) {
@@ -175,13 +170,12 @@ public abstract partial class Comparser<T>{
 				a.Locked = l; // and switch back to what3ever mode we were in
 			}
 
-			bool Resize(bool locked, int size, ref Color[] lines, /*ref bool dirty,*/ PlotAxis a) {
+			bool ResizeDim(bool locked, int size, ref Color[] lines, /*ref bool dirty,*/ PlotAxis a) {
 				var p = a.length;
 				if (locked) {
 					if (R(ref lines))
 						return false;
 					a.d *= (double)p / size;
-					return true;
 				} else {
 					var b = NewBounds(a);
 					if (R(ref lines))
@@ -250,9 +244,46 @@ public abstract partial class Comparser<T>{
 			if (OutputY.Shift(dx) && Mode == PlotMode.Xy)
 				_dirtyXy = true;*/
 		}
-
+		public class Renders {
+			public List<Expression?> MyRgb;
+			public int Length = -1;
+			public PlotMode Mode;
+			public Bitmap?[] Bitmaps; // [frames]
+			public int W, H;
+			public bool GetBitmap(out Bitmap bmp, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput>? rgbs, bool dirty = false) {
+				if (RgbMatch() && w == W && h == H && length == Length && mode == Mode && !dirty) {
+					if (Bitmaps[frame] == null) {
+						bmp = Bitmaps[frame] = new(w, h);
+						return false;
+					}
+					bmp = Bitmaps[frame];
+					return true;
+				}
+				Mode = mode;
+				bmp = (Bitmaps = new Bitmap[Length = length])[frame] = new Bitmap(W = w, H = h);
+				return false;
+				bool RgbMatch() {
+					var match = true;
+					for (var i = 0; i < rgbs.Count; ++i) {
+						if (i < MyRgb.Count) {
+							if (MyRgb[i] == rgbs[i].ColorCodeRgb)
+								continue;
+							MyRgb[i] = rgbs[i].ColorCodeRgb;
+						} else MyRgb.Add(rgbs[i].ColorCodeRgb);
+						match = false;
+					}
+					if (rgbs.Count >= MyRgb.Count)
+						return match;
+					match = false;
+					MyRgb.RemoveRange(rgbs.Count, MyRgb.Count - rgbs.Count);
+					return match;
+				}
+			}
+		}
+		private bool _dirty;
+		private Renders R = new();
 		public Bitmap Update(int w, int h, int l) {
-			Resize(w, h, l); // if size changed, it will resize everything and mark things dirty
+			Resize(w, h, l); _dirty |= InputX.DirtyL; // if size changed, it will resize everything and mark things dirty
 								 //var dirty = InputX.DirtyL;
 								 // prepare axis lines and plot values if they are dirty
 			if (InputX.DirtyL)
@@ -268,13 +299,12 @@ public abstract partial class Comparser<T>{
 						//foreach (var l in OutputR)
 						Lines(OutputY, _linesY);
 					}*/
-					
 					if(OutputY.DirtyL)
-						Lines(OutputY, _linesY);
+						Lines(OutputY, _linesO);
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						o.Values = o.Eval.GetPlotX(out var d, InputX, InputY, FixedY, InputT, (int)Frame);
-						dirty |= d; // Refresh 1D (X,FixedY) output values
+						_dirty |= d; // Refresh 1D (X,FixedY) output values
 					}
 					break;
 				default: // XY mode:
@@ -289,7 +319,7 @@ public abstract partial class Comparser<T>{
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						o.Values = o.Eval.GetPlotXy(out var d, InputX, InputY, InputT, (int)Frame);
-						dirty |= d; // Refresh 2D (X,Y) output values
+						_dirty |= d; // Refresh 2D (X,Y) output values
 					}
 					break;
 			}
@@ -300,12 +330,12 @@ public abstract partial class Comparser<T>{
 				for (var i = 0; i < axis.Length; ++i) // combine axis lines
 					axis[i] = Max(axis[i], a.lines[i]);
 			}
-			if (!dirty && !_dirtyRgb) // nothing has changed, no need to redraw the screen
+			if (R.GetBitmap(out var _bmp, w, h, l, Frame, Mode, OutputR, _dirty)) // nothing has changed, no need to redraw the screen
 				return _bmp;
-			_dirtyRgb = false;
+			_dirty = false;
 			unsafe {
-				if (_bmp is null || _bmp.Width != _linesX.Length || _bmp.Height != _linesY.Length)
-					return new(1, 1);
+				if (_bmp.Width != _linesX.Length || _bmp.Height != _linesY.Length)
+					return _bmp;
 				var lb = _bmp.LockBits(new(0, 0, _bmp.Width, _bmp.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				byte* p, ptr = (byte*)(void*)lb.Scan0;
 				var intPtr = 0;
@@ -323,20 +353,21 @@ public abstract partial class Comparser<T>{
 							var yColor = _linesY[y];
 							for (var x = intPtr = 0; x < _bmp.Width; ++x, ++intPtr, p += 3) {
 								var z = InputX.Sample(x) + yz;
-								var c = Max(_linesX[x], yColor);
-								T v;
+								var rgbc = Max(_linesX[x], yColor);
+								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
+								//T v;
 								if (Mode == PlotMode.XContour)
 									foreach (var o in OutputR) {
 										if (o.Eval?.Null() ?? true) continue;
 										Value[] prev = o.Values[x].GetValues(), next = o.Values[Math.Min(x + 1, o.Values.Length - 1)].GetValues();
 										for (int i = 0; i < prev.Length; ++i)
-											if (C(OutputY.ValueToScreen(v = prev[i].GetLeaf()), OutputY.ValueToScreen(next[i].GetLeaf())))
-												c = Max(c, o.ProcessColor(prev[i], z, t, x, y, Frame));
+											if (C(OutputY.ValueToScreen(prev[i].GetLeaf()), OutputY.ValueToScreen(next[i].GetLeaf())))
+												c = o.ProcessColor(prev[i], c, z, t, x, y, Frame);
 									}
 								else foreach (var o in OutputR) if (!(o.Eval?.Null() ?? true)) foreach (var prevV in o.Values[intPtr].GetValues())
-									if ((y < OutputY.ValueToScreen(T.Zero())) == (OutputY.ValueToScreen(v = prevV.GetLeaf()) < y))
-										c = Max(c, o.ProcessColor(prevV, z, t, x, y, Frame));
-								(p[2], p[1], p[0]) = (c.R, c.G, c.B);
+									if ((y < OutputY.ValueToScreen(T.Zero())) == (OutputY.ValueToScreen(prevV.GetLeaf()) < y))
+										c = o.ProcessColor(prevV, c, z, t, x, y, Frame);
+								(p[2], p[1], p[0]) = GetRgb(c);
 							}
 							continue;
 							bool C(int v, int n) => y < v != y <= n || y <= v != y < n;
@@ -350,21 +381,24 @@ public abstract partial class Comparser<T>{
 							p = ptr + lb.Stride * y;
 							var yColor = _linesY[y];
 							for (var x = 0; x < _bmp.Width; ++x, ++intPtr, p += 3) {
-
 								var z = InputX.Sample(x) + yz;
-								var c = Max(_linesX[x], yColor);
+								var rgbc = Max(_linesX[x], yColor);
+								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
 								foreach (var o in OutputR) if (!(o.Eval?.Null() ?? true))
 									foreach (var prevV in o.Values[intPtr].GetValues())
-										c = Max(c, o.ProcessColor(prevV, z, t, x, y, Frame));
-								(p[2], p[1], p[0]) = (c.R, c.G, c.B);
+										c = o.ProcessColor(prevV, c, z, t, x, y, Frame);
+								(p[2], p[1], p[0]) = GetRgb(c);
 							}
 						}
 						break;
 				}
+				(byte, byte, byte) GetRgb((double r, double g, double b) c) => ((byte)Math.Clamp(c.r * 255, 0, 255), (byte)Math.Clamp(c.g * 255, 0, 255),(byte)Math.Clamp(c.b * 255, 0, 255));
 				_bmp.UnlockBits(lb);
 			}
 			return _bmp;
 			Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
+			(double r, double g, double b) MaxD((double r, double g, double b) a, (double r, double g, double b) b)
+				=> (Math.Max(a.r, b.r), Math.Max(a.g, b.g), Math.Max(a.b, b.b));
 		}
 		public static int ValueToScreenLin(T value, T start, T d) => (int)(T.Re(!d * (value - start))/+d);//length * T.D2(value - start, end - start, Static.Div);
 		public static T ScreenToValueLin(int x, T start, T d) => start + x * d;//INumber<T>.Lerp(start, end, new((double)x / length));

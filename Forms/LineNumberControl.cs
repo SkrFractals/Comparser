@@ -1,7 +1,7 @@
 ﻿namespace Comparser.Forms;
 public sealed partial class LineNumberControl : UserControl {
 	private readonly RichTextBox? _textBox;
-	public LineNumberControl() : base() => InitializeComponent();
+	public LineNumberControl() => InitializeComponent();
 	public LineNumberControl(RichTextBox? textBox) {
 		SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer, true);
 		BackColor = SystemColors.Control;

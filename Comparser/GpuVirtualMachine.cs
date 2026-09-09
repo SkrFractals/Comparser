@@ -51,13 +51,12 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 		#region Private
 		private int Skip(VmValue input, ref int pc) {
 			var p = pc;
-			var v = Eval(input, ref pc, 0, false);
-			return pc;
+			Eval(input, ref pc, 0, false);
+			return p;
 		}
 		private VmValue Eval(VmValue input, ref int pc, ushort depth = 0, bool evaluate = true) {
 			if (++depth > _stackOverflow) 
 				return new(); // stack overflow
-			var initPc = pc;
 			VmValue eval;
 			var op = new Op(input, (OpCode)ReadByte(ref pc));
 			switch (op.MyCode) {
