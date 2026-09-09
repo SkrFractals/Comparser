@@ -3,10 +3,16 @@ using Comparser.Comparser.Numbers;
 using System.Diagnostics;
 using System.Globalization;
 namespace Comparser.Forms;
-
 public partial class PlotControl : ParentControl {
-	private readonly PlotSettings _s;
+	#region Structures
 	public record SceState(string s, string c, string e, int l);
+	public class Output(string name, RichTextBox rgb, RichTextBox code, EventHandler rgbChanged, EventHandler codeChanged) {
+		public readonly TextField
+			Rgb = new(rgb, rgbChanged, "hsv2rgb(log2hsv(v))", ["v", "c", "z", "t", "x", "y", "f", "w", "h", "l"]),
+			Code = new(code, codeChanged, "z*sin(t)", ["z", "t"]);
+		public readonly string Name = name;
+		public int Clip = 0;
+	}
 	public class AxisControls {
 		public EventHandler? Changed;
 		public AxisControls(IComparser context, RichTextBox s, RichTextBox c, RichTextBox e, Button ls, Button lc, Button le, /*CheckBox l, */IPlotAxis axis, AxisControls? old = null) {
@@ -22,7 +28,6 @@ public partial class PlotControl : ParentControl {
 			S.Box.Enabled = C.Box.Enabled = E.Box.Enabled = false;
 			(S.Box.Text, C.Box.Text, E.Box.Text, _locked) = _axis.GetSce();
 			S.Box.Enabled = C.Box.Enabled = E.Box.Enabled = true;
-			
 			//logBox.Tag = dBox.Tag = sBox.Tag = Axis = this;
 		}
 		public SceState GetState() => new(S.Text, C.Text, E.Text, _locked);
@@ -80,9 +85,23 @@ public partial class PlotControl : ParentControl {
 			States?.Log(Ls); // any of them will work
 		}
 		public void SetLength(int l) => SetSce(_axis.SetLength(l));
-		
 	}
+	#endregion
+
+	#region Variables
+	private readonly PlotSettings _s;
+	private readonly TextField _fy = new(), _w = new(), _h = new(), _tf = new(), _tl = new();
+	private readonly List<Output> _outputs = [];
 	private AxisControls? _inputX, _inputY, _inputT, _outputY;
+	private bool _rangeX = true, _rangeY = true, _rangeO = true, _rangeT = true, _lockedRes;
+	private Task? _draw;
+	private Bitmap? bmp;
+	private Stopwatch plotDelay = new();
+	private int _finishedImage, _length = 1, _frame;
+	private double _fixedY;
+	#endregion
+
+	#region Inits
 	public PlotControl() {
 		InitializeComponent();
 		_s = new PlotSettings();
@@ -91,14 +110,6 @@ public partial class PlotControl : ParentControl {
 		_s.Size = splitContainer.Panel1.Size;
 		_s.Dock = DockStyle.Fill;
 	}
-	public class Output(string name, RichTextBox rgb, RichTextBox code, EventHandler rgbChanged, EventHandler codeChanged) {
-		public readonly TextField 
-			Rgb = new(rgb, rgbChanged, "hsv2rgb(v2hsv(v))", ["v", "c", "z", "t", "x", "y", "f", "w", "h", "l"]),
-			Code = new(code, codeChanged, "z*sin(t)", ["z", "t"]);
-		public readonly string Name = name;
-	}
-	private readonly TextField _fy = new(), _w = new(), _h = new(), _tf = new(), _tl = new();
-	private readonly List<Output> _outputs = [];
 	public PlotControl(MenuControl? root, ParentForm parent) : base(root, parent) {
 		InitializeComponent();
 		_s = new PlotSettings {
@@ -140,6 +151,7 @@ public partial class PlotControl : ParentControl {
 		_s.prevButton.Click += prevButton_Click;
 		_s.animatedBox.CheckedChanged += AniChanged;
 		_s.outputSelect.SelectedIndexChanged += SelectOutput;
+		_s.clipSelect.SelectedIndexChanged += SelectClip;
 		_s.buildButton.Click += ClickBuild;
 		_s.saveButton.Click += ClickSave;
 		_s.loadButton.Click += ClickLoad;
@@ -177,10 +189,10 @@ public partial class PlotControl : ParentControl {
 		_inputY?.States = s;
 		_inputT?.States = s;
 		_outputY?.States = s;
-		_inputX?.Changed += (_, _) => _finishedImage = false;
-		_inputY?.Changed += (_, _) => _finishedImage = false;
-		_inputT?.Changed += (_, _) => _finishedImage = false;
-		_outputY?.Changed += (_, _) => _finishedImage = false;
+		_inputX?.Changed += (_, _) => DirtyImage();
+		_inputY?.Changed += (_, _) => DirtyImage();
+		_inputT?.Changed += (_, _) => DirtyImage();
+		_outputY?.Changed += (_, _) => DirtyImage();
 		_ = new LogSce(_inputX!, s); // input X / DONE
 		_ = new LogSce(_inputY!, s); // 2d input Y / DONE
 		_ = new LogSce(_inputT!, s); // input time / DONE
@@ -196,20 +208,7 @@ public partial class PlotControl : ParentControl {
 		_ = new LogLock(_s.lockResButton, s); // resolution lock / DONE
 		_ = new LogAni(_s.itlBox, _s.itfBox, _inputT!, _s.animatedBox, s); // TODO frame length and index + animate (animate should not update index during animation, only the animated flag)
 	}
-	private void ClickBuild(object? sender, EventArgs e) => UpdatePlot(true);
-	private void ClickSave(object? sender, EventArgs e) {
-		MessageBox.Show("This is not yet implemented, will be very soon.", "NOT IMPLEMENTED YET");
-	}
-	private void ClickLoad(object? sender, EventArgs e) {
-		MessageBox.Show("This is not yet implemented, will be very soon.", "NOT IMPLEMENTED YET");
-	}
-	public void ReEval(/*IPlot p*/) {
-		for(var i = 0; i < _outputs.Count; ++i)
-			GetPlot()?.SetCode(i, Parse(_outputs[i].Code));
-		//p.SetDirty();
-		_finishedImage = false;
-	}
-	public void SetContext(){
+	public void SetContext() {
 		if (Root == null || SettingsControl.Context is not { } context)
 			return;
 		var p = GetPlot();
@@ -224,7 +223,25 @@ public partial class PlotControl : ParentControl {
 		Init();
 		ReEval(/*p*/);
 	}
-	private bool _rangeX = true, _rangeY = true, _rangeO = true, _rangeT = true, _lockedRes;
+	public void ReEval(/*IPlot p*/) {
+		for (var i = 0; i < _outputs.Count; ++i)
+			GetPlot()?.SetCode(i, Parse(_outputs[i].Code));
+		//p.SetDirty();
+		DirtyImage();
+	}
+	#endregion
+
+	#region Actions
+	private void ClickBuild(object? sender, EventArgs e) => UpdatePlot(true);
+	private void ClickSave(object? sender, EventArgs e) {
+		MessageBox.Show("This is not yet implemented, will be very soon.", "NOT IMPLEMENTED YET");
+	}
+	private void ClickLoad(object? sender, EventArgs e) {
+		MessageBox.Show("This is not yet implemented, will be very soon.", "NOT IMPLEMENTED YET");
+	}
+	#endregion
+
+	#region Locks
 	private void LockRangeX(object? sender, EventArgs e) { PeekRange(_s.xRangeButton, _rangeX = !_rangeX); GetPlot()?.LockRangeX(_rangeX); LogState(_s.xRangeButton); }
 	private void LockRangeY(object? sender, EventArgs e) { PeekRange(_s.yRangeButton, _rangeY = !_rangeY); GetPlot()?.LockRangeY(_rangeY); LogState(_s.yRangeButton); }
 	private void LockRangeO(object? sender, EventArgs e) { PeekRange(_s.oyRangeButton, _rangeO = !_rangeO); GetPlot()?.LockRangeO(_rangeO); LogState(_s.oyRangeButton); }
@@ -249,7 +266,9 @@ public partial class PlotControl : ParentControl {
 		b.Text = locked ? Static.LockedSymbol : Static.UnlockedSymbol;
 		b.BackColor = locked ? Color.Red : c?.GetColor().b ?? Color.Black;
 	}
-	
+	#endregion
+
+	#region Outputs
 	public void Add(object? sender, EventArgs e) {
 		if (_s.outputSelect.Text == "") {
 			Err();
@@ -261,8 +280,9 @@ public partial class PlotControl : ParentControl {
 		var c = _s.outputSelect.Items.Count;
 		_s.outputSelect.Items.Add(_s.outputSelect.Text);
 		_s.outputSelect.SelectedIndex = c;//SelectOutput(null, EventArgs.Empty);
+		//_s.clipSelect.SelectedIndex = 0;
 		LogState(_s.outputSelect, (byte)OutputAction.Add);
-		_finishedImage = false;
+		DirtyImage();
 		return;
 		static void Err() => MessageBox.Show("You must write a unique name to the combo box to the right before adding.", "Error: No name.");
 	}
@@ -280,7 +300,7 @@ public partial class PlotControl : ParentControl {
 		_outputs.RemoveAt(_s.outputSelect.SelectedIndex);
 		SelectOutput(null, EventArgs.Empty);
 		LogState(_s.outputSelect, (byte)OutputAction.Remove);
-		_finishedImage = false;
+		DirtyImage();
 		return;
 		static void Err() => MessageBox.Show("You must have some output selected to delete one.", "Error: No name.");
 	}
@@ -293,8 +313,16 @@ public partial class PlotControl : ParentControl {
 		var o = _outputs[i];
 		o.Rgb.Box.Text = o.Rgb.Text;
 		o.Code.Box.Text = o.Code.Text;
+		_s.clipSelect.SelectedIndex = o.Clip;
 		_s.rgbBox.ReadOnly = _s.codeBox.ReadOnly = false;
 		LogState(_s.outputSelect);
+	}
+	private void SelectClip(object? sender, EventArgs e) {
+		var i = _s.outputSelect.SelectedIndex;
+		if (_outputs.Count <= i || i < 0)
+			return;
+		GetPlot()?.SetClip(i, _outputs[i].Clip = _s.clipSelect.SelectedIndex);
+		LogState(_s.clipSelect);
 	}
 	public void CodeChanged(object? sender, EventArgs e) {
 		var i = _s.outputSelect.SelectedIndex;
@@ -302,7 +330,7 @@ public partial class PlotControl : ParentControl {
 			return;
 		GetPlot()?.SetCode(i, Parse(_outputs[i].Code));
 		LogState(_s.codeBox);
-		_finishedImage = false;
+		DirtyImage();
 	}
 	public void RgbChanged(object? sender, EventArgs e) {
 		var i = _s.outputSelect.SelectedIndex;
@@ -311,8 +339,11 @@ public partial class PlotControl : ParentControl {
 		GetPlot()?.SetRgb(i, Parse(_outputs[i].Rgb));
 		//GetPlot()?.SetDirty();
 		LogState(_s.rgbBox);
-		_finishedImage = false;
+		DirtyImage();
 	}
+	#endregion
+
+	#region Ranges
 	//private int prevW = 0;
 	/*private void ResizedForm(object? sender, EventArgs e) {
 		splitContainer.FixedPanel = (splitContainer.Panel1.Width < 320) == (prevW < Width) ? FixedPanel.Panel2 : FixedPanel.Panel1;
@@ -337,7 +368,7 @@ public partial class PlotControl : ParentControl {
 		//RefreshSce(p, InputT, 2);
 		RefreshSce(p, _outputY, 3);
 		LogState(_s.widthBox); // any of them will log the whole state
-		_finishedImage = false;
+		DirtyImage();
 	}
 	private void RefreshSce(IPlot p, AxisControls? a, int i) {
 		if (a == null)
@@ -367,7 +398,7 @@ public partial class PlotControl : ParentControl {
 		splitContainer.FixedPanel = FixedPanel.Panel2;
 		_w.Box.Enabled = true;
 		LogState(_s.widthBox);
-		_finishedImage = false;
+		DirtyImage();
 	}
 	private void HeightChanged(object? sender, EventArgs e) {
 		if (_h.Box.Enabled)
@@ -379,16 +410,31 @@ public partial class PlotControl : ParentControl {
 		splitContainer.FixedPanel = FixedPanel.Panel2;
 		_h.Box.Enabled = true;
 		LogState(_s.heightBox);
-		_finishedImage = false;
+		DirtyImage();
 	}
-	
-	private int _length = 1, _frame;
+	private void ModeSelected(object? sender, EventArgs e) { Set2D(_s, GetPlot(), (PlotMode)_s.modeSelect.SelectedIndex); LogState(_s.modeSelect); DirtyImage(); }
+	private static void Set2D(PlotSettings s, IPlot? p, PlotMode mode) {
+		p?.ChangeMode(mode);
+		s.fyBox.ReadOnly = mode == PlotMode.Xy;
+		//bool enabled = mode == PlotMode.Xy;
+		//s.oysLabel.Visible = s.oysButton.Visible = s.oysBox.Visible = s.oycLabel.Visible = s.oycButton.Visible = s.oycBox.Visible = s.oyeLabel.Visible = s.oyeButton.Visible = s.oyeBox.Visible = !enabled;
+		//s.fyBox.ReadOnly = s.iysLabel.Visible = s.iysButton.Visible = s.iysBox.Visible = s.iycLabel.Visible = s.iycButton.Visible = s.iycBox.Visible = s.iyeLabel.Visible = s.iyeButton.Visible = s.iyeBox.Visible = enabled;
+	}
+	private void FyChanged(object? sender, EventArgs e) {
+		(_fixedY, var v) = GetPlot()?.SetFixedY(Eval(_fy)) ?? (0, "?");
+		_s.fyLabel.Text = "Y: " + v;
+		LogState(_s.fyBox);
+		DirtyImage();
+	}
+	#endregion
+
+	#region Time
 	private void TfChanged(object? sender, EventArgs e) {
 		GetPlot()?.SetFrame(Math.Min(_length - 1, _frame = (int)(SettingsControl.Context?.AsDouble(Eval(_tf)) ?? 0)));
 		if (_s.animatedBox.Checked)
 			return; // do not log undo for automatic animation frame advances
 		LogState(_s.itfBox);
-		_finishedImage = false;
+		DirtyImage();
 	}
 	private void TlChanged(object? sender, EventArgs e) {
 		/*InputT?.SetLength(*/
@@ -399,38 +445,23 @@ public partial class PlotControl : ParentControl {
 		RefreshSce(p, _inputT, 2);
 		TfChanged(null, EventArgs.Empty);
 		LogState(_s.itlBox);
-		_finishedImage = false;
+		DirtyImage();
 	}
 	private void AniChanged(object? sender, EventArgs e) => LogState(_s.animatedBox);
-	private void ModeSelected(object? sender, EventArgs e) { Set2D(_s, GetPlot(), (PlotMode)_s.modeSelect.SelectedIndex); LogState(_s.modeSelect);_finishedImage = false;}
-	private static void Set2D(PlotSettings s, IPlot? p, PlotMode mode) {
-		p?.ChangeMode(mode);
-		s.fyBox.ReadOnly = mode == PlotMode.Xy;
-		//bool enabled = mode == PlotMode.Xy;
-		//s.oysLabel.Visible = s.oysButton.Visible = s.oysBox.Visible = s.oycLabel.Visible = s.oycButton.Visible = s.oycBox.Visible = s.oyeLabel.Visible = s.oyeButton.Visible = s.oyeBox.Visible = !enabled;
-		//s.fyBox.ReadOnly = s.iysLabel.Visible = s.iysButton.Visible = s.iysBox.Visible = s.iycLabel.Visible = s.iycButton.Visible = s.iycBox.Visible = s.iyeLabel.Visible = s.iyeButton.Visible = s.iyeBox.Visible = enabled;
-	}
-	private double _fixedY;
-	private void FyChanged(object? sender, EventArgs e) {
-		(_fixedY, var v) = GetPlot()?.SetFixedY(Eval(_fy)) ?? (0, "?");
-		_s.fyLabel.Text = "Y: " + v;
-		LogState(_s.fyBox);
-		_finishedImage = false;
-	}
-
-	//private void PlotButton_Click(object sender, EventArgs e) => Root?.ShowC(_setForm, FormP);
-	public override Size GetSize() => new(120, Pad + 4 * (Pad + RowHeight));
-	private IPlot? GetPlot() => SettingsControl.Context?.GetPlot();
-	//private IComparser? GetContext() => SettingsControl.Context;
 	private void Fps_Tick(object? sender, EventArgs e) {
-		if (_s.animatedBox.Checked && _finishedImage)
+		if (_s.animatedBox.Checked && _finishedImage > 0)
 			nextButton_Click(_s.nextButton, EventArgs.Empty);
 		UpdatePlot();
 	}
-	private bool _finishedImage;
-	private Task? _draw;
 	private void UpdatePlot(bool forced = false) {
-		if (_finishedImage || !(_draw?.IsCompleted ?? true))
+		if (_finishedImage == 1) {
+			_s.Unblock();
+			_finishedImage = 2;
+			if (bmp != null && plotBox.Image != bmp)
+				plotBox.Image = bmp;
+			return;
+		}
+		if (!(_draw?.IsCompleted ?? true))
 			return;
 		// draw blocks/delays
 		if (SettingsControl.AutoPlot || forced) {
@@ -443,27 +474,36 @@ public partial class PlotControl : ParentControl {
 			}
 		} else return;
 		_s.Block();
-		_draw = Task.Run(UpdatePlotAsync);
-		
+		_draw = Task.Run(() => UpdatePlotAsync(splitContainer.Panel2.Width, splitContainer.Panel2.Height));
+
 		//plotBox.Size = plotBox.Image.Size;
 		//_dirty = false;
 	}
-	private void UpdatePlotAsync() {
-		if (GetPlot() is { } p) { plotBox.Image = p.Update(splitContainer.Panel2.Width, splitContainer.Panel2.Height, _length); }
-		_s.Unblock();
+	private void UpdatePlotAsync(int w, int h) {
+		if (GetPlot() is { } p) { bmp = p.Update(w, h, _length); }
+		_finishedImage = 1;
 		_draw = null;
-		_finishedImage = true;
 	}
-	private Stopwatch plotDelay = new();
-
+	private void DirtyImage() {
+		_finishedImage = 0;
+		_s.buildButton.Text = "PLOT";
+	}
 	private void prevButton_Click(object? sender, EventArgs e) {
 		_tf.Box.Text = ((_length - 1 + _frame) % _length).ToString();
 		//var l = (int)(GetContext()?.AsDouble(tl.Value) ?? 1);
 		//tf.Text = ((l - 1 + (int)(GetContext()?.AsDouble(Eval(tf)) ?? 0)) % l).ToString();
 	}
-	private void nextButton_Click(object? sender, EventArgs e) 
+	private void nextButton_Click(object? sender, EventArgs e)
 		=> _tf.Box.Text = ((1 + _frame) % _length).ToString();//tf.Text = ((1 + (int)(GetContext()?.AsDouble(Eval(tf)) ?? 0)) % (int)(GetContext()?.AsDouble(tl.Value) ?? 1)).ToString();
+	#endregion
 
+	#region Getters
+	public override Size GetSize() => new(120, Pad + 4 * (Pad + RowHeight));
+	private IPlot? GetPlot() => SettingsControl.Context?.GetPlot();
+	//private IComparser? GetContext() => SettingsControl.Context;
+	#endregion
+
+	#region LogState
 	private void LogState(Control c, byte action = 0) => _myStates[SettingsControl.Context!].Log(c, action);
 	override protected bool ProcessCmdKey(ref Message msg, Keys k) {
 		if(SettingsControl.Context is not { } c)
@@ -479,4 +519,5 @@ public partial class PlotControl : ParentControl {
 		return base.ProcessCmdKey(ref msg, k);
 	}
 	private readonly Dictionary<IComparser, States> _myStates = [];
+	#endregion
 }

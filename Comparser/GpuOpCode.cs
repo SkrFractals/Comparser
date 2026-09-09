@@ -187,6 +187,15 @@ public abstract partial class Comparser<T> {
 		Cub,		// = Mul(X,X,X)
 		Quart,		// = Mul(X,X,X,X)
 		// Special
-		Gauss,		// = Exp(Neg(Sqr(X)))
+		Gauss,      // = Exp(Neg(Sqr(X)))
+		// Colors
+		Rgb2hsv,
+		Hsv2rgb,
+		Log2hsv,
+		Lin2hsv,
+		Exp2hsv,
+		Log2rgb,
+		Lin2rgb,
+		Exp2rgb
 	}
 }

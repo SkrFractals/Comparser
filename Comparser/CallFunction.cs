@@ -1,4 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
+using System.Drawing.Text;
 namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	#region Call Functions
@@ -79,6 +80,7 @@ public abstract partial class Comparser<T> {
 		}
 		protected abstract Value EvalF(ushort depth, Value v, Value args);
 		public override GpuValue GpuParse(ushort depth) => new(OpCode, base.GpuParse(depth));
+		protected static Value Triple((double a, double b, double c) v) => new([new(T.MakeR(v.a)), new(T.MakeR(v.b)), new(T.MakeR(v.c))]);
 	}
 	private class FuncTextOperator(Reader read, CallFunction parent, Func<ushort, string, Value> del, Value args)
 		: FunctionExpression(read, parent, OpCode.NotAvailable, args) {
@@ -111,6 +113,32 @@ public abstract partial class Comparser<T> {
 	private class FuncOperator4(Reader read, CallFunction parent, Func<T, T, T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort _, Value v, Value args) => v.Values.Length == 4 ? Value.Operate4(v.Values[0], v.Values[1], v.Values[2], v.Values[3], comp) : new();
 	}
+	#endregion
+
+	#region Function Expressions - Colors
+	private class FuncColorSpace(Reader read, CallFunction parent, Value args, OpCode oc, Func<(double, double, double), (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
+		override protected Value EvalF(ushort depth, Value v, Value args) => (v = CollapseScalar(v)).Values.Length switch {
+			0 => None,
+			3 => Triple(del((T.Re(v.Values[0].GetLeaf()), T.Re(v.Values[1].GetLeaf()), T.Re(v.Values[2].GetLeaf())))),
+			_ => new(v.Values[0].GetLeaf()),
+		};
+	}
+	private class FuncRgb2hsv(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Rgb2hsv, Static.Rgb2hsv) { }
+	private class FuncHsv2rgb(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Hsv2rgb, Static.Hsv2rgb) { }
+	private class FuncHsv(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, double, (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
+		override protected Value EvalF(ushort depth, Value v, Value args) => Value.OperateValue(v, To, null);
+		protected virtual Value To(Value val, object? _) => Triple(del(val.GetLeaf(), 1));
+	}
+	private class FuncRgb(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, double, (double, double, double)> del) : FuncHsv(read, parent, args, oc, (_,_)=>(0,0,0)) {
+		protected override Value To(Value val, object? _) => Triple(Static.Hsv2rgb(del(val.GetLeaf(), 1)));
+	}
+	private class FuncLog2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2hsv, INumber<T>.Log2hsv) { }
+	private class FuncLog2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2rgb, INumber<T>.Log2hsv) { }
+	private class FuncLin2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2hsv, INumber<T>.Lin2hsv) { }
+	private class FuncLin2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2rgb, INumber<T>.Lin2hsv) { }
+	private class FuncExp2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Exp2hsv, INumber<T>.Exp2hsv) { }
+	private class FuncExp2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Exp2rgb, INumber<T>.Exp2hsv) { }
+
 	#endregion
 
 	#region Function Expressions - Vectors

@@ -60,6 +60,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				Square = new([(X, new(new(context, "xx", cancel), out _, X), null)]), // TODO maybe later implement it for performance
 				Cub = new([(X, new(new(context, "xxx", cancel), out _, X), null)]),
 				Quart = new([(X, new(new(context, "sqr(sqr(x))",  cancel), out _,X), null)]);
+				// TODO rgb2hsb, hsv2rgb, log2hsv, lin2hsv, exp2hsv, log2rgb, lin2rgb, exp2rgb... or maybe actually implement those...?
 		}
 		private static Subs? _subs;
 		public bool ParseByteCode(CancellationToken cancel, Comparser<T> context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {

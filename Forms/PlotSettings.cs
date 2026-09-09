@@ -2,10 +2,10 @@
 
 public partial class PlotSettings : UserControl {
 	public PlotSettings() => InitializeComponent();
-	public void Block() => SetBlock(true);
-	public void Unblock() => SetBlock(false);
-	private void SetBlock(bool b) {
-		
+	public void Block() { SetEnabled(false); buildButton.Text = "CANCEL"; }
+	public void Unblock() { SetEnabled(true); buildButton.Text = "OK"; }
+	private void SetEnabled(bool b) {
+		panel.Visible = itfBox.ReadOnly = itlBox.ReadOnly = prevButton.Enabled = nextButton.Enabled = loadButton.Enabled = saveButton.Enabled = b;
 	}
 	/*public RichTextBox IxsBox => ixsBox;
 public RichTextBox IxcBox => ixcBox;

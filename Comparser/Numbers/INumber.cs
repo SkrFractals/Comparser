@@ -9,9 +9,10 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 
 	#region Export
 	public string ToString(int d);
-	public static Color ToColorLog(T t, double repeatValue = 1) { var s = +t; return Hsv((T.Arg(t) + Math.PI) * 360 / Math.Tau, 1 - Math.Exp(-s), Math.Log(s) * .5 % repeatValue); }
-	public static Color ToColorLin(T t, double repeatValue = 1) { var s = +t; return Hsv((T.Arg(t) + Math.PI) * 360 / Math.Tau, 1 - Math.Exp(-s), Math.Sqrt(s) % repeatValue); }
-	public static Color ToColorExp(T t) => Hsv((T.Arg(t) + Math.PI) * 360 / Math.Tau, 1, 1 - Math.Exp(-+t));
+	public static (double h, double s, double v) Log2hsv(T t, double repeatValue = 1) { var s = +t; return Hsv2rgb(((T.Arg(t) + Math.PI) /* * 360 */ / Math.Tau, 1 - Math.Exp(-s), Math.Log(s) * .5 % repeatValue)); }
+	public static (double h, double s, double v) Lin2hsv(T t, double repeatValue = 1) { var s = +t; return Hsv2rgb(((T.Arg(t) + Math.PI) /* * 360 */ / Math.Tau, 1 - Math.Exp(-s), Math.Sqrt(s) % repeatValue)); }
+	public static (double h, double s, double v) Exp2hsv(T t, double _) => Hsv2rgb(((T.Arg(t) + Math.PI) /* * 360 */ / Math.Tau, 1, 1 - Math.Exp(-+t)));
+
 	public static byte[] ToBytes(T str) {
 		var size = Marshal.SizeOf(str);
 		var arr = new byte[size];

@@ -85,28 +85,27 @@ public static class Static {
 	}
 
 	/// <summary>
-	/// turn hsv into rgb color
+	/// turns hsv into rgb color
 	/// </summary>
-	/// <param name="h">0-360 hue</param>
+	/// <param name="h">0-1 hue</param>
 	/// <param name="s">0-1 saturation</param>
 	/// <param name="v">0-1 value</param>
 	/// <returns></returns>
-	public static Color Hsv(double h, double s, double v) {
-		if (s > 0) {
-			var i = (int)Math.Truncate(h = h >= 360 ? 0 : h / 60);
-			double f = h - i, p = v * (1.0 - s), q = v * (1.0 - s * f), t = v * (1.0 - s * (1.0 - f));
-			var (r, g, b) = i switch {
-				0 => (v, t, p),
-				1 => (q, v, p),
-				2 => (p, v, t),
-				3 => (p, q, v),
-				4 => (t, p, v),
-				_ => (v, p, q)
-			};
-			return Color.FromArgb((byte)(255 * r), (byte)(255 * g), (byte)(255 * b));
-		}
-		var l = (byte)(255 * v);
-		return Color.FromArgb(l, l, l);
+	public static (double r, double g, double b) Hsv2rgb((double h, double s, double v) x) {
+		if (x.s <= 0)
+			return (x.v, x.v, x.v);
+		var i = (int)Math.Truncate(x.h = 6 * x.h % 1);
+		double f = x.h - i, p = x.v * (1.0 - x.s), q = x.v * (1.0 - x.s * f), t = x.v * (1.0 - x.s * (1.0 - f));
+		return i switch { 0 => (x.v, t, p), 1 => (q, x.v, p), 2 => (p, x.v, t), 3 => (p, q, x.v), 4 => (t, p, x.v), _ => (x.v, p, q) };
+	}
+	public static (double h, double s, double v) Rgb2hsv((double r, double g, double b) x) {
+		(double min, double max) = x.r < x.g
+			? x.r < x.b ? (x.r, Math.Max(x.g, x.b)) : (x.b, Math.Max(x.r, x.g))
+			: x.g < x.b ? (x.g, Math.Max(x.r, x.b)) : (x.b, Math.Max(x.r, x.g));
+		double delta = max - min, s = max == 0.0 ? 0.0 : delta / max;
+		if (delta == 0)	return (0, s, max);
+		double h = (max == x.r ? ((x.g - x.b) / delta) % 6 : max == x.g ? ((x.b - x.r) / delta) + 2 : ((x.r - x.g) / delta) + 4) / 6;
+		return (h < 0 ? 1 + h : h, s, max);
 	}
 	public static string _i(string i, string c) => i is "1" or "-1" ? c : i + c; // redundant part of I.ToString
 	//private static string _s(double v, int d) => d < 0 ? v.ToString() : v.ToString("F" + d.ToString()); 

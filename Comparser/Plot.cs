@@ -1,5 +1,6 @@
 ﻿using Comparser.Forms;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 namespace Comparser.Comparser;
 public enum PlotMode : byte {
 	XFill, // X -> Fill Y
@@ -22,6 +23,7 @@ public interface IPlot {
 	public void AddOutput(string name, object? newRgb, object? newCode);
 	public void SetCode(int output, object? code);
 	public void SetRgb(int output, object? rgb);
+	public void SetClip(int output, int clip);
 	public object[] GetOutputs();
 	public void LockRangeX(bool l);
 	public void LockRangeY(bool l);
@@ -48,7 +50,7 @@ public abstract partial class Comparser<T>{
 				public Expression? CustomScale;
 			}*/
 			//public enum ColorMode { Rgb, Hsv }
-
+			public int Clip = 0;
 			public string Name = name;
 			//public ColorMode Mode = mode;
 			public Expression? ColorCodeRgb = newRgb; // default=rgb(value)
@@ -91,7 +93,8 @@ public abstract partial class Comparser<T>{
 					return (0,0,0);
 				var light = Get(0);
 				return (light, light, light);
-				double Get(int i) => T.Re(rgb.Values[i].GetLeaf());
+				double Get(int i) => Clip switch { 0 => Math.Clamp(T.Re(rgb.Values[i].GetLeaf()), 0, 1), 1 => Loop(T.Re(rgb.Values[i].GetLeaf())), _ => T.Re(rgb.Values[i].GetLeaf()) };
+				double Loop(double i) => i < 0 ? 1 - (-i % 1) : i % 1;
 				//byte Get(int i) => (byte)Math.Clamp(255 * T.Re(rgb.Values[i].GetLeaf()), 0, 255);
 			}
 		}
@@ -100,10 +103,8 @@ public abstract partial class Comparser<T>{
 		public void DelOutput(int output) => OutputR.RemoveAt(output);
 		public void AddOutput(string name, object? newRgb, object? newCode) => OutputR.Add(new(name, new(newCode), newRgb as Expression));
 		public void SetCode(int output, object? code) => OutputR[output].Eval = new(code);
-		public void SetRgb(int output, object? rgb) {
-			OutputR[output].ColorCodeRgb = rgb as Expression;
-			//_dirtyRgb = true;
-		}
+		public void SetRgb(int output, object? rgb) => OutputR[output].ColorCodeRgb = rgb as Expression;
+		public void SetClip(int output, int clip) => OutputR[output].Clip = clip;
 		public object[] GetOutputs() {
 			string[] r = new string[OutputR.Count];
 			for (int i = 0; i < OutputR.Count; ++i) r[i] = OutputR[i].Name;
@@ -245,37 +246,40 @@ public abstract partial class Comparser<T>{
 				_dirtyXy = true;*/
 		}
 		public class Renders {
-			public List<Expression?> MyRgb;
+			public List<(Expression? e, int c)> Outs = [];
 			public int Length = -1;
 			public PlotMode Mode;
-			public Bitmap?[] Bitmaps; // [frames]
+			public Bitmap?[] Bitmaps = []; // [frames]
 			public int W, H;
-			public bool GetBitmap(out Bitmap bmp, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput>? rgbs, bool dirty = false) {
-				if (RgbMatch() && w == W && h == H && length == Length && mode == Mode && !dirty) {
-					if (Bitmaps[frame] == null) {
+			public bool GetBitmap(out Bitmap bmp, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false) {
+				if (Match() && w == W && h == H && length == Length && mode == Mode && !dirty) {
+					var b = Bitmaps[frame];
+					if (b == null) {
 						bmp = Bitmaps[frame] = new(w, h);
 						return false;
 					}
-					bmp = Bitmaps[frame];
+					bmp = b;
 					return true;
 				}
 				Mode = mode;
-				bmp = (Bitmaps = new Bitmap[Length = length])[frame] = new Bitmap(W = w, H = h);
+				bmp = (Bitmaps = new Bitmap[Length = length])[frame] = new Bitmap(Math.Max(1, W = w), Math.Max(1, H = h));
 				return false;
-				bool RgbMatch() {
+				bool Match() {
 					var match = true;
 					for (var i = 0; i < rgbs.Count; ++i) {
-						if (i < MyRgb.Count) {
-							if (MyRgb[i] == rgbs[i].ColorCodeRgb)
+						var (e, c) = Outs[i];
+						var ri = rgbs[i];
+						if (i < Outs.Count) {
+							if (e == ri.ColorCodeRgb && c == ri.Clip)
 								continue;
-							MyRgb[i] = rgbs[i].ColorCodeRgb;
-						} else MyRgb.Add(rgbs[i].ColorCodeRgb);
+							Outs[i] = (ri.ColorCodeRgb, ri.Clip);
+						} else Outs.Add((ri.ColorCodeRgb, ri.Clip));
 						match = false;
 					}
-					if (rgbs.Count >= MyRgb.Count)
+					if (rgbs.Count >= Outs.Count)
 						return match;
 					match = false;
-					MyRgb.RemoveRange(rgbs.Count, MyRgb.Count - rgbs.Count);
+					Outs.RemoveRange(rgbs.Count, Outs.Count - rgbs.Count);
 					return match;
 				}
 			}
@@ -397,8 +401,8 @@ public abstract partial class Comparser<T>{
 			}
 			return _bmp;
 			Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
-			(double r, double g, double b) MaxD((double r, double g, double b) a, (double r, double g, double b) b)
-				=> (Math.Max(a.r, b.r), Math.Max(a.g, b.g), Math.Max(a.b, b.b));
+			//(double r, double g, double b) MaxD((double r, double g, double b) a, (double r, double g, double b) b)
+			//	=> (Math.Max(a.r, b.r), Math.Max(a.g, b.g), Math.Max(a.b, b.b));
 		}
 		public static int ValueToScreenLin(T value, T start, T d) => (int)(T.Re(!d * (value - start))/+d);//length * T.D2(value - start, end - start, Static.Div);
 		public static T ScreenToValueLin(int x, T start, T d) => start + x * d;//INumber<T>.Lerp(start, end, new((double)x / length));

@@ -1049,7 +1049,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["logb", "LogB", "Logb"], new Cf2(INumber<T>.LogB, OpCode.LogB)); // log_b(x)
 		A(["softabsb", "SoftAbsb", "Softabsb", "sftabsb", "SftAbsb", "Sftabsb", "softplusb", "SoftPlusb", "Softplusb", "sftplusb", "SftPlusb", "Sftplusb"], new Cf2(INumber<T>.SoftAbsB, OpCode.SoftAbsB)); // = e^(1+ln(z))
 		A(["softnegb", "SoftNegb", "Softnegb", "sftnegb", "SftNegb", "Sftnegb", "softminusb", "SoftMinusb", "Softminusb", "sftminusb", "SftMinusb", "Sftminusb"], new Cf2(INumber<T>.SoftNegB, OpCode.SoftNegB)); // = e^(1+ln(z))
-		
+
+
 		// triple arguments
 		A(["clamp", "Clamp"], new Cf3(T.Clamp, OpCode.Clamp)); // component-wise clamp
 		A(["softclamp", "SoftClamp", "Softclamp","sftclamp", "SftClamp", "Sftclamp" ], new Cf3(INumber<T>.SoftClamp, OpCode.SoftClamp)); // natural soft clamp
@@ -1135,12 +1136,23 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["conj","Conj","conjugate","Conjugate"],OpConj);// conjugate: negates all imaginary units, conj(r+ai+bj+dk) = r-ai-bj-bk
 		A(["softabs", "SoftAbs", "Softabs", "sftabs", "SftAbs", "Sftabs", "softplus", "SoftPlus", "Softplus", "sftplus", "SftPlus", "Sftplus"], new Cf(INumber<T>.SoftAbs, OpCode.SoftAbs)); // = e^(1+ln(z))
 		A(["softneg", "SoftNeg", "Softneg", "sftneg", "SftNeg", "Sftneg", "softminus", "SoftMinus", "Softminus", "sftminus", "SftMinus", "Sftminus"], new Cf(INumber<T>.SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
+
 		// powers
 		A(["sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(T.Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
 		A(["sqr", "Sqr", "square", "Square"], OpSqr); // square = z^2
 		A(["cbrt", "Cbrt", "cuberoot", "CubeRoot", "Cuberoot"], new Cf(INumber<T>.Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
 		A(["cube", "Cube"], new Cf(T.Cub, OpCode.Cub)); // cube = z^3
 		A(["quart", "hypercube", "HyperCube", "Hypercube", "tesseract", "Tesseract"], new Cf(T.Quart, OpCode.Quart)); // z^4
+
+		// colors
+		A(["rgb2hsv", "Rgb2hsv", "Rgb2Hsv", "rgbtohsv", "RgbToHsv", "Rgbtohsv"], new Ce(typeof(FuncRgb2hsv)));
+		A(["hsv2rgb", "Hsv2rgb", "Hsv2Rgb", "hsvtorgb", "HsvToRgb", "Hsvtorgb"], new Ce(typeof(FuncHsv2rgb)));
+		A(["log2hsv", "Log2hsv", "Log2Hsv", "logtohsv", "LogToHsv", "Logtohsv"], new Ce(typeof(FuncLog2hsv)));
+		A(["lin2hsv", "Lin2hsv", "Lin2Hsv", "lintohsv", "LinToHsv", "Lintohsv"], new Ce(typeof(FuncLin2hsv)));
+		A(["exp2hsv", "Exp2hsv", "Exp2Hsv", "exptohsv", "ExpToHsv", "Exptohsv"], new Ce(typeof(FuncExp2hsv)));
+		A(["log2rgb", "Log2rgb", "Log2Rgb", "logtorgb", "LogToRgb", "Logtorgb"], new Ce(typeof(FuncLog2rgb)));
+		A(["lin2rgb", "Lin2rgb", "Lin2Rgb", "lintorgb", "LinToRgb", "Lintorgb"], new Ce(typeof(FuncLin2rgb)));
+		A(["exp2rgb", "Exp2rgb", "Exp2Rgb", "exptorgb", "ExpToRgb", "Exptorgb"], new Ce(typeof(FuncExp2rgb)));
 
 		// specials
 		A(["fact", "Fact", "factorial", "Factorial"], OpFact); // factorial

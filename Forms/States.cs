@@ -7,7 +7,7 @@ namespace Comparser.Forms;
 public class States {
 	public bool Suppressed;
 	private Stack<ILogSet> Undos = [], Redos = [];
-	internal Dictionary<Control, ILogSet> D;
+	internal Dictionary<Control, ILogSet> D = [];
 	internal void Log(Control sender, byte action = 0) { // sender calls this when it finished a transaction
 		if (Suppressed || !D.TryGetValue(sender, out var s)) return;
 		s.LogUndo(action, true);
@@ -121,12 +121,12 @@ internal enum OutputAction {
 	Add,
 	Remove
 }
-record OutState(string s, string r, string c);
+record OutState(string s, string r, string c, int l);
 internal class LogOutput : LogSet<OutState> { // type, selectName, rgbCode, codeEval
 	internal LogOutput(PlotSettings s, PlotControl c , States t) { S = s; C = c; LogUndo(); t.D[S.outputSelect] = t.D[S.rgbBox] = t.D[S.codeBox] = this; }
 	private PlotSettings S;
 	private PlotControl C;
-	internal override OutState GetState() => new((string?)S.outputSelect.SelectedItem ?? "", S.rgbBox.Text, S.codeBox.Text);
+	internal override OutState GetState() => new((string?)S.outputSelect.SelectedItem ?? "", S.rgbBox.Text, S.codeBox.Text, S.clipSelect.SelectedIndex);
 	protected override void RestoreUndo(LogState<OutState> from, LogState<OutState> to) {
 		// remove: from = (remove, fallbacked), to (_, removed)
 		// add: from = (add, added), to (_, backto)
@@ -159,6 +159,7 @@ internal class LogOutput : LogSet<OutState> { // type, selectName, rgbCode, code
 		S.outputSelect.SelectedItem = s.s;
 		S.rgbBox.Text = s.r;
 		S.codeBox.Text = s.c;
+		S.clipSelect.SelectedIndex = s.l;
 	}
 }
 internal class LogCombo : LogSet<int> { // for the code
