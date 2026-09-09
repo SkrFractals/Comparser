@@ -234,6 +234,7 @@ partial class SettingsControl {
 		Controls.Add(decimalBox);
 		Controls.Add(algebraBox);
 		Controls.Add(darkButton);
+		MaximumSize = new Size(320, 320);
 		Name = "SettingsControl";
 		ResumeLayout(false);
 		PerformLayout();

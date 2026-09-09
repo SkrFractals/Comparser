@@ -26,13 +26,13 @@ partial class LogControl {
 		// 
 		// logBox
 		// 
-		logBox.Dock = DockStyle.Fill;
 		logBox.DetectUrls = false;
-		logBox.Font = new Font("Consolas", 12);
-		logBox.Location = new Point(3, 3);
+		logBox.Dock = DockStyle.Fill;
+		logBox.Font = new Font("Consolas", 12F);
+		logBox.Location = new Point(0, 0);
 		logBox.Name = "logBox";
 		logBox.ReadOnly = true;
-		logBox.Size = new Size(314, 314);
+		logBox.Size = new Size(320, 320);
 		logBox.TabIndex = 0;
 		logBox.Text = "[logs]";
 		// 
@@ -41,8 +41,8 @@ partial class LogControl {
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(logBox);
+		MaximumSize = new Size(320, 320);
 		Name = "LogControl";
-		Size = new Size(320, 320);
 		ResumeLayout(false);
 	}
 

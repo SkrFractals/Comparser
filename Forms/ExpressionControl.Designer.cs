@@ -43,6 +43,7 @@ partial class ExpressionControl {
 		Controls.Add(expBox);
 		Name = "ExpressionControl";
 		Size = new Size(320, 320);
+		MaximumSize = new Size(320, 320);
 		ResumeLayout(false);
 	}
 

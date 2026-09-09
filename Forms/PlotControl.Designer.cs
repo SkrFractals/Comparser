@@ -71,6 +71,7 @@ partial class PlotControl {
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
 		Name = "PlotControl";
+		MaximumSize = new Size(320, 320);
 		splitContainer.Panel2.ResumeLayout(false);
 		splitContainer.Panel2.PerformLayout();
 		((ISupportInitialize)splitContainer).EndInit();

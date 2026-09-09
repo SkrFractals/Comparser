@@ -83,6 +83,7 @@ partial class MenuControl {
 		Controls.Add(codeButton);
 		Controls.Add(expButton);
 		Controls.Add(plotButton);
+		MaximumSize = new Size(320, 320);
 		Name = "MenuControl";
 		ResumeLayout(false);
 	}
