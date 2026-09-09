@@ -5,21 +5,28 @@ Complex Computer Parser
   
 ## EXECUTION STAGES:  
 Comparser has two distinct stages:  
-Parser stage (COMMANDS) — read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage.  
-Evaluation stage (EXPRESSIONS) — after parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
+  
+### Parser stage (COMMANDS)  
+Read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage. 
+This language half is imperative.  
+  
+### Evaluation stage (EXPRESSIONS)  
+After parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
 Case-sensitivity optional - if you choose insensitive, all uppercase letters are internally converted to lowercase.  
+This language half is functional.  
   
 ## COMMANDS:  
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.  
 You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
   
-### Function definition:  
+### <img width="17" height="15" alt="image" src="https://github.com/user-attachments/assets/ffc897ab-2858-4e47-98ad-ac34348366c9" />Function definition:  
 (_\<expressionCacheSize\>_)functionName(_\<expressionArguments\>_) : _\<expressionDefinition\>_  
+They have a light blue color in the editor in dark mode.  
 CacheSize is a limit that will get assigned to that function, for how many different arguments it will remember its evaluation.  
 CacheSize is optional. It will only get read if the definition begins with parentheses.  
 The default built-in function cache is 1 for most simple functions.  
 The default custom function cache size is 0 for any function where it is not specified.  
-When cache size is 0, each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
+When the cache size is 0, each evaluation will get computed again, even if it is called with the very same arguments immediately again.  
 It is recommended to be careful about using cache if you are mutating variables.  
 If you call a cached function with the same arguments it has remembered, but internally there would be a mutated variable changing the result, it will return the old, unmutated result.  
 You define a function multiple times with different arguments. If an argument evaluates to some value, that definition will only get matched with calls with the same value.  
@@ -63,11 +70,18 @@ New lines can work as separators as long as it is unambiguous.
 For example, if your old line is ending with an operator or opening parenthesis, bracket, or if the next line continues with an operator...
 ...anything that obviously means an expression continues to the next line, the newline will not act as a separator, and it will be interpreted as a multi-line expression.
   
-### Variable definition:  
+### <img width="17" height="17" alt="image" src="https://github.com/user-attachments/assets/8eaa1e9d-da83-45a1-98a4-02e99229b6df" />Variable definition:  
 variableName : _\<expressionValue\>_  
+They have a bright green color in the editor in dark mode.  
 -They can be mutable when you write definitions with the same name multiple times. It will have the value that was defined the last time during reading.  
 Example: x : 1; print : x, ","; x : 2; print=x; _/* prints 1, 2_  
-
+  
+  
+## <img width="14" height="15" alt="image" src="https://github.com/user-attachments/assets/3f4d3c96-8a4d-4561-9874-f349861a45f4" />ACTIONS:  
+_\<actionName\>_ : _\<expressionArgument\>_  
+Same syntax as defining constants, but using the core set of keywords instead of your custom names.  
+They have a bright golden color in the editor in dark mode.  
+  
 ### If:  
 if : _\<expressionCondition\>_ { _\<commands\>_ }  
 Functions just like if in other languages, only the syntax is slightly different. The keyword "if" is just a question mark, and it doesn't require parentheses  
@@ -83,9 +97,6 @@ while : _\<expressionCondition\>_ { _\<commands\>_ }
 Functions just like while. The syntax is again different in the same way as if/else.  
 Can have an else branch like if. It would get called only if the condition is not met even initially.  
 It can trigger a loop limit overflow if the condition is true too many times.  
-  
-## ACTIONS:  
-_\<actionName\>_ : _\<expressionArgument\>_  
 
 ### Return:  
 Breaks out of the specified number of blocks, treating all blocks the same, whether they are ifs or whiles.  
@@ -164,10 +175,12 @@ Example: (1,2,3,(4,5,6))# = 4
 ### Binary operators:  
 _\<expression\>_ + _\<expression\>_  
 Add  
+(if any operand is a string, it will add the other operand as a string)  
 _\<expression\>_ - _\<expression\>_  
 Subtract  
 __\<expression\>_ * _\<expression\>_  
 Multiply  
+If the LEFT operand is a string, it will try to call a function matching that string's name on the right operand(s).  
 _\<expression\>_ / _\<expression\>_  
 Divide  
 _\<expression\>_ \ _\<expression\>_  
@@ -217,12 +230,13 @@ Example: ((1, 2), (3, 4, 5), 6, 13) + ((7, 8, 9), 10, (11, 12))
 ### Vector Extractor:  
 _\<expression\>_[_\<expression\>_]  
 Extracts terms from a vector using indices in: [expression].  
-Example: (a, b, c, d, e)[2] : c  
-Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] : (30d, 31e), 2c, (5, 1, (30d, 31e))  
+Example: (a, b, c, d, e)[2] = c  
+Example: (0a, 1b, 2c, (30d, 31e), 5f)[3, 2, (5, 1, 3)] = (30d, 31e), 2c, (5, 1, (30d, 31e))  
   
-### Functions:  
+### <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/8157451f-687a-4c7e-b073-6a1cd949ea0b" />Default Functions:  
 min, max, clamp, exp, ln, log10, sin, cosh, re, im, frac, floor, round, sgn, abs, conj, sqrt, cub, gauss, softmax, gamma, zeta...  
 (full list below)  
+They have a light violet color in the editor in dark mode.  
 All elementary and component-wise operations and then some.  
 Binary operations are chain-applied to the first and second element, then to the result and the third element, and so on.  
 So a binary operation like Min can take the minimum for any size vector.  
@@ -251,30 +265,41 @@ IntegralLikeSum(x, from, to, expression) : from \> to ? -sum(x, from, to, expres
 There is also "prod" function that functions the same way as an iterated product  
 and there is also "vec" function, which doesn't add or multiply the terms, but puts them all directly into a vector.  
   
-### Constants:  
+### <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/72aed23b-74c1-4b8f-b5e2-6187c28bc611" />Arguments:  
+They have an orange color in the editor in dark mode.  
+Any expression call get these as an input.  When you define a function, you can give it any number of arguments and name them.
+Or give then a default expression that would evaluate them if the caller didn't supply any.
+And if you just write something that successfult evaluates into a number instead of a name, the function will pattern match whether the caller provides that value. 
+  
+### <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/2ce7d181-75b4-45da-835e-b456ec0891e3" />Constants:  
 e | pi | tau | gamma | one  
+They have a dark green color in the editor in dark mode.  
 Get replaced by their associated mathematical constant value  
 Some algebras have their extra constants, like i in Complex numbers and i, j, k in Quaternions.  
   
-### Variables:  
-Work by simple value substitution just like constants, but you define their names and values  
+### <img width="17" height="17" alt="image" src="https://github.com/user-attachments/assets/bedcbf08-0adb-45a9-befe-4d4e33e16e45" />Variables:  
+Work by simple value substitution just like constants, but you define their names and values.  
+They have a light green color in the editor in dark mode.  
   
-### Numbers:  
+### <img width="18" height="16" alt="image" src="https://github.com/user-attachments/assets/5ebf7dbf-9c7e-4fd6-9f38-eba6690be74d" />Numbers:  
+They have a dark purple golden color in the editor in dark mode.  
 Decimal notation: 123.456  
 Scientific notation could be ambiguously confused with multiplication by Euler's number, so just write it like: 1.234*10^2  
   
 ### NaN:  
 \_  
 "Not a number" is a result of an undefined operation, or a wrongly parsed expression.  
-It can also be used as a discard argument, which would prompt it's efault expression if it has any.  
+It can also be used as a discard argument, which would prompt its default expression if it has any.  
   
-### Strings:  
+### <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/289f0145-63be-4cff-8b92-ebea6bcd85ec" />Strings:  
 "string"  
+They have a pink color in the editor in dark mode.  
 Adding strings concatenates them.  
 Subtracting removes occurrences of the operand.  
 Multiplying a string with a value on the right acts as a dynamic delegate call of a function whose name matches that string.  
   
-Delegate Calls:  
+### <img width="17" height="16" alt="image" src="https://github.com/user-attachments/assets/7b4dc667-ce86-4291-9167-2a791c416705" />Delegate Calls:  
+They have a dark violet color in the editor in dark mode.  
 There are two way this can be done.  
 1. Constant: _\<constantString\>_(_\<expressionArgument\>_)
 If you have a string in a constant, that matches any function name (including your defined functions), you can call that constant like that function.
@@ -285,11 +310,13 @@ Multiplying a string that matches any default or user function with any value on
 You can write parentheses for visual resemblance, but it's really an overload of multiplication for strings, so it can also use operator-less multiply.
 Example: twoXsevenY(x,y):2x+7y;a:"twoXsevenY";b(d,x):dx;print:b(a,1,2); /* prints b(a,1,2) = 16  
   
-### Comments:  
+### <img width="15" height="16" alt="image" src="https://github.com/user-attachments/assets/ccd3a95b-4097-4d64-9cf3-387d063e62af" />Comments:  
 /* comments are in between these, and are completely ignored by the parser's logic, unless they are inside strings. */  
+They have a dark grey color in the editor in dark mode. (and light gray in light mode)  
 They can be anywhere except inside words and operators. You can even use them to continue to a new line in the few places that don't normally allow that.
   
-### Errors:  
+### <img width="16" height="14" alt="image" src="https://github.com/user-attachments/assets/3f593571-8493-41ca-91b3-cec1521d72f2" />Errors:  
+They have a bright red color in the editor in dark mode.  
 1. Stack Overflow - if the expression evaluation thinks it caught itself in an infinite loop (the default limit is 499, and can be adjusted in the Comparser constructor)  
 Examples of stack overflow:  
 f(x)=f(x) /* and call f(anything)  
@@ -311,7 +338,7 @@ There could be other ways, like with eval, etc.
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------  
   
-## Full default function list:  
+## <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/8157451f-687a-4c7e-b073-6a1cd949ea0b" />Full default function list:  
 
 ### Vector/Meta functions:
 eval(_\<string\>_) ...parses a string as an expression and evaluates it (might not work properly yet). Example: eval("1+1") = 2  
@@ -400,3 +427,6 @@ This feature is still in development, but it's almost finished.
 I'm also preparing a GPU shader that will be able to evaluate custom expressions called on the build.  
 This still has a while to be finished, but I've already prepared a translation of the build into the bytecode from the upcoming GPU shader, and a CPU virtual machine for simulating it.  
 Neither has been tested yet, though.  
+It will not support any features that work with strings:  
+No EVAL function, no string data, no dynamic delegates (constant delegates are fine - those are resolved during parsing).  
+  
