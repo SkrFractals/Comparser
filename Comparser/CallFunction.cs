@@ -125,12 +125,12 @@ public abstract partial class Comparser<T> {
 	}
 	private class FuncRgb2hsv(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Rgb2hsv, Static.Rgb2hsv) { }
 	private class FuncHsv2rgb(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Hsv2rgb, Static.Hsv2rgb) { }
-	private class FuncHsv(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, double, (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
+	private class FuncHsv(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args) => Value.OperateValue(v, To, null);
-		protected virtual Value To(Value val, object? _) => Triple(del(val.GetLeaf(), 1));
+		protected virtual Value To(Value val, object? _) => Triple(del(val.GetLeaf()/*, 1*/));
 	}
-	private class FuncRgb(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, double, (double, double, double)> del) : FuncHsv(read, parent, args, oc, (_,_)=>(0,0,0)) {
-		protected override Value To(Value val, object? _) => Triple(Static.Hsv2rgb(del(val.GetLeaf(), 1)));
+	private class FuncRgb(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, (double, double, double)> del) : FuncHsv(read, parent, args, oc, (_)=>(0,0,0)) {
+		protected override Value To(Value val, object? _) => Triple(Static.Hsv2rgb(del(val.GetLeaf()/*, 1*/)));
 	}
 	private class FuncLog2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2hsv, INumber<T>.Log2hsv) { }
 	private class FuncLog2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2rgb, INumber<T>.Log2hsv) { }

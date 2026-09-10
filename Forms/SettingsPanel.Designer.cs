@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 namespace Comparser.Forms;
-partial class SettingsControl {
+partial class SettingsPanel {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -234,7 +234,7 @@ partial class SettingsControl {
 		Controls.Add(decimalBox);
 		Controls.Add(algebraBox);
 		Controls.Add(darkButton);
-		MaximumSize = new Size(320, 320);
+		Size = new Size(320, 320);
 		Name = "SettingsControl";
 		ResumeLayout(false);
 		PerformLayout();

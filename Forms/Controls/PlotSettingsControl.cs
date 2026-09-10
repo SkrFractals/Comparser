@@ -1,11 +1,18 @@
-﻿namespace Comparser.Forms;
-
-public partial class PlotSettings : UserControl {
-	public PlotSettings() => InitializeComponent();
-	public void Block() { SetEnabled(false); buildButton.Text = "CANCEL"; }
-	public void Unblock() { SetEnabled(true); buildButton.Text = "OK"; }
-	private void SetEnabled(bool b) {
-		panel.Visible = itfBox.ReadOnly = itlBox.ReadOnly = prevButton.Enabled = nextButton.Enabled = loadButton.Enabled = saveButton.Enabled = b;
+﻿namespace Comparser.Forms.Controls;
+public partial class PlotSettingsControl : UserControl {
+	public PlotSettingsControl() => InitializeComponent();
+	public void Block() { SetBlock(true); buildButton.Text = "CANCEL"; }
+	public void Unblock() { SetBlock(false); buildButton.Text = "OK"; }
+	private void SetBlock(bool b) {
+		prevButton.Enabled = nextButton.Enabled = loadButton.Enabled = saveButton.Enabled = !b;
+		SetBlock(panel, itfBox.ReadOnly = itlBox.ReadOnly = b);
+	}
+	private void SetBlock(object c, bool r) {
+		if (c is not Control cr)
+			return;
+		cr.Tag = r;
+		foreach (var ch in cr.Controls)
+			SetBlock(ch, r);
 	}
 	/*public RichTextBox IxsBox => ixsBox;
 public RichTextBox IxcBox => ixcBox;

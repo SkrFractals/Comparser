@@ -43,7 +43,7 @@ public abstract partial class Comparser<T> {
 				//args.Values[5].Leaf = T.MakeR(ax.length); // w
 				//args.Values[6].Leaf = T.MakeR(ay.length); // h
 				//args.Values[7].Leaf = T.MakeR(at.length); // l
-				if (!SettingsControl.MemXy || refresh) // refresh completely without trying to transfer anything from memory
+				if (!SettingsPanel.MemXy || refresh) // refresh completely without trying to transfer anything from memory
 					return Rows(ay.length, Finish);
 				double dXs = +ax.d, dYs = +ay.d;
 				(Complex s, Complex x, Complex y) pm, mp;
@@ -217,7 +217,7 @@ public abstract partial class Comparser<T> {
 					return _plotX;
 				}
 				// no overlap: jut re-eval everything
-				if (refresh || !SettingsControl.MemX || !(+o.Perp <= o.SqrE) || o.NoOverlap()) return ReEval();
+				if (refresh || !SettingsPanel.MemX || !(+o.Perp <= o.SqrE) || o.NoOverlap()) return ReEval();
 				// eval 0-iaStart (that isn't in the memory)
 				ReEval(0, o.IaStart);
 				if (AxisMismatch(o, mDx, out var mt)) {
@@ -271,7 +271,7 @@ public abstract partial class Comparser<T> {
 				}
 				Value Eval(int x) {
 					args.Values[0].Leaf = ax.Sample(x) + yC;
-					args.Values[2].Leaf = T.MakeR(x);
+					//args.Values[2].Leaf = T.MakeR(x);
 					return exp.Eval(0, args);
 				}
 			}

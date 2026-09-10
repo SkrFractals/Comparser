@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 namespace Comparser.Forms;
-partial class MenuControl {
+partial class MenuPanel {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -30,10 +30,11 @@ partial class MenuControl {
 		// setButton
 		// 
 		setButton.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		setButton.Location = new Point(3, 3);
+		setButton.Location = new Point(4, 4);
+		setButton.Margin = new Padding(4);
 		setButton.Name = "setButton";
-		setButton.Size = new Size(314, 32);
-		setButton.TabIndex = 0;
+		setButton.Size = new Size(313, 32);
+		setButton.TabIndex = 9;
 		setButton.Text = "SETTINGS";
 		setButton.UseMnemonic = false;
 		setButton.UseVisualStyleBackColor = true;
@@ -42,10 +43,11 @@ partial class MenuControl {
 		// codeButton
 		// 
 		codeButton.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		codeButton.Location = new Point(3, 41);
+		codeButton.Location = new Point(4, 44);
+		codeButton.Margin = new Padding(4);
 		codeButton.Name = "codeButton";
-		codeButton.Size = new Size(314, 200);
-		codeButton.TabIndex = 2;
+		codeButton.Size = new Size(313, 192);
+		codeButton.TabIndex = 10;
 		codeButton.Text = "CODE";
 		codeButton.UseMnemonic = false;
 		codeButton.UseVisualStyleBackColor = true;
@@ -54,10 +56,11 @@ partial class MenuControl {
 		// expButton
 		// 
 		expButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		expButton.Location = new Point(3, 247);
+		expButton.Location = new Point(3, 244);
+		expButton.Margin = new Padding(4);
 		expButton.Name = "expButton";
-		expButton.Size = new Size(314, 32);
-		expButton.TabIndex = 3;
+		expButton.Size = new Size(313, 32);
+		expButton.TabIndex = 11;
 		expButton.Text = "EXPRESSIONS";
 		expButton.UseMnemonic = false;
 		expButton.UseVisualStyleBackColor = true;
@@ -66,10 +69,11 @@ partial class MenuControl {
 		// plotButton
 		// 
 		plotButton.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		plotButton.Location = new Point(3, 285);
+		plotButton.Location = new Point(4, 284);
+		plotButton.Margin = new Padding(4);
 		plotButton.Name = "plotButton";
-		plotButton.Size = new Size(314, 32);
-		plotButton.TabIndex = 4;
+		plotButton.Size = new Size(313, 32);
+		plotButton.TabIndex = 12;
 		plotButton.Text = "PLOT";
 		plotButton.UseMnemonic = false;
 		plotButton.UseVisualStyleBackColor = true;
@@ -83,14 +87,15 @@ partial class MenuControl {
 		Controls.Add(codeButton);
 		Controls.Add(expButton);
 		Controls.Add(plotButton);
-		MaximumSize = new Size(320, 320);
+		Size = new Size(320, 320);
 		Name = "MenuControl";
 		ResumeLayout(false);
 	}
 
 	#endregion
-	private System.Windows.Forms.Button setButton;
-	private System.Windows.Forms.Button codeButton;
-	private System.Windows.Forms.Button expButton;
-	private System.Windows.Forms.Button plotButton;
+
+	public Button setButton;
+	public Button codeButton;
+	public Button expButton;
+	public Button plotButton;
 }

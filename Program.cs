@@ -1,4 +1,5 @@
 using Comparser.Forms;
+using Comparser.Forms.Core;
 namespace Comparser;
 internal static class Program {
     /// <summary>
@@ -9,9 +10,10 @@ internal static class Program {
         // To customize application configuration such as set high DPI settings or default font,
         // see https://aka.ms/applicationconfiguration.
         ApplicationConfiguration.Initialize();
-        ParentForm m = new() { ActuallyClose = true };
-        m.StartPosition = FormStartPosition.CenterScreen;
-        _ = new MenuControl(null, m);
+		ParentForm m = new() {
+			ActuallyClose = true, StartPosition = FormStartPosition.CenterScreen
+		};
+		_ = new MenuPanel(m);
         Application.Run(m);
     }
 }

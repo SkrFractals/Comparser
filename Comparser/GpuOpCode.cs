@@ -180,6 +180,7 @@ public abstract partial class Comparser<T> {
 		// components
 		Frac,		// = Sub(X,Trunc(X))
 		Ceil,		// = Neg(Floor(Neg(X)))
+		Cycle,		// = x - Floor(x)
 		Sgn,		// = Mul(X,Inv(Abs(X)))
 		Sqrt,		// = Pow(X,.5)
 		Cbrt,		// = Pow(X,1.0/3)

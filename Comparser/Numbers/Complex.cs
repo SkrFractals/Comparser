@@ -63,6 +63,7 @@ public readonly struct Complex(double r = 0, double i = 0) : INumber<Complex> {
 	public static Complex Round(Complex c) => new(Math.Round(c.R), Math.Round(c.I));
 	// round up
 	public static Complex Ceil(Complex c) => new(Math.Ceiling(c.R), Math.Ceiling(c.I));
+	public static Complex Cycle(Complex c) => new(Static.Cycle(c.R), Static.Cycle(c.I));
 	// 1 / complex
 	public static Complex Inv(Complex c) => !c / +c;
 	// Argument of complex

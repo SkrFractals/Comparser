@@ -1,7 +1,8 @@
 ﻿using Comparser.Comparser.Numbers;
-using static Comparser.Forms.PlotControl;
+using Comparser.Forms.Controls;
+using static Comparser.Forms.PlotPanel;
 
-namespace Comparser.Forms;
+namespace Comparser.Forms.Core;
 
 // When any control "sender" finishes a trasaction, it should call MyStates[SettingsControl.Context!].Log(sender)
 public class States {
@@ -78,10 +79,10 @@ internal class LogPlotSize : LogSet<PlotSizeState> { // triple textbox pinnable 
 	private RichTextBox W, H; // Width x Height
 	internal override PlotSizeState GetState() => new(W.Text, H.Text, Ix.GetState(), Iy.GetState(), Oy.GetState()); // log three texts and which one is pinned
 	protected override void RestoreRedo(LogState<PlotSizeState> _, LogState<PlotSizeState> to) {
-		W.Enabled = H.Enabled = false;
+		W.Tag = H.Tag = true;
 		W.Text = to.State.w;
 		H.Text = to.State.h;
-		W.Enabled = H.Enabled = true;
+		W.Tag = H.Tag = false;
 		Ix.SetSce(to.State.ix, true);
 		Iy.SetSce(to.State.iy, true);
 		Oy.SetSce(to.State.oy, true);
@@ -123,9 +124,9 @@ internal enum OutputAction {
 }
 record OutState(string s, string r, string c, int l);
 internal class LogOutput : LogSet<OutState> { // type, selectName, rgbCode, codeEval
-	internal LogOutput(PlotSettings s, PlotControl c , States t) { S = s; C = c; LogUndo(); t.D[S.outputSelect] = t.D[S.rgbBox] = t.D[S.codeBox] = this; }
-	private PlotSettings S;
-	private PlotControl C;
+	internal LogOutput(PlotSettingsControl s, PlotPanel c , States t) { S = s; C = c; LogUndo(); t.D[S.outputSelect] = t.D[S.rgbBox] = t.D[S.codeBox] = this; }
+	private PlotSettingsControl S;
+	private PlotPanel C;
 	internal override OutState GetState() => new((string?)S.outputSelect.SelectedItem ?? "", S.rgbBox.Text, S.codeBox.Text, S.clipSelect.SelectedIndex);
 	protected override void RestoreUndo(LogState<OutState> from, LogState<OutState> to) {
 		// remove: from = (remove, fallbacked), to (_, removed)

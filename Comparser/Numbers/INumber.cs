@@ -9,9 +9,10 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 
 	#region Export
 	public string ToString(int d);
-	public static (double h, double s, double v) Log2hsv(T t, double repeatValue = 1) { var s = +t; return Hsv2rgb(((T.Arg(t) + Math.PI) /* * 360 */ / Math.Tau, 1 - Math.Exp(-s), Math.Log(s) * .5 % repeatValue)); }
-	public static (double h, double s, double v) Lin2hsv(T t, double repeatValue = 1) { var s = +t; return Hsv2rgb(((T.Arg(t) + Math.PI) /* * 360 */ / Math.Tau, 1 - Math.Exp(-s), Math.Sqrt(s) % repeatValue)); }
-	public static (double h, double s, double v) Exp2hsv(T t, double _) => Hsv2rgb(((T.Arg(t) + Math.PI) /* * 360 */ / Math.Tau, 1, 1 - Math.Exp(-+t)));
+	public static (double h, double s, double v) Log2hsv(T t/*, double repeatValue = 1*/) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Log(s) * .5 /*% repeatValue*/); }
+	public static (double h, double s, double v) Lin2hsv(T t/*, double repeatValue = 1*/) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Sqrt(s) /*% repeatValue*/); }
+	public static (double h, double s, double v) Exp2hsv(T t/*, double _*/) => (ToHue(t), 1, 1 - Math.Exp(-+t));
+	public static double ToHue(T t) => Static.Cycle(T.Arg(t) / Math.Tau);
 
 	public static byte[] ToBytes(T str) {
 		var size = Marshal.SizeOf(str);
@@ -82,6 +83,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T Floor(T t);
 	public static abstract T Round(T t);
 	public static abstract T Ceil(T t);
+	public static abstract T Cycle(T t);
 	public static abstract T Inv(T t);
 	public static abstract double Arg(T t);
 	public static abstract T InvArg(double p, T axis);

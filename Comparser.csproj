@@ -32,16 +32,15 @@
     <Compile Update="Controls\LogControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\PlotControl.cs">
+    <Compile Update="Forms\PlotSettingsPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\LineNumberControl.cs">
+    <Compile Update="Forms\PlotPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Comparser\Gpu\" />
+    <Compile Update="Forms\Controls\LineNumberControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
   </ItemGroup>
 
 </Project>

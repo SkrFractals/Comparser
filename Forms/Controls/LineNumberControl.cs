@@ -1,4 +1,4 @@
-﻿namespace Comparser.Forms;
+﻿namespace Comparser.Forms.Controls;
 public sealed partial class LineNumberControl : UserControl {
 	private readonly RichTextBox? _textBox;
 	public LineNumberControl() => InitializeComponent();

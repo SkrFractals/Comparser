@@ -1,4 +1,4 @@
-﻿namespace Comparser.Forms;
+﻿namespace Comparser.Forms.Core;
 partial class ParentForm {
 	/// <summary>
 	///  Required designer variable.
@@ -50,6 +50,7 @@ partial class ParentForm {
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
 		ClientSize = new System.Drawing.Size(350, 350);
+		MinimumSize = new System.Drawing.Size(120, 120);
 		AutoSize = false;
 		Controls.Add(outerPanel);
 		Text = "Comparser - Complex Computer Parser";

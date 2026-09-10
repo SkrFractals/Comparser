@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 namespace Comparser.Forms;
-partial class LogControl {
+partial class PlotSettingsPanel {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -21,31 +21,15 @@ partial class LogControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		logBox = new RichTextBox();
 		SuspendLayout();
 		// 
-		// logBox
-		// 
-		logBox.DetectUrls = false;
-		logBox.Dock = DockStyle.Fill;
-		logBox.Font = new Font("Consolas", 12F);
-		logBox.Location = new Point(0, 0);
-		logBox.Name = "logBox";
-		logBox.ReadOnly = true;
-		logBox.Size = new Size(320, 320);
-		logBox.TabIndex = 0;
-		logBox.Text = "[logs]";
-		// 
-		// LogControl
+		// PlotSettingsControl
 		// 
 		AutoScaleMode = AutoScaleMode.None;
-		BackColor = Color.FromArgb(64, 64, 64);
-		Controls.Add(logBox);
-		MaximumSize = new Size(320, 320);
-		Name = "LogControl";
+		Size = new Size(320, 320);
+		Name = "PlotSettingsControl";
 		ResumeLayout(false);
 	}
 
 	#endregion
-	private System.Windows.Forms.RichTextBox logBox;
 }

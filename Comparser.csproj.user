@@ -1,31 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Compile Update="Basic\CodeControl.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Update="Forms\ComparserControl.cs">
+    <Compile Update="Forms\ComparserPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\ExpressionControl.cs">
+    <Compile Update="Forms\ExpressionPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\LogControl.cs">
+    <Compile Update="Forms\LogPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\MenuControl.cs">
+    <Compile Update="Forms\MenuPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\ParentControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="Forms\ParentForm.cs">
+    <Compile Update="Forms\Core\ParentForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Update="Forms\PlotSettings.cs">
+    <Compile Update="Forms\Controls\PlotSettingsControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Update="Forms\SettingsControl.cs">
+    <Compile Update="Forms\SettingsPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
   </ItemGroup>

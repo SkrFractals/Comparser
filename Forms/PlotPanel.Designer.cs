@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 namespace Comparser.Forms;
-partial class ExpressionControl {
+partial class PlotPanel {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -21,31 +21,40 @@ partial class ExpressionControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		expBox = new Button();
+		components = new Container();
+		fps = new System.Windows.Forms.Timer(components);
+		plotBox = new PictureBox();
+		((ISupportInitialize)plotBox).BeginInit();
 		SuspendLayout();
 		// 
-		// expBox
+		// fps
 		// 
-		expBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		expBox.Location = new Point(3, 3);
-		expBox.Name = "expBox";
-		expBox.Size = new Size(314, 32);
-		expBox.TabIndex = 3;
-		expBox.Text = "ADD EXPRESSION";
-		expBox.UseMnemonic = false;
-		expBox.UseVisualStyleBackColor = true;
-		expBox.Click += ExpAdd;
+		fps.Enabled = true;
+		fps.Tick += Fps_Tick;
 		// 
-		// ExpressionControl
+		// plotBox
+		// 
+		plotBox.Dock = DockStyle.Fill;
+		plotBox.Location = new Point(0, 0);
+		plotBox.Name = "plotBox";
+		plotBox.Size = new Size(320, 320);
+		plotBox.SizeMode = PictureBoxSizeMode.StretchImage;
+		plotBox.TabIndex = 1;
+		plotBox.TabStop = false;
+		plotBox.Click += PlotClick;
+		// 
+		// PlotPanel
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
-		Controls.Add(expBox);
-		MaximumSize = new Size(320, 320);
-		Name = "ExpressionControl";
+		Controls.Add(plotBox);
+		Name = "PlotPanel";
+		Size = new Size(320, 320);
+		SizeChanged += Resized;
+		((ISupportInitialize)plotBox).EndInit();
 		ResumeLayout(false);
 	}
-
 	#endregion
-	private System.Windows.Forms.Button expBox;
+	private System.Windows.Forms.Timer fps;
+	private PictureBox plotBox;
 }

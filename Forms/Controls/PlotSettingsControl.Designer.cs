@@ -1,6 +1,6 @@
-﻿namespace Comparser.Forms;
+﻿namespace Comparser.Forms.Controls;
 
-partial class PlotSettings {
+partial class PlotSettingsControl {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -161,7 +161,6 @@ partial class PlotSettings {
 		// 
 		// clipSelect
 		// 
-		clipSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 		clipSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
 		clipSelect.FormattingEnabled = true;
 		clipSelect.Items.AddRange(new object[] { "Clamp", "Loop", "Overflow" });

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
-namespace Comparser.Forms;
-partial class ParentControl {
+namespace Comparser.Forms.Controls;
+sealed partial class LineNumberControl {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -16,23 +16,14 @@ partial class ParentControl {
 	}
 
 	#region Component Designer generated code
-	/// <summary>
-	/// Required method for Designer support - do not modify
+
+	/// <summary> 
+	/// Required method for Designer support - do not modify 
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		SuspendLayout();
-		// 
-		// ParentControl
-		// 
-		BackColor = Color.FromArgb(64, 64, 64);
-		AutoScaleMode = AutoScaleMode.None;
-		AutoSize = false;
-		MinimumSize = new Size(320, 320);
-		Name = "ParentControl";
-		Size = new Size(320, 320);
-		Load += ParentControl_Load;
-		ResumeLayout(false);
+		components = new System.ComponentModel.Container();
+		this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 	}
 
 	#endregion

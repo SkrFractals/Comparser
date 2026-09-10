@@ -1,5 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
-using static Comparser.Forms.PlotControl;
+using static Comparser.Forms.PlotPanel;
 namespace Comparser.Comparser;
 public interface IPlotAxis {
 	public (string c, string e) SetS(object? v);

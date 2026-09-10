@@ -54,6 +54,7 @@ public readonly struct Real(double r = 0) : INumber<Real> {
 	public static Real Round(Real r) => new(Math.Round(r.R));
 	// round up
 	public static Real Ceil(Real r) => new(Math.Ceiling(r.R));
+	public static Real Cycle(Real r) => new(Static.Cycle(r.R));
 	// 1 / real
 	public static Real Inv(Real r) => new(1 / r.R);
 	// Argument of real

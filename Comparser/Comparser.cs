@@ -1126,6 +1126,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["floor", "Floor"], new Cf(T.Floor, OpCode.Floor)); // = round down
 		A(["round", "Round", "rnd", "Rnd"], new Cf(T.Round, OpCode.Round)); // = round
 		A(["ceiling", "Ceiling", "ceil", "Ceil"], new Cf(T.Ceil, OpCode.Ceil)); // = round up
+		A(["cyc", "Cyc", "cycle", "Cycle", "lmod", "Lmod", "pfrac", "Pfrac"], new Cf(T.Cycle, OpCode.Cycle)); // = positive frac cycle. cyc(1.25)=0.25, cyc(-.75)=0.25. Also equals x-floor(x)
 		A(["sign", "Sign", "sgn", "Sgn"],OpSign); // = z/|z|
 		A(["neg", "Neg", "negative", "Negative"], new Cf(INumber<T>.Neg, OpCode.Neg)); // = -z
 		A(["inv","Inv", "inverse", "Inverse"], new Cf(T.Inv, OpCode.Inv)); // = 1/z

@@ -1,4 +1,5 @@
-﻿using Comparser.Forms;
+﻿using Comparser.Comparser.Numbers;
+using Comparser.Forms;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 namespace Comparser.Comparser;
@@ -94,7 +95,7 @@ public abstract partial class Comparser<T>{
 				var light = Get(0);
 				return (light, light, light);
 				double Get(int i) => Clip switch { 0 => Math.Clamp(T.Re(rgb.Values[i].GetLeaf()), 0, 1), 1 => Loop(T.Re(rgb.Values[i].GetLeaf())), _ => T.Re(rgb.Values[i].GetLeaf()) };
-				double Loop(double i) => i < 0 ? 1 - (-i % 1) : i % 1;
+				double Loop(double i) => Static.Cycle(i);
 				//byte Get(int i) => (byte)Math.Clamp(255 * T.Re(rgb.Values[i].GetLeaf()), 0, 255);
 			}
 		}
@@ -267,9 +268,9 @@ public abstract partial class Comparser<T>{
 				bool Match() {
 					var match = true;
 					for (var i = 0; i < rgbs.Count; ++i) {
-						var (e, c) = Outs[i];
 						var ri = rgbs[i];
 						if (i < Outs.Count) {
+							var (e, c) = Outs[i];
 							if (e == ri.ColorCodeRgb && c == ri.Clip)
 								continue;
 							Outs[i] = (ri.ColorCodeRgb, ri.Clip);

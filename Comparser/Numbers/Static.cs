@@ -32,7 +32,7 @@ public static class Static {
 			int e, o, m, tri, n = i << 1;
 			var powers = new BigRational[n+1];
 			for (var k = 2; k <= n; ++k) { // prepare k^n
-				BigRational power = powers[k] = new(k, 1);
+				var power = powers[k] = new(k, 1);
 				for(int j = n - 1; j > 0; j >>= 1, power *= power)
 					if((j & 1) == 1)
 						powers[k] *= power;
@@ -94,7 +94,7 @@ public static class Static {
 	public static (double r, double g, double b) Hsv2rgb((double h, double s, double v) x) {
 		if (x.s <= 0)
 			return (x.v, x.v, x.v);
-		var i = (int)Math.Truncate(x.h = 6 * x.h % 1);
+		var i = (int)Math.Truncate(x.h = x.h * 6 % 6);
 		double f = x.h - i, p = x.v * (1.0 - x.s), q = x.v * (1.0 - x.s * f), t = x.v * (1.0 - x.s * (1.0 - f));
 		return i switch { 0 => (x.v, t, p), 1 => (q, x.v, p), 2 => (p, x.v, t), 3 => (p, q, x.v), 4 => (t, p, x.v), _ => (x.v, p, q) };
 	}
@@ -181,6 +181,7 @@ public static class Static {
 	public static int Floor(double x) => (int)x;
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static int Round(double x) => (int)Math.Round(x);
+	public static double Cycle(double x) => x - Math.Floor(x);
 	public static double Sqr(double x) => x * x;
 	public static double Lerp(double a, double b, double t) => a * (1 - t) + b * t;
 	#endregion

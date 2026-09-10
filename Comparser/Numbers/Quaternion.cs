@@ -78,6 +78,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static Quaternion Round(Quaternion q) => D1(q, Math.Round);
 	// round up
 	public static Quaternion Ceil(Quaternion q) => D1(q, Math.Ceiling);
+	public static Quaternion Cycle(Quaternion q) => D1(q, Static.Cycle);
 	// 1 / quaternion
 	public static Quaternion Inv(Quaternion q) => !q / +q;
 	// = iτ/c // using this in my Gamma_Stirling_Negative, maybe won't work for quaternions as it's only using i

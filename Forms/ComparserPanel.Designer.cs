@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 namespace Comparser.Forms;
-partial class ComparserControl {
+partial class ComparserPanel {
 	/// <summary> 
 	/// Required designer variable.
 	/// </summary>
@@ -108,8 +108,7 @@ partial class ComparserControl {
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
 		Controls.Add(splitContainer);
-		MaximumSize = new Size(320, 320);
-		MinimumSize = new Size(0, 0);
+		Size = new Size(320, 320);
 		Name = "ComparserControl";
 		splitContainer.Panel1.ResumeLayout(false);
 		splitContainer.Panel2.ResumeLayout(false);
