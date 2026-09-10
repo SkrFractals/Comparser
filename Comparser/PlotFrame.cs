@@ -22,7 +22,7 @@ public abstract partial class Comparser<T> {
 			private T _mSx1 = T.NaN(), _mDx1 = T.NaN(), _mY1 = T.NaN(), _t1 = T.NaN(); // ax.S, ax.d, yC, frame
 			private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
-			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, bool refresh = false) {
+			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.Zero();
 				int mLx = 0, mLy = 0, x = 0, y = 0, yw = 0;
 				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
@@ -81,11 +81,11 @@ public abstract partial class Comparser<T> {
 					Action xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
 					Action ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
 					void NoX() {
-						for (Begin(); x < ex; ++x)
+						for (Begin(); x < ex && !cancel.IsCancellationRequested; ++x)
 							_plotXy[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
 					}
 					void YesX() {
-						for (Begin(); x < ex; ++pX, ++x)
+						for (Begin(); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
 							_plotXy[x + yw] = (pX % modX < 1) ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval();
 					}
 					Rows(Math.Min(ay.length, (int)bottom.I), ytest);
@@ -135,7 +135,7 @@ public abstract partial class Comparser<T> {
 					}
 					void PgRow() {
 						Begin();
-						for (int e = Math.Min(ax.length, (int)bounds.I); x < e; _plotXy[x + yw] = Fracs(out var p) ? _memXy[p] : Eval(), ++x)
+						for (int e = Math.Min(ax.length, (int)bounds.I); x < e && !cancel.IsCancellationRequested; _plotXy[x + yw] = Fracs(out var p) ? _memXy[p] : Eval(), ++x)
 							uv = _map(pm, x, y);
 						Finish();
 						// ReSharper disable AccessToModifiedClosure
@@ -153,9 +153,9 @@ public abstract partial class Comparser<T> {
 
 				bool Test(double t) => t is < .5 and >= -.5;
 				bool AxisMatchA(T s, T d, Plot.PlotAxis a) => Math.Max(+(s - a.start), +((d - a.d) * a.length)) <= +a.d * recallTolerance;
-				Value[] Rows(int ye, Action a) { for (; y < ye; a(), ++y) (x, yw) = (0, y * ax.length); return _plotXy; }
-				void Begin() { int e = Math.Min(ax.length, (int)bounds.R); for (x = 0, yw = y * ax.length; x < e; ++x) E(); } // to the left of the outer bounds
-				void Finish() { for (; x < ax.length; ++x) E(); } // to the right of the outer bounds
+				Value[] Rows(int ye, Action a) { for (; y < ye && !cancel.IsCancellationRequested; a(), ++y) (x, yw) = (0, y * ax.length); return _plotXy; }
+				void Begin() { int e = Math.Min(ax.length, (int)bounds.R); for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E(); } // to the left of the outer bounds
+				void Finish() { for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E(); } // to the right of the outer bounds
 				Value Eval() {
 					var l = args.Values;
 					l[0].Leaf = ax.Sample(x) + ay.Sample(y);
@@ -187,7 +187,7 @@ public abstract partial class Comparser<T> {
 				}
 			}
 
-			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, T memFrame, double recallTolerance, bool refresh = false) {
+			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				Value[] memY = []; changed = true;
 				int memYo = -1, mLx = 0;
 				T mSx = T.Zero(), mDx = T.Zero(), yC = ay.Sample(y); // y coordinate
@@ -210,7 +210,7 @@ public abstract partial class Comparser<T> {
 				// we have some memory Y match
 				if (AxisOverlap.New(ax, mSx, mDx, mLx, recallTolerance, out var o)) {
 					if (memY != _plotX) // x-axis is not identical to the memory	
-						for (var x = 0; x < _plotX.Length; _plotX[x] = memY[x++ + memYo]) { } // the identical memory is the 2D plot, not already our 1D one
+						for (var x = 0; x < _plotX.Length && !cancel.IsCancellationRequested; _plotX[x] = memY[x++ + memYo]) { } // the identical memory is the 2D plot, not already our 1D one
 					// transfer the whole Y slice form the 2d memory (tolerance is < pixel, so the array lengths should match)
 					(_plotX, _memX) = (_memX, _plotX); // switch back
 					changed = false;
@@ -225,12 +225,12 @@ public abstract partial class Comparser<T> {
 					if (StepMismatch(o, mDx * dScale, o.IaEnd - o.IaStart))
 						return ReEval(); // the ratio between asked-memory step sizes is not an integer, the interlacing won't work, so re-eval all
 					int x, phase; // find the phase when the axis maps to memory ( then we will loop: once "take from memory" then (dScale-1) times "re-eval") 
-					for (phase = 0; phase < dScale && o.IaStart < o.IaEnd; _plotX[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
+					for (phase = 0; phase < dScale && o.IaStart < o.IaEnd && !cancel.IsCancellationRequested; _plotX[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
 						if (!DistanceMismatch(o, mt * mDx, o.IaStart))
 							break; // stop evaluating once we find the phase match,then we can proceed with the interlacing
 					if (phase == dScale) // failed to find any match that might be repeating every phase, just re-eval all:
 						return ReEval(o.IaStart);
-					for (phase = 0, x = o.IaStart; x < o.IaEnd; ++x) // do the interlacing
+					for (phase = 0, x = o.IaStart; x < o.IaEnd && !cancel.IsCancellationRequested; ++x) // do the interlacing
 						_plotX[x] = phase++ % dScale == 0 ? memY[o.Map(x) + memYo] : Eval(x); // phase 0 % dScale = transfer, otherwise eval
 				} else
 					for (var x = o.IaStart; x < o.IaEnd; ++x) // the memory-asked axis bases match, so the transfer can be much simpler:
@@ -265,7 +265,7 @@ public abstract partial class Comparser<T> {
 				//  we haven't found any memory Y match, or only might be intersecting at 0-1 points, 1 point intersection is not worth finding so just render the whole X line
 				// So re-eval the whole frame
 				Value[] ReEval(int start = 0, int end = int.MaxValue) {
-					for (int x = start, iEnd = Math.Min(end, _plotX.Length); x < iEnd; ++x) // eval at the whole X axis range
+					for (int x = start, iEnd = Math.Min(end, _plotX.Length); x < iEnd && !cancel.IsCancellationRequested; ++x) // eval at the whole X axis range
 						_plotX[x] = Eval(x); // eval at this x coordinate
 					return _plotX;
 				}

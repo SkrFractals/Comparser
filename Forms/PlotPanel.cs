@@ -227,7 +227,13 @@ public partial class PlotPanel : UserControl, IPanel {
 	#endregion
 
 	#region Actions
-	private void ClickBuild(object? sender, EventArgs e) => UpdatePlot(true);
+	private void ClickBuild(object? sender, EventArgs e) {
+		if (_finishedImage == 0 && _draw != null) {
+			cancel.Cancel();
+			return;
+		}
+		UpdatePlot(true);
+	}
 	private void ClickSave(object? sender, EventArgs e) {
 		MessageBox.Show("This is not yet implemented, will be very soon.", "NOT IMPLEMENTED YET");
 	}
@@ -475,8 +481,10 @@ public partial class PlotPanel : UserControl, IPanel {
 		//plotBox.Size = plotBox.Image.Size;
 		//_dirty = false;
 	}
+	private CancellationTokenSource cancel;
+	private CancellationToken token;
 	private void UpdatePlotAsync(int w, int h) {
-		if (GetPlot() is { } p) { bmp = p.Update(w, h, _length); }
+		if (GetPlot() is { } p) { bmp = p.Update(w, h, _length, token = (cancel = new CancellationTokenSource()).Token); }
 		_finishedImage = 1;
 		_draw = null;
 	}

@@ -18,7 +18,7 @@ public interface IPlot {
 	public void ZoomContinuous(int x, int y, double size);
 	public void ZoomBinary(int x, int y, bool zoomIn) => ZoomContinuous(x, y, zoomIn ? .5 : 2);
 	public void Shift(int dx, int dy);
-	public Bitmap Update(int w, int h, int l);
+	public Bitmap Update(int w, int h, int l, CancellationToken cancel);
 	public IPlotAxis[] GetAxis();
 	public void DelOutput(int output);
 	public void AddOutput(string name, object? newRgb, object? newCode);
@@ -137,12 +137,12 @@ public abstract partial class Comparser<T>{
 			Context = context;
 			//Eval = [new(Context = comparser, "x!")];
 			//OutputHsv = new(Context = comparser, "[repeatValue=1; (1)s(x)=sqrabs(x)] (arg(x)+pi)360/tau, 1-exp(-s(x)), sqrt(s(x))%repeatValue /* repeatValue: Value cycle slowness, (1)s(x): caches sqrabs for reuse", _x);
-			Update(width, height, length);
+			//Update(width, height, length, new CancellationToken());
 		}
 		public void ChangeMode(PlotMode xy) {
 			Mode = xy;
 			//_dirtyX = _dirtyXy = true;
-			Update(InputX.length, InputY.length, InputT.length);
+			//Update(InputX.length, InputY.length, InputT.length, new CancellationToken());
 		}
 		public (double, string) SetFixedY(object? yf) {
 			FixedY = Context.AsDouble(yf);
@@ -287,7 +287,7 @@ public abstract partial class Comparser<T>{
 		}
 		private bool _dirty;
 		private Renders R = new();
-		public Bitmap Update(int w, int h, int l) {
+		public Bitmap Update(int w, int h, int l, CancellationToken cancel) {
 			Resize(w, h, l); _dirty |= InputX.DirtyL; // if size changed, it will resize everything and mark things dirty
 								 //var dirty = InputX.DirtyL;
 								 // prepare axis lines and plot values if they are dirty
@@ -308,6 +308,7 @@ public abstract partial class Comparser<T>{
 						Lines(OutputY, _linesO);
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
+						o.Eval.Cancel = cancel;
 						o.Values = o.Eval.GetPlotX(out var d, InputX, InputY, FixedY, InputT, (int)Frame);
 						_dirty |= d; // Refresh 1D (X,FixedY) output values
 					}
@@ -323,6 +324,7 @@ public abstract partial class Comparser<T>{
 						Lines(InputY, _linesY);
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
+						o.Eval.Cancel = cancel;
 						o.Values = o.Eval.GetPlotXy(out var d, InputX, InputY, InputT, (int)Frame);
 						_dirty |= d; // Refresh 2D (X,Y) output values
 					}
@@ -353,10 +355,14 @@ public abstract partial class Comparser<T>{
 							o.PrepareArgs(InputX.length, OutputY.length, InputT.length);
 						var yz = OutputY.Sample(FixedY);
 						for (var y = 0; y < _bmp.Height; ++y) {
+							if (cancel.IsCancellationRequested)
+								break;
 
 							p = ptr + lb.Stride * y;
 							var yColor = _linesY[y];
 							for (var x = intPtr = 0; x < _bmp.Width; ++x, ++intPtr, p += 3) {
+								if (cancel.IsCancellationRequested)
+									break;
 								var z = InputX.Sample(x) + yz;
 								var rgbc = Max(_linesX[x], yColor);
 								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
@@ -382,10 +388,14 @@ public abstract partial class Comparser<T>{
 						foreach (var o in OutputR)
 							o.PrepareArgs(InputX.length, InputY.length, InputT.length);
 						for (var y = 0; y < _bmp.Height; ++y) {
+							if (cancel.IsCancellationRequested)
+								break;
 							yz = InputY.Sample(y);
 							p = ptr + lb.Stride * y;
 							var yColor = _linesY[y];
 							for (var x = 0; x < _bmp.Width; ++x, ++intPtr, p += 3) {
+								if (cancel.IsCancellationRequested)
+									break;
 								var z = InputX.Sample(x) + yz;
 								var rgbc = Max(_linesX[x], yColor);
 								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
