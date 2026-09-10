@@ -416,10 +416,36 @@ ncoshc/ncosch/coshcpi/coschpi(_\<vector\>_) ...Also equals to cosh(pi*_\<vector\
   
   
 ## PLOTTER:  
-The app comes with a plotter component. It lets you override a function plot(z,t), where z is the plot input, and t is animation time.  
-It will render a 1D or 2D plot of that function.  
-You can choose any coordinate bases you want.  
-And you can also override the coloring function like: rgb(z):hsvtorgb(loghsv(z))  
+The app comes with a plotter component.   
+You can choose any coordinate bases you want, and process the RGB values any way you want. It's basically like a programmable shader.  
+LOAD/SAVE/PLOT - you can load or save your settings you have filled in (not ready yet), and clicking PLOT will render the plot (if it didn't render automatically yet).  
+Then i the animation row. The first text box is the animation length, then a previous frame button, then select frame box, then next frame button, and the animate toggle that can animate the frames automatically.  
+Then is the size, you can type in the picture width and height. It also automatically adjusts if you resize the window. And if you lock the lock button, the picture size will stay pinned evne if you resize the window.  
+The is the axis control of the time dimension. Axis controls have 3 textboxes and 3 locks.  
+For Start, Center and End. Locks can pin one of these, and then adjusting another one will automatically adjust the third unlocked one to keep the center in center.  
+The big lock button will pin the entire range.  
+Then is the selection of plotting mode.  
+There is Area X, which plots the function only in X range, and the Y will be the output, with OuY range.  
+Then is Line X, which is similar, but only draws the outlines of the curve, not the areas below the curve.  
+And finally RGB XY, which plots the function in 2D both the X and Y range (OuY is unused here).  
+The final textbox is the FixedY textbox, that is onyl used for the 1D modes, and selects which Y range slice you want to render.  
+And finally, there's the output editor. Name your output in the selector on the right, and click the plus button to create it.  
+On the left these is a selection about what to do if the values are out of 0-1 range, it can be clamped or looped, or you can overflow, which lets it go outside the range.  
+then each output has the 2 big codeboxes at the bottom. the bottom one is the evaluation stage, it gets these arguments:  
+z = the sample of the coordinate bases X and Y for that particular pixel.  
+t = the sample in time coordinate. For example, if you time range is 1-2-3, then the first frame will have t=1, and the last frame will have t=3.  
+the coebox above is the shader codebox. It receives the value of the evaluation box,and also a bunch of other values you coudl work with. And then expects that to evaluate into a vector of 3 normalized RGB values.  
+If you just type 0,0,0 in that box you will get a black square, if 1,1,1, you get white.  
+values you can use in the shader box:  
+v = the output value of the eval box below.  
+z = the same z input coordinate value the codeBox received  
+t = the same time value  
+x = the screen-space x location  
+x = the screen-space y location  
+f = the frame (0 to frames-1)  
+w = picture width  
+h = picture height  
+l = frames, the animation frame count  
 This feature is still in development, but it's almost finished.  
 
 
