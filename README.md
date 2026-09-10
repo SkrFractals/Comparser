@@ -165,9 +165,11 @@ _\<expression\>_@
 Absolute value, norm  
 _\<expression\>_ @@  
 Squared norm. Square of the absolute value.  
+Example (5+i)@@ = 26  
 _\<expression\>_|  
 Component-wise absolute value   
-Example (5+i)@@ = 26  
+_\<expression\>_||  
+Normalize.   
 _\<expression\>_#  
 Count top-level vector elements  
 Example: (1,2,3,(4,5,6))# = 4  
