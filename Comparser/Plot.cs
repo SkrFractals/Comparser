@@ -400,8 +400,8 @@ public abstract partial class Comparser<T>{
 								var rgbc = Max(_linesX[x], yColor);
 								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
 								foreach (var o in OutputR) if (!(o.Eval?.Null() ?? true))
-									foreach (var prevV in o.Values[intPtr].GetValues())
-										c = o.ProcessColor(prevV, c, z, t, x, y, Frame);
+									//foreach (var prevV in o.Values[intPtr].GetValues())
+										c = o.ProcessColor(o.Values[intPtr], c, z, t, x, y, Frame);
 								(p[2], p[1], p[0]) = GetRgb(c);
 							}
 						}
