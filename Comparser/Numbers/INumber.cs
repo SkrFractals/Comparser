@@ -219,6 +219,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	#region Simple Functions and Constants
 	public static T C_E() => T.MakeR(Math.E);
 	public static T C_Pi() => T.MakeR(Math.PI);
+	public static T C_Phi() => T.MakeR(.5 + .5 * Math.Sqrt(2));
 	public static T C_Tau() => T.MakeR(Math.Tau);
 	public static T C_Gamma() => T.MakeR(0.57721566490153286060651209008240243104215933593992); // Euler's constant
 	public static T LogB(T t, T b) => T.Log(t) / T.Log(b);

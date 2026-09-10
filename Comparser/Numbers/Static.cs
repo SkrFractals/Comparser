@@ -94,7 +94,7 @@ public static class Static {
 	public static (double r, double g, double b) Hsv2rgb((double h, double s, double v) x) {
 		if (x.s <= 0)
 			return (x.v, x.v, x.v);
-		var i = (int)Math.Truncate(x.h = x.h * 6 % 6);
+		var i = (int)Math.Truncate(x.h = Cycle(x.h) * 6);
 		double f = x.h - i, p = x.v * (1.0 - x.s), q = x.v * (1.0 - x.s * f), t = x.v * (1.0 - x.s * (1.0 - f));
 		return i switch { 0 => (x.v, t, p), 1 => (q, x.v, p), 2 => (p, x.v, t), 3 => (p, q, x.v), 4 => (t, p, x.v), _ => (x.v, p, q) };
 	}

@@ -294,8 +294,6 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 					} // it is a function:
 					var failFunc = FailReason.Success;
 					read.AddC(beforeI, beforeI + name.Length, ParseDictionary.Type.UserF);
-					if (!UserFunctions.ContainsKey(name)) // create the custom function if this is its first definition
-						Context.Insert(new(UserFunctions[name] = new CallCustom([]), ParseDictionary.Type.UserF), name);
 					LoadTernary();
 					break;
 					void LoadTernary() {
@@ -334,6 +332,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 									foundCantBeNext = Static.FindArgs;
 									e = GetName(); // TODO parse as definition
 									if (e != "") return e;
+									if (!UserFunctions.ContainsKey(name)) // create the custom function if this is its first definition
+										Context.Insert(new(UserFunctions[name] = new CallCustom([]), ParseDictionary.Type.UserF), name);
 									if (FailArgs(out args)) return "Failed to parse ARGUMENTS.";
 									break;
 								case 2: // cache
@@ -374,8 +374,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 								if (pfn[m].input.SameArg(input))
 									pfn.RemoveAt(m); // already have the definition with the same arguments - mutate it
 						} else pfn = parsedF[name] = [];
-						foreach (var condI in conditional)
-							pfn.Add((args, condI.ifTrue, condI.question));
+						foreach (var (ifTrue, question) in conditional)
+							pfn.Add((args, ifTrue, question));
 						if (dBranch != null)
 							pfn.Add((args, dBranch, null));
 						// create/update the compiled function:
@@ -465,8 +465,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 						Cl(FailReason.Unexpected); // closing a bracket that wasn't started
 						return;
 					}
-					var bb = back[brackets];
-					var (bi, bc) = (bb.i, bb.c + 1);
+					var (i, c) = back[brackets];
+					var (bi, bc) = (i, c + 1);
 					if (bi >= 0) {
 						// at the end of while
 						if (bc <= _loopOverflow) {
@@ -1021,11 +1021,12 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	#endregion
 
 	private void FillDefault() {
-		C(["π", "pi", "Pi", "PI"], INumber<T>.C_Pi());
-		C(["τ", "tau", "Tau", "TAU"], INumber<T>.C_Pi());
-		C(["e","E"], INumber<T>.C_E());
-		C(["γ", "gamma", "Gamma", "GAMMA"], INumber<T>.C_Gamma());
-		C(["one", "One", "ONE"], T.One());
+		C(["π", "pi", "Pi", "PI"], INumber<T>.C_Pi()); // half rotation
+		C(["τ", "tau", "Tau", "TAU"], INumber<T>.C_Tau()); // full rotation
+		C(["e", "E"], INumber<T>.C_E()); // euler number
+		C(["φ", "phi", "Phi", "PHI"], INumber<T>.C_Phi()); // golden ratio
+		C(["γ", "gamma", "Gamma", "GAMMA"], INumber<T>.C_Gamma()); // euler constant
+		C(["one", "One", "ONE"], T.One()); // all components one
 		foreach(var d in GenericConstants().Values)
 			C([d.String], d.Leaf);
 		
