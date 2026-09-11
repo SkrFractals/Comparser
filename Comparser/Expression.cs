@@ -1,4 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
+using System.DirectoryServices.ActiveDirectory;
 namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
 	public class Expression {
@@ -104,22 +105,36 @@ public abstract partial class Comparser<T> {
 		/// <param name="parseAs">what are e expecting this to be? Modifies what it is allowed to parse and return.</param>
 		public Expression(Reader read, out Operator nextOp, Value args, int cache = 0, OpOrder left = 0, ParseAs parseAs = ParseAs.Expression) {
 			Context = read.Context;
-			
+
 			// Init variables
 			int startR, start = read.From;
 			FailReason error = 0;
 			_cache = new(cache);
 			Value /*t = new(),*/ r;
 			List<Value> expr = [];
-			
+
 			// Parse Arguments:
 			ParseDictionary pArgs = new();
 			Nest();
 			read.TrimStart();
-			nextOp = new();
+			var o = nextOp = new();
 			do { // Read vector loop:
 				startR = read.From;
-				Read(out nextOp);
+				// Init read
+				expr.Add(r = new() {
+					Op = { Negative = Char('-') },
+					Leaf = T.nan
+				});
+				nextOp = r.Op = new();
+				_ = End(false) // unexpected ')', or no op, and return back successful
+					|| ReadUnaryOperatorReturned() // read unary
+					|| ReadTermReturned() // read term
+					|| CollapseTerm(ref r.Term!) // pre-eval const term
+					|| End(false) // test expression end
+					|| ReadOperatorReturn() // read operator
+					|| o.EatOp == 0 && !Context._operatorLess // operator-less multiply is blocked
+					|| ProcessBinaryOperator(ref nextOp) // eat operator chars and try to perform left-association
+					|| ReadOperand(ref nextOp); // Read operand
 				if (r.Text == "")
 					r.Text = read.Uncomment(startR, read.From); // if it didn't remember pre-defaultArg string, it will take it here
 				if (r.String == "")
@@ -133,21 +148,38 @@ public abstract partial class Comparser<T> {
 			V = new([..expr], error, read.Uncomment(start, read.From));
 			return;
 
-			void Read(out Operator nextOp) {
-				// Init read
-				r = new();
-				expr.Add(r);
-				nextOp = r.Op = new();
-				r.Op.Negative = Char('-');
-				r.Leaf = T.nan;
+			#region Read Terms and Operators
+			bool ReadTermReturned() {
+				if (o.Order != 0) {
+					// we had an unary operator (the only one I have to far is the unary inverse, so do that)
+					r.Term = new(Context, new(T.unit)); // unary inverse (pretend we have just successfully read "1/")
+					read.TrimStart(1); // trim white space
+					return true; // then return and go read a second operand
+				}
+				// no unary - read teh first term like normal: Try parenthesis/function/number/constant/argument:
+				if (ReadTermProperNeedsFailTest() && Fail(r) && F())
+					return true;
 				read.TrimStart();
-				// Try parenthesis/function/number/constant/argument:
-				//int[] argNest = [];
+				return false;
 
-				// unary operators:
-				Operator o;
-				if (End(false)) // unexpected ')', or no op, and return back successful
-					return;
+				bool ReadTermProperNeedsFailTest() {
+					// definitions do not allow parenthesis unless they got one right at the beginning of the top level
+					// if opening parenthesis, allow a newline,and read a subterm to encapsulate
+					if ((parseAs != ParseAs.Definition || left == 0) && Char('(') && read.TrimStart(1) && SubTerm(out r.Term, ')') 
+						|| Char('"') && ReadString(out r.Term) // try read string
+						|| TryFunc() // try read function
+						) return true;
+					var startTerm = read.From;
+					var success = ReadNumber(out var n) || ReadConst(out n) // read number OR const OR argument, const and argument can also be a delegate call:
+							&& (!(Context.UserFunctions.TryGetValue(n.String, out var f) || Context.DefaultFunctions.TryGetValue(n.String, out f)) // does the string value match any function name?
+								|| read.GotoFirstFailed(0, 2, ['('], 1, out _, out _) // if yes, try to eat the next opening parenthesis
+								|| !CallFunction(f, startTerm, read.From - 1, ParseDictionary.Type.PointerF)); // and then actually parse calling that function
+					if (success) // these calls only return value, need to encapsulate that into a term
+						r.Term = new(Context, n, cache); 
+					return !success;
+				}
+			}
+			bool ReadUnaryOperatorReturned() {
 				while ((o = read.nextChar switch {
 					'/' => new Div(), '\\' => new LDiv(), _ => new()
 				}).GetType() switch {
@@ -155,38 +187,14 @@ public abstract partial class Comparser<T> {
 					_ => false
 				}) {
 					if (o.Order == 0)
-						return;
+						return true;
 					read.TrimStart();
-					if (read.From >= read.Text.Length) return;
+					if (read.From >= read.Text.Length) return true;
 				}
-				// no unary:
-				if (o.Order == 0) {
-					var startTerm = read.From;
-					if ((
-							parseAs == ParseAs.Definition && left != 0 // definitions do not allow parenthesis unless they got one right at the beginning of the top level
-							|| !Char('(') 
-							|| !read.TrimStart(1) && SubTerm(out r.Term, ')')
-							) // if opening parenthesis, allow a newline,and read a subterm to encapsulate
-						&& (!Char('"') || ReadString(out r.Term))
-						&& TryFuncFailed() // _term = default function
-						&& (Number(out var n) // _value = number
-							|| Const(out n, pArgs, (byte)ParseDictionary.Type.Arg, c => new(read.Uncomment(startR, read.From), (int[])c.obj.Obj)) // function arguments
-							|| Const(out n, Context.Context, Constants, c => ((Value)c.obj.Obj).Copy()) // _value = constant
-							&& (!(Context.UserFunctions.TryGetValue(n.String, out var f) || Context.DefaultFunctions.TryGetValue(n.String, out f))
-								|| read.GotoFirstFailed(0, 2, ['('], 1, out _, out _)
-								|| CallF(f, startTerm, read.From - 1, ParseDictionary.Type.PointerF))
-						)) r.Term = new(Context, n, cache); // just a value
-					else if (Fail(r) && F()) return;//if(Fail(r) && F()) TryComment();
-					read.TrimStart();
-				} else {
-					r.Term = new(Context, new(T.unit)); // unary inverse
-					read.TrimStart(1);
-				}
-				// collapse constant evaluations:
-				CollapseTerm(ref r.Term!);
-				if (End(false)) // unexpected ')', or no op, and return back successful
-					return; // true; 
-				// Read operators/comments:
+				return false;
+			}
+			bool ReadOperatorReturn() {
+				// Try to read a binary operator, or apply and encapsulate a post-fix unary operator if it happens to be one
 				while ((o = read.nextChar switch {
 					'+' => new Add(), '-' => new Sub(), '*' => new Mul(), '/' => new Div(), '\\' => new LDiv(), '^' => new Pow(), '$' => new Root(read.CharAtRel('$', 1)), '%' => new Mod(read.CharAtRel('%', 1)),
 					'=' => new Equal(), '<' => new Less(read.CharAtRel('=', 1)), '>' => new More(read.CharAtRel('=', 1)),
@@ -194,35 +202,28 @@ public abstract partial class Comparser<T> {
 				}).GetType() switch {
 					var x when x == typeof(Sqr) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpSqr, T.Sqr, OpCode.Sqr, expr[^1])), // sqr
 					var x when x == typeof(Conj) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpConj, INumber<T>.Conj, OpCode.Conj, expr[^1])), // conjugate
-					var x when x == typeof(Exclamation) => DoubleOp('=', new Exclamation(OpOrder.Compare)) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpFact, T.Factorial, OpCode.Factorial, expr[^1])), // factorial
+					var x when x == typeof(Exclamation) => SecondOpCharMissing('=', new Exclamation(OpOrder.Compare)) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpFact, T.Factorial, OpCode.Factorial, expr[^1])), // factorial
 					var x when x == typeof(Index) => ExtractTerms(), // index
 					var x when x == typeof(Div) => read.IsComment(), // comment
-					var x when x == typeof(Count) => DoubleOp('#', new Count()) && ++read.From > 0 && Encapsulate(new FuncCount(Context, OpCount, expr[^1]))
+					var x when x == typeof(Count) => SecondOpCharMissing('#', new Count()) && ++read.From > 0 && Encapsulate(new FuncCount(Context, OpCount, expr[^1]))
 						|| (read.From += 2) > 0 && Encapsulate(new FuncCatCount(Context, OpCatCount, expr[^1])), // count / catCount
 					var x when x == typeof(Abs) => DuO('@', new Abs(), OpAbs, INumber<T>.T_Abs, OpCode.Abs, OpSqrAbs, INumber<T>.SqrAbs, OpCode.SqrAbs), // abs / sqrAbs
 					var x when x == typeof(AbsRi) => DuO('|', new AbsRi(), OpCompAbs, T.AbsComp, OpCode.Absri, OpSign, INumber<T>.Sign, OpCode.Sgn), // count / catCount
 					_ => false
 				}) {
 					read.TrimStart();
-					if (o.Order == 0 || read.From >= read.Text.Length) return; // true;
+					if (o.Order == 0 || read.From >= read.Text.Length) return true;
 				}
-				if (o.EatOp == 0 && !Context._operatorLess)
-					return; // operator-less multiply is blocked
-				read.From += o.EatOp; // eat operator
-				read.TrimStart(o.EatOp > 0 ? 1 : 0);
-				o.Negative = r.Op.Negative; // move negative flag to the new operator
-				if (LeftAssociate(o)) {
-					nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
-					return; // false;
-				}
-				// Read operand:
+				return false;
+			}
+			bool ReadOperand(ref Operator nextOp) {
 				while (true) {
 					var fail = Fail((r.Operand = new(read, out o, args, cache, (r.Op = o).Order, parseAs)).V);
 					if (fail) {
 						if (parseAs != ParseAs.Expression && F()) // operand failed when we're looking for an argument - go back and take the string and try the defArg there 
 							break;
 						if (r.Op.EatOp > 0 && F())
-							return; // false; // failed to read operand
+							return false; // false; // failed to read operand
 						r.Op = new();
 						break; // if it was trying to be an operator-less multiplication - assume it was an expression end instead, because we literally read nothing
 					}
@@ -231,215 +232,255 @@ public abstract partial class Comparser<T> {
 					// operand's next op has lower or equal order priority:
 					// encapsulate my term into another term (wrap my term into parentheses), take the next operator and find the next operand to use it on
 					_ = Encapsulate(new(Context, expr[^1], cache));
-					
-					if (!LeftAssociate(o))
+					if (NotLeftAssociate(o))
 						continue; // need to test associativity again, to let it recurse backwards. otherwise 2^2^2+1 would be 2^(2^2+1)
 					nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
-					return; // false;
+					return true; // false;
 				}
-				return; // true;
-
-				bool DuO(char c, Operator newOp, CallFunction parent1, Func<T, T> del1, OpCode op1, CallFunction parent2, Func<T, T> del2, OpCode op2)
-					=> DoubleOp(c, newOp) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent1, del1, op1, expr[^1]))
-						|| (read.From += 2) > 0 && Encapsulate(new FuncOperator(Context, parent2, del2, op2, expr[^1]));
-				bool DoubleOp(char c, Operator newOp) {
-					if (!read.CharAtRel(c, 1))
-						return true; // must be a factorial, keep it
-					o = newOp; // must be !=, change into that
-					return false;
-				}
-				bool ExtractTerms() {
-					++read.From;
-					if (!SubTerm(out var indices, ']'))
-						return Encapsulate(new FuncIndex(Context, expr[^1], indices.V));
-					o = new(); // failed to parse indices
-					return true;
-				}
-				bool SubTerm(out Expression readTo, char req) {
-					var fail = Fail((readTo = new(read, out _, args, 0, 0, parseAs >= ParseAs.Definition ? ParseAs.DefinitionExp : parseAs)).V);
-					read.TrimStart();
-					return (fail || readTo.V.Values.Length == 0 || FailRequiredSymbol(req)) && F();
-				}
-				bool ReadString(out Expression readTo) {
-					var before = read.From;
-					if (read.GotoFirstFailed(1, 2, [], 0, out _, out _, false, 0, true)) {
-						readTo = new(Context, None);
-						return F();
-					}
-					var s = read.Uncomment(before, read.From - 1);
-					for (var i = 0; (i = s.IndexOf('\\', i)) >= 0;) {
-						if (i + 1 < s.Length)
-							switch (s[i + 1]) {
-							case '\\': s = s.Remove(++i, 1); break; // intentional backslash in string
-							case 'n': R("\n"); break; // intentional newline in string
-							case 't': R("\t"); break; // intentional newline in string
-							case 'r': R("\r"); break; // intentional newline in string
-							default: ++i; break;
-								void R(string character) {
-									s = s.Remove(i, 2).Insert(i, character);
-									++i;
-								}
-							}
-					}
-					readTo = new(Context, new(0, s));
-					return false;
-				}
-				bool FailRequiredSymbol(char c, int offset = 0) {
-					if (read.GotoFirstFailed(offset, 0, [c], 1, out _, out var found))
-						return F();
-					read.From = found + 1; // goto behind the char we found
-					return false;
-				}
-				bool End(bool allowNewLines) {
-					bool endDefault = false;
-					char next;
-					if (!allowNewLines) {
-						int beforeFrom = read.From, beforeLine = read.Line;
-						while (!read.GotoFirstFailed(0, 1, ['\n'], 0, out _, out _))
-							endDefault = true;
-						var nf = read.From;
-						read.From = beforeFrom;
-						read.Line = beforeLine;
-						if (!endDefault)
-							nf = beforeFrom;
-						if (nf >= read.Text.Length)
-							return true;
-						next = read.Text[nf];
-					} else {
-						if (read.TrimStart(1)) return true;
-						next = read.nextChar;
-					}
-					var result = read.TrimStart(allowNewLines ? 1 : 0) || next switch {
-						// what counts as an expression end:
-						')' => true, // ends parentheses
-						',' => true, // divides vector element expressions
-						'{' => true, // after if or while
-						'}' => true, // after block
-						';' => true, // separator
-						'\n' => !allowNewLines, // separator
-						'?' => true, // ternary
-						':' => true, // ternary, default arguments, definitions
-						']' => true, // ends indexer 
-						// operators strictly allowing continuation:
-						'+' => false, // add
-						'-' => false, // subtract
-						'*' => false, // multiply
-						'/' => false, // div
-						'%' => false, // mod
-						'^' => false, // pow
-						'$' => false, // root/log
-						'&' => false, // sqr
-						'|' => false, // absRi
-						'@' => false, // abs
-						'#' => false, // count
-						'~' => false, // conj
-						'!' => false, // unequal, but not factorial, as that could be while
-						'<' => false, // less
-						'>' => false, // more
-						'=' => false, // equal
-						'[' => false, // begin indexer
-						//'(' => false, // a definition can begin with a parenthesis, so those are not allowed on a new line
-						_ => endDefault
-					};
-					return endDefault && !result ? read.TrimStart(1) : result; // if we found an op on the next line, then trim the newlines
-				}
-				bool Encapsulate(Expression p) {
-					// TEST I just moved the unary minus out of encapsulation, test if that's ok every time
-					var n = r.Op.Negative;
-					r.Op.Negative = false;
-					expr[^1] = r = new(T.nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
-					r.Op.Negative = n;
-					CollapseTerm(ref p);
-					return true;
-				}
-				bool LeftAssociate(Operator testOp) => testOp.Right ? testOp.Order < left : testOp.Order <= left;
-				bool Fail(Value test) => test.Term == null && (test.Values.Length == 0 || test.Values is [{ Term: null }]);
-				bool F() {
-					(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(), T.nan, [], null, null);
-					int e, end = read.Text.Length, prevF = read.From;
-					char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']', '/'];
-					if (read.From < read.Text.Length)
-						foreach (var et in ends)
-							if ((e = read.Text.IndexOf(et, read.From)) >= 0 && e < end)
-								end = e;
-					if (prevF < end)
-						read.AddC(prevF, end, ParseDictionary.Type.Error);
-					read.From = end;
-					if (parseAs == ParseAs.Expression)
-						r.Error = (FailReason)Math.Max((byte)FailReason.BadExpression, (byte)r.Error);
-					return true;
-				} // reading failed
-				bool TryFuncFailed() {
-					var startFrom = read.From;
-					foreach (var f in Context.Context.Get(read.Text, read.From, Functions))
-						if (f.name.Length > 0 && !FailRequiredSymbol('(', (byte)f.name.Length))
-							return CallF((CallFunction)f.obj.Obj, startFrom, startFrom + f.name.Length, f.obj.Type);
-					return true;
-				}
-				bool CallF(CallFunction f, int startFrom, int endFrom, ParseDictionary.Type type) {
-					read.TrimStart(1); // allow newline after opening parenthesis
-					if ((Fail((r.Term = f.Call(read, args)).V) || FailRequiredSymbol(')')) && F()) {
-						read.AddC(startFrom, read.From, ParseDictionary.Type.Error);
-						return true; // must eat func closing parenthesis
-					}
-					read.AddC(startFrom, endFrom, type);
-					return false;
-				}
-				bool Number(out Value number) {
-					var startFrom = read.From;
-					if (Char('_')) {
-						read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
-						number = new(T.nan); // '_' is NaN
-						return true;
-					}
-					if (RealNumber(out var real)) {
-						read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
-						number = new(T.MakeR(real), 0, read.Uncomment(startR, read.From));
-						return true;
-					}
-					number = None;
-					return false;
-				}
-				bool RealNumber(out double number, double l = 0) {
-					if (read.From < read.Text.Length) {
-						if (read.nextChar == '.') {
-							// eat decimal point
-							++read.From;
-							// get fractional part
-							number = l + DecimalNumber();
-							return true;
-						}
-						if (int.TryParse(read.nextChar.ToString(), out var i)) {
-							l *= 10;
-							// eat another digit
-							++read.From; 
-							// add another whole digit, or finish
-							_ = RealNumber(out number, l + i); // && 1 <= n ? 10 * i + n : i + n;
-							return true;
-						}
-					}
-					number = l; // no more digits
-					return false;
-				}
-				double DecimalNumber(double d = 1) {
-					if (read.From >= read.Text.Length) return 0; // no more digits
-					d /= 10; // prepare another position
-					if (!int.TryParse(read.nextChar.ToString(), out var i))
-						return 0;
-					++read.From; 
-					return i * d + DecimalNumber(d);
-				}
-				bool Const(out Value number, ParseDictionary dic, byte type, Func<(string name, ParseDictionary.S obj),Value> make) {
-					foreach (var c in dic.Get(read.Text, read.From, type)) {
-						if (c.name.Length <= 0) continue;
-						number = make(c);
-						read.AddC(read.From, read.From += c.name.Length, c.obj.Type);
-						return true;
-					}
-					number = None;
-					return false;
-				}
+				return false;
 			}
+			bool DuO(char c, Operator newOp, CallFunction parent1, Func<T, T> del1, OpCode op1, CallFunction parent2, Func<T, T> del2, OpCode op2)
+				=> SecondOpCharMissing(c, newOp) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent1, del1, op1, expr[^1]))
+					|| (read.From += 2) > 0 && Encapsulate(new FuncOperator(Context, parent2, del2, op2, expr[^1]));
+			bool SecondOpCharMissing(char c, Operator newOp) {
+				if (!read.CharAtRel(c, 1))
+					return true; // must be the single-character operator, go to the single-character branch (true)
+				o = newOp; // found the second possible character for this op -> replace teh operator and go to the double-char branch (false) 
+				return false;
+			}
+			#endregion
+
+			#region Orders Of Operations
+			bool SubTerm(out Expression readTo, char req) {
+				var fail = Fail((readTo = new(read, out _, args, 0, 0, parseAs >= ParseAs.Definition ? ParseAs.DefinitionExp : parseAs)).V);
+				read.TrimStart();
+				return (fail || readTo.V.Values.Length == 0 || FailRequiredSymbol(req)) && F();
+			}
+			bool Encapsulate(Expression p) {
+				// TEST I just moved the unary minus out of encapsulation, test if that's ok every time
+				var n = r.Op.Negative;
+				r.Op.Negative = false;
+				expr[^1] = r = new(T.nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
+				r.Op.Negative = n;
+				CollapseTerm(ref p);
+				return true;
+			}
+			bool NotLeftAssociate(Operator testOp) => testOp.Right ? testOp.Order >= left : testOp.Order > left;
+			bool ProcessBinaryOperator(ref Operator nextOp) {
+				read.From += o.EatOp; // eat operator
+				read.TrimStart(o.EatOp > 0 ? 1 : 0);
+				o.Negative = r.Op.Negative; // move negative flag to the new operator
+				if (NotLeftAssociate(o))
+					return true;
+				nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
+				return false;
+			}
+			#endregion
+
+			#region Read Function/Delegate Calls
+			bool TryFunc() {
+				var startFrom = read.From;
+				foreach (var f in Context.Context.Get(read.Text, read.From, Functions))
+					if (f.name.Length > 0 && !FailRequiredSymbol('(', (byte)f.name.Length))
+						return CallFunction((CallFunction)f.obj.Obj, startFrom, startFrom + f.name.Length, f.obj.Type);
+				return false;
+			}
+			bool CallFunction(CallFunction f, int startFrom, int endFrom, ParseDictionary.Type type) {
+				read.TrimStart(1); // allow newline after opening parenthesis
+				if ((Fail((r.Term = f.Call(read, args)).V) || FailRequiredSymbol(')')) && F()) {
+					read.AddC(startFrom, read.From, ParseDictionary.Type.Error);
+					return false; // must eat func closing parenthesis
+				}
+				read.AddC(startFrom, endFrom, type);
+				return true;
+			}
+			#endregion
+
+			#region Read Values
+			bool ReadNumber(out Value number) {
+				var startFrom = read.From;
+				if (Char('_')) {
+					read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
+					number = new(T.nan); // '_' is NaN
+					return true;
+				}
+				if (RealNumber(out var real)) {
+					read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
+					number = new(T.MakeR(real), 0, read.Uncomment(startR, read.From));
+					return true;
+				}
+				number = None;
+				return false;
+			}
+			bool RealNumber(out double number, double l = 0) {
+				if (read.From < read.Text.Length) {
+					if (read.nextChar == '.') {
+						// eat decimal point
+						++read.From;
+						// get fractional part
+						number = l + DecimalNumber();
+						return true;
+					}
+					if (int.TryParse(read.nextChar.ToString(), out var i)) {
+						l *= 10;
+						// eat another digit
+						++read.From;
+						// add another whole digit, or finish
+						_ = RealNumber(out number, l + i); // && 1 <= n ? 10 * i + n : i + n;
+						return true;
+					}
+				}
+				number = l; // no more digits
+				return false;
+			}
+			double DecimalNumber(double d = 1) {
+				if (read.From >= read.Text.Length) return 0; // no more digits
+				d /= 10; // prepare another position
+				if (!int.TryParse(read.nextChar.ToString(), out var i))
+					return 0;
+				++read.From;
+				return i * d + DecimalNumber(d);
+			}
+			bool ReadConst(out Value number) {
+				var found = ConstType(out var readArg, pArgs, (byte)ParseDictionary.Type.Arg); // function arguments
+				if (ConstType(out var readConst, Context.Context, Constants) || found) { // constants
+					if (readConst.name.Length <= readArg.name.Length) {
+						number = new(read.Uncomment(startR, read.From), (int[])readArg.obj.Obj); // the longest match was an argument
+						AddC(readArg);
+						return true;
+					}
+					number = ((Value)readConst.obj.Obj).Copy(); // the longest match was a constant
+					AddC(readConst);
+					return true;
+					void AddC((string name, ParseDictionary.S obj) c) => read.AddC(read.From, read.From += c.name.Length, c.obj.Type);
+				}
+				number = None;
+				return false;
+			}
+			bool ConstType(out (string name, ParseDictionary.S obj) number, ParseDictionary dic, byte type /*, Func<(string name, ParseDictionary.S obj),Value> make*/) {
+				foreach (var c in dic.Get(read.Text, read.From, type)) {
+					if ((number = c).name.Length <= 0) continue;
+					number = c; //number = make(c);
+
+					return true;
+				}
+				number = ("", new());
+				return false;
+			}
+			bool ReadString(out Expression readTo) {
+				var before = read.From;
+				if (read.GotoFirstFailed(1, 2, [], 0, out _, out _, false, 0, true)) {
+					readTo = new(Context, None);
+					return !F();
+				}
+				var s = read.Uncomment(before, read.From - 1);
+				for (var i = 0; (i = s.IndexOf('\\', i)) >= 0;) {
+					if (i + 1 < s.Length)
+						switch (s[i + 1]) {
+						case '\\': s = s.Remove(++i, 1); break; // intentional backslash in string
+						case 'n': R("\n"); break; // intentional newline in string
+						case 't': R("\t"); break; // intentional newline in string
+						case 'r': R("\r"); break; // intentional newline in string
+						default:
+							++i;
+							break;
+							void R(string character) {
+								s = s.Remove(i, 2).Insert(i, character);
+								++i;
+							}
+						}
+				}
+				readTo = new(Context, new(0, s));
+				return true;
+			}
+			bool ExtractTerms() {
+				++read.From;
+				if (!SubTerm(out var indices, ']'))
+					return Encapsulate(new FuncIndex(Context, expr[^1], indices.V));
+				o = new(); // failed to parse indices
+				return true;
+			}
+			#endregion
+
+			#region Fails/Endings
+			bool End(bool allowNewLines) {
+				read.TrimStart();
+				bool endDefault = false;
+				char next;
+				if (!allowNewLines) {
+					int beforeFrom = read.From, beforeLine = read.Line;
+					while (!read.GotoFirstFailed(0, 1, ['\n'], 0, out _, out _))
+						endDefault = true;
+					var nf = read.From;
+					read.From = beforeFrom;
+					read.Line = beforeLine;
+					if (!endDefault)
+						nf = beforeFrom;
+					if (nf >= read.Text.Length)
+						return true;
+					next = read.Text[nf];
+				} else {
+					if (read.TrimStart(1)) return true;
+					next = read.nextChar;
+				}
+				var result = read.TrimStart(allowNewLines ? 1 : 0) || next switch {
+					// what counts as an expression end:
+					')' => true, // ends parentheses
+					',' => true, // divides vector element expressions
+					'{' => true, // after if or while
+					'}' => true, // after block
+					';' => true, // separator
+					'\n' => !allowNewLines, // separator
+					'?' => true, // ternary
+					':' => true, // ternary, default arguments, definitions
+					']' => true, // ends indexer 
+					// operators strictly allowing continuation:
+					'+' => false, // add
+					'-' => false, // subtract
+					'*' => false, // multiply
+					'/' => false, // div
+					'%' => false, // mod
+					'^' => false, // pow
+					'$' => false, // root/log
+					'&' => false, // sqr
+					'|' => false, // absRi
+					'@' => false, // abs
+					'#' => false, // count
+					'~' => false, // conj
+					'!' => false, // unequal, but not factorial, as that could be while
+					'<' => false, // less
+					'>' => false, // more
+					'=' => false, // equal
+					'[' => false, // begin indexer
+					//'(' => false, // a definition can begin with a parenthesis, so those are not allowed on a new line
+					_ => endDefault
+				};
+				return endDefault && !result ? read.TrimStart(1) : result; // if we found an op on the next line, then trim the newlines
+			}
+			bool FailRequiredSymbol(char c, int offset = 0) {
+				if (read.GotoFirstFailed(offset, 0, [c], 1, out _, out var found))
+					return F();
+				read.From = found + 1; // goto behind the char we found
+				return false;
+			}
+			bool Fail(Value test) => test.Term == null && (test.Values.Length == 0 || test.Values is [{ Term: null }]);
+			bool F() {
+				(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(), T.nan, [], null, null);
+				int e, end = read.Text.Length, prevF = read.From;
+				char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']', '/'];
+				if (read.From < read.Text.Length)
+					foreach (var et in ends)
+						if ((e = read.Text.IndexOf(et, read.From)) >= 0 && e < end)
+							end = e;
+				if (prevF < end)
+					read.AddC(prevF, end, ParseDictionary.Type.Error);
+				read.From = end;
+				if (parseAs == ParseAs.Expression)
+					r.Error = (FailReason)Math.Max((byte)FailReason.BadExpression, (byte)r.Error);
+				return true;
+			} // reading failed
+			#endregion
+
 			bool ParseContinue() {
 				if (left != 0) // only the top-level layer is allowed to follow up with ',' or ':'
 					return false;
@@ -467,9 +508,10 @@ public abstract partial class Comparser<T> {
 				}
 			}
 			// experimental - pre-evaluate parts of expressions that are not dependent on any arguments:
-			void CollapseTerm(ref Expression exp) {
+			bool CollapseTerm(ref Expression exp) {
 				if (Context.PreEvaluate && !CollapseValue(exp.V))
 					exp = new(Context, exp.Eval(0, None));
+				return false;
 			}
 			bool CollapseValue(Value v) {
 				if (!Context.PreEvaluate)
@@ -481,7 +523,7 @@ public abstract partial class Comparser<T> {
 				return false;
 				bool CollapseValues(Value[] vals) {
 					var has = false;
-					foreach (var val in vals) 
+					foreach (var val in vals)
 						has |= CollapseValue(val);
 					return has;
 				}
@@ -525,6 +567,7 @@ public abstract partial class Comparser<T> {
 		}
 		#endregion
 		
+		private static (string, ParseDictionary.S) NoConstant = ("", new());
 		private const byte Functions = (byte)ParseDictionary.Type.UserF | (byte)ParseDictionary.Type.DefaultF;
 		private const byte Constants = (byte)ParseDictionary.Type.UserC | (byte)ParseDictionary.Type.DefaultC;
 	}
