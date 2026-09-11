@@ -25,7 +25,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		splitContainer.Panel2MinSize = 2 * Pad + RowHeight;
 		_lines = new(codeBox);
 		codeBox.Location = new(0, 0);
-		codeBox.Size = new(314, 216); //splitContainer.Panel1.Size;
+		codeBox.Size = new(splitContainer.Panel2.Width, splitContainer.Panel2.Height); //splitContainer.Panel1.Size;
 		_lines.Location = codeBox.Location;
 		_lines.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Top;
 		_lines.Height = codeBox.Height;
