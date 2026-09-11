@@ -183,7 +183,7 @@ public abstract partial class Comparser<T> {
 					read.TrimStart(1);
 				}
 				// collapse constant evaluations:
-				CollapseTerm(r.Term!);
+				CollapseTerm(ref r.Term!);
 				if (End(false)) // unexpected ')', or no op, and return back successful
 					return; // true; 
 				// Read operators/comments:
@@ -226,7 +226,7 @@ public abstract partial class Comparser<T> {
 						r.Op = new();
 						break; // if it was trying to be an operator-less multiplication - assume it was an expression end instead, because we literally read nothing
 					}
-					CollapseTerm(r.Operand);
+					CollapseTerm(ref r.Operand);
 					if (o.Order == 0) break;
 					// operand's next op has lower or equal order priority:
 					// encapsulate my term into another term (wrap my term into parentheses), take the next operator and find the next operand to use it on
@@ -241,7 +241,7 @@ public abstract partial class Comparser<T> {
 
 				bool DuO(char c, Operator newOp, CallFunction parent1, Func<T, T> del1, OpCode op1, CallFunction parent2, Func<T, T> del2, OpCode op2)
 					=> DoubleOp(c, newOp) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent1, del1, op1, expr[^1]))
-						|| ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent2, del2, op2, expr[^1]));
+						|| (read.From += 2) > 0 && Encapsulate(new FuncOperator(Context, parent2, del2, op2, expr[^1]));
 				bool DoubleOp(char c, Operator newOp) {
 					if (!read.CharAtRel(c, 1))
 						return true; // must be a factorial, keep it
@@ -344,8 +344,12 @@ public abstract partial class Comparser<T> {
 					return endDefault && !result ? read.TrimStart(1) : result; // if we found an op on the next line, then trim the newlines
 				}
 				bool Encapsulate(Expression p) {
+					// TEST I just moved the unary minus out of encapsulation, test if that's ok every time
+					var n = r.Op.Negative;
+					r.Op.Negative = false;
 					expr[^1] = r = new(T.nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
-					CollapseTerm(p);
+					r.Op.Negative = n;
+					CollapseTerm(ref p);
 					return true;
 				}
 				bool LeftAssociate(Operator testOp) => testOp.Right ? testOp.Order < left : testOp.Order <= left;
@@ -455,7 +459,7 @@ public abstract partial class Comparser<T> {
 					// found ':', so try to read argument default new([..expr]) is to let it reference already read arguments:
 					read.TrimStart(1);
 					r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
-					CollapseTerm(r.Operand);
+					CollapseTerm(ref r.Operand);
 					goto default; // after reading the defArd, go try read ',' again, but with ':' not allowed again
 				default:
 					return !read.GotoFirstFailed(0, 2, [','], 1, out s, out _);
@@ -463,9 +467,9 @@ public abstract partial class Comparser<T> {
 				}
 			}
 			// experimental - pre-evaluate parts of expressions that are not dependent on any arguments:
-			void CollapseTerm(Expression exp) {
-				if(Context.PreEvaluate && !CollapseValue(exp.V))
-					exp.V = exp.Eval(0, None);
+			void CollapseTerm(ref Expression exp) {
+				if (Context.PreEvaluate && !CollapseValue(exp.V))
+					exp = new(Context, exp.Eval(0, None));
 			}
 			bool CollapseValue(Value v) {
 				if (!Context.PreEvaluate)
@@ -477,8 +481,8 @@ public abstract partial class Comparser<T> {
 				return false;
 				bool CollapseValues(Value[] vals) {
 					var has = false;
-					foreach (var v in vals) 
-						has |= CollapseValue(v);
+					foreach (var val in vals) 
+						has |= CollapseValue(val);
 					return has;
 				}
 			}

@@ -94,7 +94,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T Ceil(T t);
 	public static abstract T Cycle(T t);
 	public static abstract T Inv(T t);
-	public static T I_Inv(T t) => Conj(t) / SqrAbs(t);
+	public static T I_Inv(T t) => Conj(t) / +t;
 	public static abstract double Arg(T t);
 	public static abstract T InvArg(double p, T axis);
 	public static abstract T Axis(T t);
