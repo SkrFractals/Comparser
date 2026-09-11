@@ -66,7 +66,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 
 	public static T ComplexOp(T t, Func<Complex, Complex> func) {
 		var r = func(Abs(t) * Complex.Complex_InvArg(T.Arg(t)));
-		return INumber<Complex, double>.Abs(r) * T.InvArg(Complex.Arg(r), T.Axis(t));
+		return INumber<Complex>.Abs(r) * T.InvArg(Complex.Arg(r), T.Axis(t));
 	}
 	#endregion
 	

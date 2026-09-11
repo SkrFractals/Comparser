@@ -63,7 +63,8 @@ partial class ComparserPanel {
 		// 
 		// codeBox
 		// 
-		codeBox.Dock = DockStyle.Fill;
+		codeBox.Dock = DockStyle.None;
+		codeBox.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 		codeBox.Location = new Point(0, 0);
 		codeBox.MinimumSize = new Size(0, 32);
 		codeBox.Name = "codeBox";

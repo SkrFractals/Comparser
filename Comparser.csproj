@@ -8,6 +8,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ForceDesignerDPIUnaware>true</ForceDesignerDPIUnaware>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,6 +44,9 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Update="Forms\Controls\LineNumberControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Update="Forms\test.cs">
       <SubType>UserControl</SubType>
     </Compile>
   </ItemGroup>

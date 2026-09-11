@@ -21,204 +21,224 @@ partial class SettingsPanel {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		darkButton = new Button();
-		algebraBox = new ComboBox();
-		decLabel = new Label();
-		decimalBox = new TextBox();
-		autoButton = new Button();
-		reportButton = new Button();
-		autoLabel = new Label();
-		reportLabel = new Label();
-		autoBox = new TextBox();
-		reportBox = new TextBox();
-		plotButton = new Button();
-		plotBox = new TextBox();
-		plotLabel = new Label();
-		xMemBox = new CheckBox();
-		xyMemBox = new CheckBox();
+		darkButton = new System.Windows.Forms.Button();
+		algebraBox = new System.Windows.Forms.ComboBox();
+		decLabel = new System.Windows.Forms.Label();
+		decimalBox = new System.Windows.Forms.TextBox();
+		autoButton = new System.Windows.Forms.Button();
+		reportButton = new System.Windows.Forms.Button();
+		autoLabel = new System.Windows.Forms.Label();
+		reportLabel = new System.Windows.Forms.Label();
+		autoBox = new System.Windows.Forms.TextBox();
+		reportBox = new System.Windows.Forms.TextBox();
+		plotButton = new System.Windows.Forms.Button();
+		plotBox = new System.Windows.Forms.TextBox();
+		plotLabel = new System.Windows.Forms.Label();
+		xMemBox = new System.Windows.Forms.CheckBox();
+		xyMemBox = new System.Windows.Forms.CheckBox();
+		preEvalBox = new System.Windows.Forms.CheckBox();
 		SuspendLayout();
 		// 
 		// darkButton
 		// 
-		darkButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-		darkButton.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		darkButton.Location = new Point(287, 3);
+		darkButton.Anchor = ((System.Windows.Forms.AnchorStyles)(System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right));
+		darkButton.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		darkButton.Location = new System.Drawing.Point(287, 3);
 		darkButton.Name = "darkButton";
-		darkButton.Size = new Size(30, 23);
+		darkButton.Size = new System.Drawing.Size(30, 23);
 		darkButton.TabIndex = 2;
 		darkButton.Text = "L";
 		darkButton.UseMnemonic = false;
 		darkButton.UseVisualStyleBackColor = true;
+		darkButton.Visible = false;
 		darkButton.Click += darkButton_Click;
 		// 
 		// algebraBox
 		// 
-		algebraBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-		algebraBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
+		algebraBox.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
+		algebraBox.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
 		algebraBox.FormattingEnabled = true;
 		algebraBox.Items.AddRange(new object[] { "REAL", "COMPLEX", "QUATERNION" });
-		algebraBox.Location = new Point(163, 4);
+		algebraBox.Location = new System.Drawing.Point(163, 3);
 		algebraBox.Name = "algebraBox";
-		algebraBox.Size = new Size(118, 23);
+		algebraBox.Size = new System.Drawing.Size(118, 23);
 		algebraBox.TabIndex = 1;
-		algebraBox.Text = "COMPLEX";
+		algebraBox.Visible = false;
 		algebraBox.SelectedIndexChanged += AlgebraBox_SelectedIndexChanged;
 		// 
 		// decLabel
 		// 
 		decLabel.AutoSize = true;
-		decLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		decLabel.Location = new Point(3, 6);
+		decLabel.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		decLabel.Location = new System.Drawing.Point(3, 6);
 		decLabel.Name = "decLabel";
-		decLabel.Size = new Size(70, 15);
+		decLabel.Size = new System.Drawing.Size(70, 15);
 		decLabel.TabIndex = 3;
 		decLabel.Text = "Decimals:";
 		decLabel.UseMnemonic = false;
+		decLabel.Visible = false;
 		// 
 		// decimalBox
 		// 
-		decimalBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		decimalBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		decimalBox.Location = new Point(100, 4);
+		decimalBox.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		decimalBox.Location = new System.Drawing.Point(90, 4);
 		decimalBox.Name = "decimalBox";
-		decimalBox.Size = new Size(57, 23);
+		decimalBox.Size = new System.Drawing.Size(67, 23);
 		decimalBox.TabIndex = 0;
+		decimalBox.Visible = false;
 		decimalBox.Text = "3";
 		decimalBox.TextChanged += DecimalBox_TextChanged;
 		// 
 		// autoButton
 		// 
-		autoButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-		autoButton.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		autoButton.Location = new Point(163, 33);
+		autoButton.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		autoButton.Location = new System.Drawing.Point(163, 32);
 		autoButton.Name = "autoButton";
-		autoButton.Size = new Size(154, 23);
+		autoButton.Size = new System.Drawing.Size(154, 23);
 		autoButton.TabIndex = 4;
 		autoButton.Text = "DELAYED AUTOMATIC";
 		autoButton.UseMnemonic = false;
 		autoButton.UseVisualStyleBackColor = true;
+		autoButton.Visible = false;
 		autoButton.Click += autoButton_Click;
 		// 
 		// reportButton
 		// 
-		reportButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-		reportButton.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		reportButton.Location = new Point(163, 62);
+		reportButton.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		reportButton.Location = new System.Drawing.Point(163, 61);
 		reportButton.Name = "reportButton";
-		reportButton.Size = new Size(154, 23);
+		reportButton.Size = new System.Drawing.Size(154, 23);
 		reportButton.TabIndex = 6;
 		reportButton.Text = "ONGOING";
 		reportButton.UseMnemonic = false;
 		reportButton.UseVisualStyleBackColor = true;
+		reportButton.Visible = false;
 		reportButton.Click += reportButton_Click;
 		// 
 		// autoLabel
 		// 
 		autoLabel.AutoSize = true;
-		autoLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		autoLabel.Location = new Point(3, 37);
+		autoLabel.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		autoLabel.Location = new System.Drawing.Point(3, 35);
 		autoLabel.Name = "autoLabel";
-		autoLabel.Size = new Size(70, 15);
+		autoLabel.Size = new System.Drawing.Size(84, 15);
 		autoLabel.TabIndex = 7;
-		autoLabel.Text = "Building:";
+		autoLabel.Text = "Auto Build:";
 		autoLabel.UseMnemonic = false;
+		autoLabel.Visible = false;
 		// 
 		// reportLabel
 		// 
 		reportLabel.AutoSize = true;
-		reportLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		reportLabel.Location = new Point(3, 66);
+		reportLabel.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)238));
+		reportLabel.Location = new System.Drawing.Point(3, 65);
 		reportLabel.Name = "reportLabel";
-		reportLabel.Size = new Size(98, 15);
+		reportLabel.Size = new System.Drawing.Size(91, 15);
 		reportLabel.TabIndex = 9;
-		reportLabel.Text = "Build Report:";
+		reportLabel.Text = "Report Logs:";
 		reportLabel.UseMnemonic = false;
+		reportLabel.Visible = false;
 		// 
 		// autoBox
 		// 
-		autoBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		autoBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		autoBox.Location = new Point(100, 33);
+		autoBox.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		autoBox.Location = new System.Drawing.Point(90, 32);
 		autoBox.Name = "autoBox";
-		autoBox.Size = new Size(57, 23);
+		autoBox.Size = new System.Drawing.Size(67, 23);
 		autoBox.TabIndex = 10;
+		autoBox.Visible = false;
 		autoBox.Text = "5000";
 		autoBox.TextChanged += autoBox_TextChanged;
 		// 
 		// reportBox
 		// 
-		reportBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		reportBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		reportBox.Location = new Point(100, 62);
+		reportBox.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		reportBox.Location = new System.Drawing.Point(90, 62);
 		reportBox.Name = "reportBox";
-		reportBox.Size = new Size(57, 23);
-		reportBox.TabIndex = 12;
-		reportBox.Text = "1000";
+		reportBox.Size = new System.Drawing.Size(67, 23);
+		reportBox.Text = "5000";
+		reportBox.TabIndex = 11;
+		reportBox.Visible = false;
 		reportBox.TextChanged += reportBox_TextChanged;
 		// 
 		// plotButton
 		// 
-		plotButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-		plotButton.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		plotButton.Location = new Point(163, 91);
+		plotButton.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		plotButton.Location = new System.Drawing.Point(163, 91);
 		plotButton.Name = "plotButton";
-		plotButton.Size = new Size(154, 23);
+		plotButton.Size = new System.Drawing.Size(154, 23);
 		plotButton.TabIndex = 13;
 		plotButton.Text = "DELAYED AUTOMATIC";
 		plotButton.UseMnemonic = false;
 		plotButton.UseVisualStyleBackColor = true;
+		plotButton.Visible = false;
 		plotButton.Click += plotButton_Click;
 		// 
 		// plotBox
 		// 
-		plotBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		plotBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		plotBox.Location = new Point(100, 92);
+		plotBox.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		plotBox.Location = new System.Drawing.Point(90, 92);
 		plotBox.Name = "plotBox";
-		plotBox.Size = new Size(57, 23);
+		plotBox.Size = new System.Drawing.Size(67, 23);
 		plotBox.TabIndex = 14;
-		plotBox.Text = "5000";
+		plotBox.Text = "1000";
+		plotBox.Visible = false;
 		plotBox.TextChanged += plotBox_TextChanged;
 		// 
 		// plotLabel
 		// 
 		plotLabel.AutoSize = true;
-		plotLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		plotLabel.Location = new Point(3, 95);
+		plotLabel.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Bold);
+		plotLabel.Location = new System.Drawing.Point(3, 95);
 		plotLabel.Name = "plotLabel";
-		plotLabel.Size = new Size(70, 15);
+		plotLabel.Size = new System.Drawing.Size(70, 15);
 		plotLabel.TabIndex = 15;
-		plotLabel.Text = "Plotting:";
+		plotLabel.Text = "Auto Plot";
 		plotLabel.UseMnemonic = false;
+		plotLabel.Visible = false;
 		// 
 		// xMemBox
 		// 
-		xMemBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 		xMemBox.AutoSize = true;
-		xMemBox.Location = new Point(56, 121);
+		xMemBox.Location = new System.Drawing.Point(9, 121);
 		xMemBox.Name = "xMemBox";
-		xMemBox.Size = new Size(101, 19);
+		xMemBox.Size = new System.Drawing.Size(101, 19);
 		xMemBox.TabIndex = 16;
 		xMemBox.Text = "Memory X->Y";
 		xMemBox.UseVisualStyleBackColor = true;
+		xMemBox.Visible = false;
 		xMemBox.CheckedChanged += xMemBox_CheckedChanged;
 		// 
 		// xyMemBox
 		// 
-		xyMemBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 		xyMemBox.AutoSize = true;
-		xyMemBox.Location = new Point(163, 120);
+		xyMemBox.Location = new System.Drawing.Point(9, 146);
 		xyMemBox.Name = "xyMemBox";
-		xyMemBox.Size = new Size(123, 19);
+		xyMemBox.Size = new System.Drawing.Size(123, 19);
 		xyMemBox.TabIndex = 17;
 		xyMemBox.Text = "XY->RGB Memory";
 		xyMemBox.UseVisualStyleBackColor = true;
+		xyMemBox.Visible = false;
 		xyMemBox.CheckedChanged += xyMemBox_CheckedChanged;
 		// 
-		// SettingsControl
+		// preEvalBox
 		// 
-		AutoScaleMode = AutoScaleMode.None;
-		BackColor = Color.FromArgb(64, 64, 64);
+		preEvalBox.AutoSize = true;
+		preEvalBox.Checked = true;
+		preEvalBox.CheckState = System.Windows.Forms.CheckState.Checked;
+		preEvalBox.Location = new System.Drawing.Point(9, 171);
+		preEvalBox.Name = "preEvalBox";
+		preEvalBox.Size = new System.Drawing.Size(92, 19);
+		preEvalBox.TabIndex = 18;
+		preEvalBox.Text = "Pre-Evaluate";
+		preEvalBox.UseVisualStyleBackColor = true;
+		preEvalBox.Visible = false;
+		// 
+		// SettingsPanel
+		// 
+		AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
+		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
+		Controls.Add(preEvalBox);
 		Controls.Add(xyMemBox);
 		Controls.Add(xMemBox);
 		Controls.Add(plotLabel);
@@ -234,11 +254,12 @@ partial class SettingsPanel {
 		Controls.Add(decimalBox);
 		Controls.Add(algebraBox);
 		Controls.Add(darkButton);
-		Size = new Size(320, 320);
-		Name = "SettingsControl";
+		Location = new System.Drawing.Point(15, 15);
+		Size = new System.Drawing.Size(320, 320);
 		ResumeLayout(false);
 		PerformLayout();
 	}
+	private System.Windows.Forms.CheckBox preEvalBox;
 	private System.Windows.Forms.Label autoLabel;
 	private System.Windows.Forms.Label reportLabel;
 	private System.Windows.Forms.TextBox autoBox;
@@ -248,11 +269,11 @@ partial class SettingsPanel {
 	#endregion
 	private System.Windows.Forms.Button darkButton;
 	private System.Windows.Forms.TextBox decimalBox;
-	private Label decLabel;
+	private System.Windows.Forms.Label decLabel;
 	private System.Windows.Forms.ComboBox algebraBox;
-	private Button plotButton;
-	private TextBox plotBox;
-	private Label plotLabel;
-	private CheckBox xMemBox;
-	private CheckBox xyMemBox;
+	private System.Windows.Forms.Button plotButton;
+	private System.Windows.Forms.TextBox plotBox;
+	private System.Windows.Forms.Label plotLabel;
+	private System.Windows.Forms.CheckBox xMemBox;
+	private System.Windows.Forms.CheckBox xyMemBox;
 }

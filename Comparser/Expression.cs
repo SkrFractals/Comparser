@@ -11,7 +11,7 @@ public abstract partial class Comparser<T> {
 		// Contains user-defined custom function
 		protected readonly Comparser<T> Context;
 		// Parsed and evaluated data
-		public readonly Value V;
+		public Value V;
 		// Cache for remembering recently evaluated arguments
 		private readonly CallFunction.EvalCache _cache;
 		//public readonly List<(int start, ParseDictionary.Type color)> Colors = [];
@@ -124,6 +124,7 @@ public abstract partial class Comparser<T> {
 					r.Text = read.Uncomment(startR, read.From); // if it didn't remember pre-defaultArg string, it will take it here
 				if (r.String == "")
 					r.String = (r.Term?.V.String ?? "") != "" ? r.Term?.V.String! : r.Text; // if it didn't remember pre-defaultArg string, it will take it here
+				CollapseValue(r);
 				Err(ref error, r);
 				read.TrimStart();
 			} while (ParseContinue());
@@ -181,6 +182,8 @@ public abstract partial class Comparser<T> {
 					r.Term = new(Context, new(T.unit)); // unary inverse
 					read.TrimStart(1);
 				}
+				// collapse constant evaluations:
+				CollapseTerm(r.Term!);
 				if (End(false)) // unexpected ')', or no op, and return back successful
 					return; // true; 
 				// Read operators/comments:
@@ -221,12 +224,14 @@ public abstract partial class Comparser<T> {
 						if (r.Op.EatOp > 0 && F())
 							return; // false; // failed to read operand
 						r.Op = new();
-						break; // if it was operator-less multiplication - assume it was an expression end instead
+						break; // if it was trying to be an operator-less multiplication - assume it was an expression end instead, because we literally read nothing
 					}
+					CollapseTerm(r.Operand);
 					if (o.Order == 0) break;
 					// operand's next op has lower or equal order priority:
 					// encapsulate my term into another term (wrap my term into parentheses), take the next operator and find the next operand to use it on
 					_ = Encapsulate(new(Context, expr[^1], cache));
+					
 					if (!LeftAssociate(o))
 						continue; // need to test associativity again, to let it recurse backwards. otherwise 2^2^2+1 would be 2^(2^2+1)
 					nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
@@ -340,6 +345,7 @@ public abstract partial class Comparser<T> {
 				}
 				bool Encapsulate(Expression p) {
 					expr[^1] = r = new(T.nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
+					CollapseTerm(p);
 					return true;
 				}
 				bool LeftAssociate(Operator testOp) => testOp.Right ? testOp.Order < left : testOp.Order <= left;
@@ -449,10 +455,31 @@ public abstract partial class Comparser<T> {
 					// found ':', so try to read argument default new([..expr]) is to let it reference already read arguments:
 					read.TrimStart(1);
 					r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
+					CollapseTerm(r.Operand);
 					goto default; // after reading the defArd, go try read ',' again, but with ':' not allowed again
 				default:
 					return !read.GotoFirstFailed(0, 2, [','], 1, out s, out _);
 					void TrimString() => r.String = TrimEnd(read.Uncomment(startR, read.From), 1); // remember string before ':'
+				}
+			}
+			// experimental - pre-evaluate parts of expressions that are not dependent on any arguments:
+			void CollapseTerm(Expression exp) {
+				if(Context.PreEvaluate && !CollapseValue(exp.V))
+					exp.V = exp.Eval(0, None);
+			}
+			bool CollapseValue(Value v) {
+				if (!Context.PreEvaluate)
+					return true;
+				if (v.Values.Length > 0)
+					return v.HasArgs |= CollapseValues(v.Values);
+				if (v.Arg.Length > 0 || v.Term != null && (v.Term.V.HasArgs || v.Operand != null && v.Operand.V.HasArgs))
+					return v.HasArgs = true;
+				return false;
+				bool CollapseValues(Value[] vals) {
+					var has = false;
+					foreach (var v in vals) 
+						has |= CollapseValue(v);
+					return has;
 				}
 			}
 			bool Char(char c, byte offset = 0) {

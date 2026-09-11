@@ -379,7 +379,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	private void Refresh(TextField f, string s) {
 		f.Box.Tag = true;
 		if (f.Box.Text != s) f.Box.Text = s;
-		Parse(f);
+		Parse(f, false);
 		f.Box.Tag = false;
 	}
 	private void WidthChanged(object? sender, EventArgs e) {

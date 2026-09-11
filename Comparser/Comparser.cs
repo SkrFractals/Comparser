@@ -16,6 +16,7 @@ public interface IComparser {
 	//public object ParseEval(string text, int from, object? args = null);
 	public string ToString(object value, int decimals = -1, bool pure = false, int type = 0);
 	public void SetDarkMode(bool dark);
+	public void SetPreEvaluate(bool preEval);
 	public void SetDecimals(int decimals);
 	public string ParsePeek();
 	public (Color b, Color f) GetColor();
@@ -85,6 +86,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	public string ToString(object value, int decimals = int.MinValue, bool pure = false, int type = 0) 
 		=> AsValue(value).ToString(decimals == int.MinValue ? Decimals : decimals, pure, type);
 	public void SetDarkMode(bool dark) => _darkMode = dark;
+	public void SetPreEvaluate(bool preEval) => PreEvaluate = preEval;
 	public void SetDecimals(int decimals) => Decimals = decimals;
 	public IPlot GetPlot() => Plotter;
 	public string ParsePeek() => _allowParsePeek ? _currentReader == null ? "No current reader." : _currentReader.Text[_currentReader.From..] : "Parse Peek disabled.";
@@ -594,6 +596,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	#region Content
 	private bool _darkMode = true;
 	public int Decimals = 3;
+	public bool PreEvaluate = true;
 	public Plot Plotter;
 	
 	private Color GetColor(ParseDictionary.Type type) => _darkMode ? _darkColors[type] : _lightColors[type];

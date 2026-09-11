@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using static Comparser.Comparser.Numbers.Static;
 
 namespace Comparser.Comparser.Numbers;
-public interface IScalarOf<T,S> where T : unmanaged, INumber<T> where S : unmanaged {
+/*public interface IScalarOf<T,S> where T : unmanaged, INumber<T> where S : unmanaged {
 
 
 
@@ -407,11 +407,5 @@ public interface IScalarOf<T,S> where T : unmanaged, INumber<T> where S : unmana
 
 	public static abstract void IndexAndAddToRgb(Color[] axis, T indices, T value);
 	//T.Floor( ValueToScreenLin(length, i * h, S, E))
-	/*void DrawLine(T s, T a) {
-
-				if (s.r >= 0 && s.r < length)
-					axis.r[(int)s.r] += a.r;
-				if (s.i >= 0 && s.i < length)
-					axis.i[(int)s.i] += a.i;
-			}*/
 }
+*/

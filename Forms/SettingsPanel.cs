@@ -7,20 +7,21 @@ public partial class SettingsPanel : UserControl, IPanel {
 	#region IControl
 	private readonly ControlVar _var;
 	public ControlVar GetVar() => _var;
-	public Size GetSize() => new( Pad * 5 + decLabel.Width + decimalBox.Width + algebraBox.Width + darkButton.Width, 
-		(Pad << 1) + RowHeight + Pad);
+	public Size GetSize() => new(320, 320);//new( Pad * 5 + decLabel.Width + decimalBox.Width + algebraBox.Width + darkButton.Width, 
+		//(Pad << 1) + RowHeight + Pad);
 	public void SetDark(bool dark) { BaseSetDark(this);	darkButton.Text = dark ? "☾" : "☀︎"; }
 	public void PerformClose() { }
 	public void CoreLayout() { }
 	#endregion
 
 	#region Variables
+	//private SettingsLayout _s = new();
 	public static bool MemX, MemXy;
 	public static int Decimals = 3;
 	public static int Algebra = 1;
 	private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	public static IComparser? Context;
-	private bool _darkMode = true;
+	private bool _darkMode = true, _preEvaluate = true;
 	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000;
 	public static Reporting ReportingMode = Reporting.Report;
 	public static bool AutoBuild = true, AutoPlot = true;
@@ -31,6 +32,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public SettingsPanel() => InitializeComponent();
 	public SettingsPanel(MenuPanel root, ParentForm parent) : this() {
 		InitVar(ref _var, this, root, parent, "Comparser - App Settings");
+		
 		Context = _algebras[Algebra];
 		DecimalBox_TextChanged(decimalBox, EventArgs.Empty);
 		_var.Root.Code?.CodeChanged = true;
@@ -40,6 +42,26 @@ public partial class SettingsPanel : UserControl, IPanel {
 		autoBox_TextChanged(reportBox, EventArgs.Empty);
 		UpdateAuto();
 		UpdateReport();
+		
+		plotLabel.Text = "Auto Plot";
+		autoLabel.Text = "Auto Build:";
+		decLabel.Text = "Decimals:";
+		reportLabel.Text = "Report Logs:";
+
+
+		/*Controls.Add(_s);
+		_s.Location = new(0, 0);
+		_s.Dock = DockStyle.Fill;
+		_s.darkButton.Click += darkButton_Click;
+		_s.algebraBox.SelectedIndexChanged += AlgebraBox_SelectedIndexChanged;
+		_s.decimalBox.TextChanged += DecimalBox_TextChanged;
+		_s.autoButton.Click += autoButton_Click;
+		_s.autoBox.TextChanged += autoBox_TextChanged;
+		_s.reportBox.TextChanged += reportBox_TextChanged;
+		_s.plotButton.Click += plotButton_Click;
+		_s.plotBox.TextChanged += plotBox_TextChanged;
+		_s.xMemBox.CheckedChanged += xMemBox_CheckedChanged;
+		_s.xyMemBox.CheckedChanged += xyMemBox_CheckedChanged;*/
 	}
 	#endregion
 
@@ -71,14 +93,17 @@ public partial class SettingsPanel : UserControl, IPanel {
 		UpdateReport();
 	}
 	private void autoBox_TextChanged(object sender, EventArgs e) {
-		if (!int.TryParse(autoBox.Text, out BuildDelay) || BuildDelay < 0) BuildDelay = 0;
+		if (!int.TryParse(autoBox.Text, out BuildDelay) || BuildDelay < 100) BuildDelay = 100;
 	}
 	private void reportBox_TextChanged(object sender, EventArgs e) {
-		if (!int.TryParse(reportBox.Text, out ReportingDelay) || ReportingDelay < 0) ReportingDelay = 0;
+		if (!int.TryParse(reportBox.Text, out ReportingDelay) || ReportingDelay < 100) ReportingDelay = 100;
 	}
-
+	private void preEvalBox_CheckedChanged(object sender, EventArgs e) {
+		_preEvaluate = preEvalBox.Checked;
+		SetPreEval();
+	}
 	private void plotBox_TextChanged(object sender, EventArgs e) {
-		if (!int.TryParse(plotBox.Text, out PlotDelay) || PlotDelay < 0) PlotDelay = 0;
+		if (!int.TryParse(plotBox.Text, out PlotDelay) || PlotDelay < 100) PlotDelay = 100;
 	}
 
 	private void plotButton_Click(object sender, EventArgs e) {
@@ -101,6 +126,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		Context?.SetDarkMode(_darkMode);
 		_var.Root.SetDark(_darkMode);
 	}
+	public void SetPreEval() => Context?.SetPreEvaluate(_preEvaluate);
 	private void UpdateAuto() => autoButton.Text = AutoBuild ? "DELEAYED AUTOMATIC" : "MANUAL";
 	private void UpdateReport() => reportButton.Text = ReportingMode switch {
 		Reporting.Silent => "SILENT",

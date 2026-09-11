@@ -2,7 +2,7 @@
 using static Comparser.Comparser.Numbers.Static;
 
 namespace Comparser.Comparser.Numbers;
-public readonly struct Dual<T,>(T r = default!, T e = default!) : INumber<Dual<T>> where T: unmanaged, INumber<T> {
+/*public readonly struct Dual<T,>(T r = default!, T e = default!) : INumber<Dual<T>> where T: unmanaged, INumber<T> {
 	public readonly T R = r, E = e;
 
 	#region Query
@@ -79,7 +79,7 @@ public readonly struct Dual<T,>(T r = default!, T e = default!) : INumber<Dual<T
 	// dual^2
 	public static Dual<T> Sqr(Dual<T> c) => new(T.Sqr(c.R), c.R * c.E + c.E * c.R); // maybe can't simplify into 2RI, because R and E could be quaternions...?
 	// dual^3
-	public static Dual<T> Cub(Dual<T> c) /* new(T.Sqr(c.R), c.R * c.E + c.E * c.R) *  new(c.R, c.E)*/ => new(T.Cub(c.R), T.Sqr(c.R) * c.E + (c.R * c.E * c.R + c.E * T.Sqr(c.R))); // a=T.Sqr(c.R), b = c.R * c.E + c.E * c.R, c= c.R, d = c.E
+	public static Dual<T> Cub(Dual<T> c) => new(T.Cub(c.R), T.Sqr(c.R) * c.E + (c.R * c.E * c.R + c.E * T.Sqr(c.R))); // a=T.Sqr(c.R), b = c.R * c.E + c.E * c.R, c= c.R, d = c.E
 	// dual^ * 4
 	public static Dual<T> Quart(Dual<T> c) => Sqr(c) * Sqr(c);
 	// |a| + |b|i
@@ -236,7 +236,7 @@ public readonly struct Dual<T,>(T r = default!, T e = default!) : INumber<Dual<T
 		if (indices.I >= 0 && indices.I < axis.Length)
 			axis[(int)indices.I] = Color.FromArgb(a.R, a.G, a.B + (int)value.I);
 	}
-}
+}*/
 /* this one was originally used for zeta reflection, but it combined itself with SinN1 into NISinI
 // i^c + i^(-c) = 2cos(πc/2) // is this faster than 2*T.Cos(qTau * c)? T.Cos(c) = new(Math.Cos(c.R) * Math.Cosh(c.I), Math.Sin(-c.R) * Math.Sinh(c.I));
 private static T CosI(T c) {

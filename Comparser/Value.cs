@@ -13,6 +13,8 @@ public abstract partial class Comparser<T>{
 		public readonly int[] Arg = [];
 		// 1 = stack overflow
 		public FailReason Error;
+		// is is dependent on any arguments? if not it could be evaluated during parsing
+		public bool HasArgs; 
 		
 		// special type
 		public object? Data;
