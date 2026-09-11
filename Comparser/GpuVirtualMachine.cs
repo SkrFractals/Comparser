@@ -9,7 +9,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			public VmValue(T leaf) => Leaf = leaf;
 			public VmValue(VmValue[] values) => Values = values;
 			public VmValue[] Values = [];
-			public T Leaf = T.NaN();
+			public T Leaf = T.nan;
 			public int Def = -1; // TODO link this
 		}
 		public class Op(VmValue input, OpCode myCode) {
@@ -88,8 +88,8 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				}
 			}
 				static bool Match(VmValue self, VmValue a) { // defArguments.Match(callArguments)
-					if (!self.Leaf.IsNaN())
-						return a.Leaf.IsNaN() || T.AreEqual(self.Leaf, a.Leaf); // callArguments always starts with Values
+					if (!T.IsNaN(self.Leaf))
+						return T.IsNaN(a.Leaf) || T.AreEqual(self.Leaf, a.Leaf); // callArguments always starts with Values
 					if (self.Values.Length == 0) return true;
 					if (self.Values.Length < a.Values.Length) return false;
 					if (self.Values.Length > a.Values.Length) {
@@ -114,7 +114,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					while(nest-- > 0) ReadInt(ref pc);
 					break;
 				}
-				op.MyValue = evaluate ? GetArg(input, ref pc) : new(T.NaN());
+				op.MyValue = evaluate ? GetArg(input, ref pc) : new(T.nan);
 				break;
 
 				VmValue GetArg(VmValue recurse, ref int pc) {
@@ -122,13 +122,13 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					--nest;
 					recurse = Collapse(recurse);
 					if (recurse.Values.Length == 0)
-						return i == 0 && nest == 0 ? Collapse(EvalArg(recurse, input)) : new(T.NaN());
+						return i == 0 && nest == 0 ? Collapse(EvalArg(recurse, input)) : new(T.nan);
 					var fail = recurse.Values.Length <= i;
 					if (nest == 0)
-						return fail ? new(T.NaN()) : recurse.Values[i];
-					return fail ? new(T.NaN()) : GetArg(recurse.Values[i], ref pc);
+						return fail ? new(T.nan) : recurse.Values[i];
+					return fail ? new(T.nan) : GetArg(recurse.Values[i], ref pc);
 					VmValue EvalArg(VmValue arg, VmValue args) {
-						if (!arg.Leaf.IsNaN() || arg.Def < 0)
+						if (!T.IsNaN(arg.Leaf) || arg.Def < 0)
 							return new(arg.Leaf);
 						var argDef = _definitions[arg.Def][0];
 						var argPtr = argDef.definition;
@@ -306,7 +306,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				definitions = [];
 				eval = Collapse(Eval(input, ref pc, depth));
 				if (eval.Values.Length < 3 || !evaluate) {
-					op.MyValue = new(T.NaN()); // missing range
+					op.MyValue = new(T.nan); // missing range
 					return true;
 				}
 				args = new(new VmValue[input.Values.Length + 1]);
@@ -350,7 +350,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				vals.Leaf = OpLeaf(value.Leaf);
 				return vals;
 				T OpLeaf(T l) => opCode switch {
-					OpCode.Neg => -l, OpCode.True => +l < 1 ? T.Zero() : T.MakeR(1),
+					OpCode.Neg => -l, OpCode.True => +l < 1 ? T.zero : T.unit,
 					OpCode.Inv => T.Inv(l), OpCode.Exp => T.Exp(l), OpCode.Log => T.Log(l),
 					OpCode.Cosh => T.Cosh(l), OpCode.Sinh => T.Sinh(l), OpCode.Cos => T.Cos(l), OpCode.Sin => T.Sin(l),
 					OpCode.Acosh => T.Acosh(l), OpCode.Asinh => T.Asinh(l), OpCode.Atanh => T.Atanh(l), OpCode.Acoth => T.Acoth(l),
@@ -359,7 +359,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					OpCode.SqrAbs => T.MakeR(+l), OpCode.Abs => INumber<T>.T_Abs(l),
 					OpCode.Arg => T.MakeR(T.Arg(l)), OpCode.Conj => INumber<T>.Conj(l),
 					OpCode.Factorial => T.Factorial(l), OpCode.Gamma => T.Gamma(l), OpCode.Zeta => T.Zeta(l),
-					_ => T.NaN()
+					_ => T.nan
 				};
 			}
 			VmValue Operate2(VmValue av, VmValue bv, OpCode opCode) {
@@ -388,7 +388,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					OpCode.Equal => T.MakeR(T.Re(la) - T.Re(lb) < 1e-8 ? 1 : 0), OpCode.NotEqual => T.MakeR(T.Re(la) - T.Re(lb) >= 1e-8 ? 1 : 0), 
 					OpCode.Add => la + lb, OpCode.Mod => la % lb, OpCode.CompMod => INumber<T>.CompMod(la, lb), OpCode.Mul => la * lb, OpCode.Pow => la^lb, OpCode.Max => T.Max(la, lb),
 					OpCode.SoftMax => INumber<T>.SoftMax(la, lb), 
-					_ => T.NaN()
+					_ => T.nan
 				};
 			}
 			/*VmValue Operate3(VmValue av, VmValue bv, VmValue cv, OpCode opCode) {
@@ -418,7 +418,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				return vals;
 				T OpLeaf(T la, T lb,T lc) => opCode switch {
 					OpCode.Clamp => T.Clamp(la, lb, lc),
-					_ => T.NaN()
+					_ => T.nan
 				};
 			}*/
 			/*VmValue Operate4(VmValue av, VmValue bv, VmValue cv, VmValue dv, OpCode opCode) {
@@ -449,7 +449,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				return vals;
 				T OpLeaf(T la, T lb,T lc) => opCode switch {
 					OpCode.Clamp => T.Clamp(la, lb, lc),
-					_ => T.NaN()
+					_ => T.nan
 				};
 			}*/
 		}

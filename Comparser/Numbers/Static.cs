@@ -124,7 +124,7 @@ public static class Static {
 		if (s.EndsWith(".")) s = s.TrimEnd('.');
 		return s == "-0" ? "0" : s;
 	}
-	public static string ValueToString(string units, double[] values, int d) {
+	public static string ValueToString(string[] units, double[] values, int d) {
 		var v = new string[values.Length];
 		for (var i = 0; i < values.Length; ++i)
 			v[i] = _sr(values[i], d);

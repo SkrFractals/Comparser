@@ -50,10 +50,10 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		_operatorLess = operatorLess;
 		Plotter = new(this);
 			/*, [
-			new(false, T.Zero(), T.MakeR(1)), 
-			new(false, T.Zero(), T.One() - T.MakeR(1))
+			new(false, T.zero, T.unit), 
+			new(false, T.zero, T.one - T.unit)
 		], [new(
-			new(false, T.Zero(), T.MakeR(1)),
+			new(false, T.zero, T.unit),
 			new(new CancellationTokenSource().Token, this, "z"),
 			Plot.PlotOutput.ColorMode.Hsv, new(this, None), new(this, None))]);*/
 	}
@@ -62,7 +62,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 
 	#region Interface
 	public object MakeArgs((string alias, object value)[] pairs) => new Value([.. pairs.Select(p => new Value((T)p.value, 0, p.alias))]);
-	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(T.NaN(), 0, p)).ToArray());
+	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(T.nan, 0, p)).ToArray());
 	private static Value AsValue(object? e) => e as Value ?? new();
 	public double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null) {
@@ -166,7 +166,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 							Lg();
 						}
 						var actionCode = name switch { // f(x) : "returned"+"string", 1+1 
-							"print" => Actions.Print, // prints the expression, and it's value with its type.								f(x) = "returnedstring", 2
+							"print" => Actions.Print, // prints the expression, and it's value with its type.								f(x) = "returnedString", 2
 							"printvalue" => Actions.PrintValue, // prints just the value, without type (number > string > expression).		returnedString, 2
 							"printnumber" => Actions.PrintNumber, // prints just the numerical value, without fallback to string values.	NaN + NaNi, 2
 							"printstring" => Actions.PrintString, // prints only the string value, even if there's a numeric value			returnedString, '1+1'
@@ -339,7 +339,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 								case 2: // cache
 									if ("" != (e = FailEvalClose(out eval) ? "Failed to parse CACHE size."
 										: eval.Values.Length != 1 ? "Multiple values in the CACHE size expression: " + eval
-										: eval.Values[0].Leaf.IsNaN() ? "CACHE size evaluated as NaN." : "")) { return e; }
+										: T.IsNaN(eval.Values[0].Leaf) ? "CACHE size evaluated as NaN." : "")) { return e; }
 									cache = (int)Math.Round(T.Re(eval.Values[0].Leaf));
 									break;
 								default:
@@ -357,7 +357,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 					}
 					void IsFailed(Expression expression) {
 						var v = CollapseScalar(expression.V);
-						if (v.Values.Length != 0 || v.Term != null || !v.Leaf.IsNaN())
+						if (v.Values.Length != 0 || v.Term != null || !T.IsNaN(v.Leaf))
 							return;
 						read.AddC(beforeI, read.From, ParseDictionary.Type.Error);
 						failFunc = FailReason.BadExpression;
@@ -546,7 +546,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 					foreach (var iv in v)
 						fail |= iv.Values.Length > 0
 							? FailArgValues(iv.Values)
-							: iv.Leaf.IsNaN() && (iv.String == "" || !IsAlphaNumeric(iv.String));
+							: T.IsNaN(iv.Leaf) && (iv.String == "" || !IsAlphaNumeric(iv.String));
 					return fail;
 				}
 			}
@@ -582,7 +582,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		DoOverflow = 14,
 		Operator = 15
 	}
-	public enum FailReason : byte {
+	[Flags] public enum FailReason : byte {
 		Success = 0,
 		NaN = 1,
 		StackOverflow = 2,
@@ -1026,7 +1026,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		C(["e", "E"], INumber<T>.C_E()); // euler number
 		C(["φ", "phi", "Phi", "PHI"], INumber<T>.C_Phi()); // golden ratio
 		C(["γ", "gamma", "Gamma", "GAMMA"], INumber<T>.C_Gamma()); // euler constant
-		C(["one", "One", "ONE"], T.One()); // all components one
+		C(["one", "One", "ONE"], T.one); // all components one
+		C(["unit", "Unit", "UNIT"], T.unit); // all components one
 		foreach(var d in GenericConstants().Values)
 			C([d.String], d.Leaf);
 		

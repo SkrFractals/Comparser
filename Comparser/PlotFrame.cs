@@ -5,8 +5,8 @@ public abstract partial class Comparser<T> {
 	public partial class PlotEval {
 		public class PlotFrame(bool centerPixels = true) {
 			// z = coordinate Z input, t = coordinate TIME input, x = screen space x, y = screenspace y, f = frame, w = screen width, h = screen height, l = frame count 
-			//Value args = new([new(T.NaN(), 0, "z"), new(T.NaN(), 0, "t"), new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "f"), new(T.NaN(), 0, "w"), new(T.NaN(), 0, "h"), new(T.NaN(), 0, "l")]);
-			Value args = new([new(T.NaN(), 0, "z"), new(T.NaN(), 0, "t")]);
+			//Value args = new([new(T.nan, 0, "z"), new(T.nan, 0, "t"), new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "f"), new(T.nan, 0, "w"), new(T.nan, 0, "h"), new(T.nan, 0, "l")]);
+			Value args = new([new(T.nan, 0, "z"), new(T.nan, 0, "t")]);
 			private readonly double _c = centerPixels ? .5 : 0;
 			private static Complex MapC((Complex s, Complex x, Complex y) a, int x, int y) => a.s + (x + .5) * a.x + (y + .5) * a.y;
 			private static Complex Map((Complex s, Complex x, Complex y) a, int x, int y) => a.s + x * a.x + y * a.y;
@@ -18,12 +18,12 @@ public abstract partial class Comparser<T> {
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, double> _mapClU = centerPixels ? &MapClCu : &MapClu;
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, double> _mapClV = centerPixels ? &MapClCv : &MapClv;
 			private readonly unsafe delegate*<double, int> _rnd = centerPixels ? &Static.Floor : &Static.Round;
-			private T _mSx2 = T.NaN(), _mDx2 = T.NaN(), _mSy2 = T.NaN(), _mDy2 = T.NaN(), _t2 = T.NaN(); // ax.S, ax.d, ay.x, ay.d, frame
-			private T _mSx1 = T.NaN(), _mDx1 = T.NaN(), _mY1 = T.NaN(), _t1 = T.NaN(); // ax.S, ax.d, yC, frame
+			private T _mSx2 = T.nan, _mDx2 = T.nan, _mSy2 = T.nan, _mDy2 = T.nan, _t2 = T.nan; // ax.S, ax.d, ay.x, ay.d, frame
+			private T _mSx1 = T.nan, _mDx1 = T.nan, _mY1 = T.nan, _t1 = T.nan; // ax.S, ax.d, yC, frame
 			private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
 			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
-				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.Zero();
+				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.zero;
 				int mLx = 0, mLy = 0, x = 0, y = 0, yw = 0;
 				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
 					(mSx, mDx, mLx, mSy, mDy, mLy) = (_mSx2, _mDx2, _mLx2, _mSy2, _mDy2, _mLy2);
@@ -190,7 +190,7 @@ public abstract partial class Comparser<T> {
 			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				Value[] memY = []; changed = true;
 				int memYo = -1, mLx = 0;
-				T mSx = T.Zero(), mDx = T.Zero(), yC = ay.Sample(y); // y coordinate
+				T mSx = T.zero, mDx = T.zero, yC = ay.Sample(y); // y coordinate
 				var sqrEy = +at.d * recallTolerance;
 				(_plotX, _memX) = (_memX, _plotX); // swap mem
 				if (_plotX.Length != ax.length) _plotX = new Value[ax.length]; // length mismatch: re-alloc
@@ -305,8 +305,8 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 			private static int Round(double x) => (int)Math.Round(x);
 			private static int Floor(double x) => (int)x;
 			private const bool CrossDimensionalMemory = true;
-			private T _mSx1 = T.NaN(), _mDx1 = T.NaN(), _mY1 = T.NaN(), _t1 = T.NaN(); // 1D memory,  ax.S, ax.d, yC, frame
-			private T _mSx2 = T.NaN(), _mDx2 = T.NaN(), _mSy2 = T.NaN(), _mDy2 = T.Zero(), _t2 = T.NaN(); // 2D memory, ax.S, ax.d, ay.x, ay.d, frame
+			private T _mSx1 = T.nan, _mDx1 = T.nan, _mY1 = T.nan, _t1 = T.nan; // 1D memory,  ax.S, ax.d, yC, frame
+			private T _mSx2 = T.nan, _mDx2 = T.nan, _mSy2 = T.nan, _mDy2 = T.zero, _t2 = T.nan; // 2D memory, ax.S, ax.d, ay.x, ay.d, frame
 			private int _mLx1 = 0, _mLx2 = 0, _mLy2 = 0; // 1D: ax.length, 2D: ax.length, ay.length
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
 			/// <summary>
@@ -320,7 +320,7 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 			/// <param name="recallTolerance">0=memorized evaluations must be exactly precise, 1=can take memorized pixels that at up to 1 pixel away</param>
 			/// <returns></returns>
 			public unsafe Value[] GetPlotXy(Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, T frame, double recallTolerance = 0.5) {
-				T mSx = T.Zero(), mDx = T.Zero(), mSy = T.Zero(), mDy = T.Zero();
+				T mSx = T.zero, mDx = T.zero, mSy = T.zero, mDy = T.zero;
 				int mLx = 0, mLy = 0, x = 0, y = 0, yw = 0; double u = 0, v = 0;
 				Value[] mem = _plotXy;
 				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
@@ -330,7 +330,7 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 				(_mLx2, _mLy2, _mSx2, _mSy2, _mDx2, _mDy2) = (ax.length, ay.length, ax.S, ay.S, ax.d, ay.d);
 				if (AxisMatchA(mSx, mDx, ax) && AxisMatchA(mSy, mDy, ay))
 					return _plotXy;
-				Value args = new([new(T.NaN(), "x"), new(T.NaN(), "y"), new(_t2 = frame, "t")]);
+				Value args = new([new(T.nan, "x"), new(T.nan, "y"), new(_t2 = frame, "t")]);
 				(Complex s, Complex x, Complex y) pm, mp;
 				if (Math.Min(mLx, mLy) == 0 || FailAffineMap(mSx + mSy,ax.S + ay.S, Math.Min(+ax.d, +ay.d)))
 					return Rows(ay.length, Finish);
@@ -399,14 +399,14 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 			public Value[] GetPlotX(Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, T frame, double recallTolerance = 0.5) {
 				Value[] memY = [];
 				int memYo = -1, mLx = 0;
-				T mSx = T.Zero(), mDx = T.Zero(), yC = ay.Sample(y); // y coordinate
+				T mSx = T.zero, mDx = T.zero, yC = ay.Sample(y); // y coordinate
 				var sqrEy = +at.d * recallTolerance;
 				(_plotX, _memX) =  (_memX, _plotX);// length mismatch: re-alloc
 				if(_plotX.Length != (_mLx1 = ax.length)) _plotX = new Value[ax.length];// length mismatch: re-alloc
 
 				// remember this evaluated X axis
 				Remember(); // fetch a
-				Value args = new([new(T.NaN(), "x"), new(_mY1 = yC, "y"), new(_t1 = frame, "t")]);
+				Value args = new([new(T.nan, "x"), new(_mY1 = yC, "y"), new(_t1 = frame, "t")]);
 				if (memYo < 0) return ReEval();// no memory
 				(_mSx1, _mDx1) = (ax.S, ax.d);
 				// we have some memory Y match

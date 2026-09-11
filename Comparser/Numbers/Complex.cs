@@ -11,17 +11,25 @@ public readonly struct Complex(double r = 0, double i = 0) : INumber<Complex> {
 	#endregion
 
 	#region Query
-	public bool Is0() => R == 0 && I == 0;
-	public bool IsNaN() => double.IsNaN(R) || double.IsNaN(I);
+	public static bool Is0(Complex t) => t is { R: 0, I: 0 };
+	public static bool IsNaN(Complex c) => double.IsNaN(c.R) || double.IsNaN(c.I);
 
 	public override string ToString() => ToString(-1);
-	public string ToString(int d) => Static.ValueToString("i", [R, I], d);
+	private static readonly string[] Units = ["i"];
+	public static string[] epsUnit => ["i", "ε", "εi"];
+	public static double[] EpsValues(Complex r, Complex e) => [r.R, r.I, e.R, e.I];
+	public string ToString(int d) => ValueToString(Units, [R, I], d);
 	#endregion
 
 	#region Constants
-	public static Complex Zero() => new(0);
-	public static Complex One() => new(1, 1);
-	public static Complex NaN() => new(double.NaN, double.NaN);
+	public static Complex zero => default;
+	public static Complex nan => new(double.NaN, double.NaN);
+	public static Complex unit => new(1);
+	public static Complex one => new(1, 1);
+	public static Complex u => new(0, 1);
+	public static Complex minusUnit => new(-1);
+	public static Complex minusOne => new(-1, -1);
+	public static Complex minusU => new(0, -1);
 	#endregion
 
 	#region Helpers
@@ -40,10 +48,10 @@ public readonly struct Complex(double r = 0, double i = 0) : INumber<Complex> {
 	public static Complex MakeR(double r) => new(r);
 	public static Complex Swap(Complex c) => new(c.I, c.R);
 	// conjugate: a - bi
-	public static Complex operator !(Complex c) => new(c.R, -c.I);
+	public static Complex operator ~(Complex c) => new(c.R, -c.I);
 	// negative: - a - bi
 	public static Complex operator -(Complex c) => new(-c.R, -c.I);
-	public static Complex operator ~(Complex c) => new(-c.I, c.R);
+	public static Complex operator !(Complex c) => new(-c.I, c.R);
 	public static Complex U(Complex c) => new(0, c.I);
 	// i * complex
 	public static Complex MulU(Complex c) => new(-c.I, c.R);
@@ -65,7 +73,7 @@ public readonly struct Complex(double r = 0, double i = 0) : INumber<Complex> {
 	public static Complex Ceil(Complex c) => new(Math.Ceiling(c.R), Math.Ceiling(c.I));
 	public static Complex Cycle(Complex c) => new(Static.Cycle(c.R), Static.Cycle(c.I));
 	// 1 / complex
-	public static Complex Inv(Complex c) => !c / +c;
+	public static Complex Inv(Complex c) => INumber<Complex>.I_Inv(c); //~c / +c;
 	// Argument of complex
 	public static double Arg(Complex c) => Math.Atan2(c.I, c.R);
 	// from angle

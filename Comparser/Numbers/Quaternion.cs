@@ -14,17 +14,25 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	#endregion
 
 	#region Query
-	public bool Is0() => R == 0 && I == 0 && J == 0 && K == 0;
-	public bool IsNaN() => double.IsNaN(R) || double.IsNaN(I);
-
+	public static bool Is0(Quaternion q) => q is { R: 0, I: 0, J: 0, K: 0 };
+	public static bool IsNaN(Quaternion q) => double.IsNaN(q.R) || double.IsNaN(q.I);
+	public static string[] epsUnit => ["i", "j", "k", "ε", "εi", "εj", "εk"];
+	public static double[] EpsValues(Quaternion r, Quaternion e) => [r.R, r.I, r.J, r.K, e.R, e.I, e.J, e.K];
 	public override string ToString() => ToString(-1);
-	public string ToString(int d) => ValueToString("ijk", [R, I, J, K], d);
+	private static readonly string[] Units = ["i", "j", "k"];
+
+	public string ToString(int d) => ValueToString(Units, [R, I, J, K], d);
 	#endregion
 
 	#region Constants
-	public static Quaternion Zero() => new(0);
-	public static Quaternion One() => new(1, 1, 1, 1);
-	public static Quaternion NaN() => new(double.NaN, double.NaN, double.NaN, double.NaN);
+	public static Quaternion zero => default;
+	public static Quaternion nan => new(double.NaN, double.NaN, double.NaN, double.NaN);
+	public static Quaternion unit => new(1);
+	public static Quaternion one => new(1, 1, 1, 1);
+	public static Quaternion u => new(0, 1, 1, 1);
+	public static Quaternion minusUnit => new(-1);
+	public static Quaternion minusOne => new(-1, -1, -1, -1);
+	public static Quaternion minusU => new(0, -1, -1, -1);
 	#endregion
 
 	#region Helpers
@@ -43,11 +51,11 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static double Im(Quaternion q) => q.I + q.J + q.K;
 	public static double ImMag(Quaternion q) => Math.Sqrt(I_Dot(q));
 	// conjugate: a - bi
-	public static Quaternion operator !(Quaternion q) => new(q.R, -q.I, -q.J, -q.K);
+	public static Quaternion operator ~(Quaternion q) => new(q.R, -q.I, -q.J, -q.K);
 	// negative: - a - bi
 	public static Quaternion operator -(Quaternion q) => new(-q.R, -q.I, -q.J, -q.K);
 	// u * quaternion: (0, q.I, q.J, q.K) * q;
-	public static Quaternion operator ~(Quaternion q) => new(-q.I - q.J - q.K, q.R + q.K - q.J, q.R + q.I - q.K, q.J - q.I + q.R);
+	public static Quaternion operator !(Quaternion q) => new(-q.I - q.J - q.K, q.R + q.K - q.J, q.R + q.I - q.K, q.J - q.I + q.R);
 	// u = i+j+k
 	public static Quaternion U(Quaternion q) => new(0, q.I, q.J, q.K);
 	// u * quaternion
@@ -80,7 +88,7 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static Quaternion Ceil(Quaternion q) => D1(q, Math.Ceiling);
 	public static Quaternion Cycle(Quaternion q) => D1(q, Static.Cycle);
 	// 1 / quaternion
-	public static Quaternion Inv(Quaternion q) => !q / +q;
+	public static Quaternion Inv(Quaternion q) =>  INumber<Quaternion>.I_Inv(q);
 	// = iτ/c // using this in my Gamma_Stirling_Negative, maybe won't work for quaternions as it's only using i
 	//public static Quaternion InvITau(Quaternion c) => new Quaternion(c.I, c.R) * (Math.Tau / +c);
 	// Argument of quaternion

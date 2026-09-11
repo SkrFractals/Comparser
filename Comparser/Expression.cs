@@ -67,7 +67,7 @@ public abstract partial class Comparser<T> {
 			}
 		}
 		private Value EvalArg(ushort depth, Value arg, Value args) => depth > Context._stackOverflow ? StackOverflow 
-			: arg.Leaf.IsNaN() && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args) ?? arg : arg;
+			: T.IsNaN(arg.Leaf) && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args) ?? arg : arg;
 		
 		#endregion
 		
@@ -138,7 +138,7 @@ public abstract partial class Comparser<T> {
 				expr.Add(r);
 				nextOp = r.Op = new();
 				r.Op.Negative = Char('-');
-				r.Leaf = T.NaN();
+				r.Leaf = T.nan;
 				read.TrimStart();
 				// Try parenthesis/function/number/constant/argument:
 				//int[] argNest = [];
@@ -178,7 +178,7 @@ public abstract partial class Comparser<T> {
 					else if (Fail(r) && F()) return;//if(Fail(r) && F()) TryComment();
 					read.TrimStart();
 				} else {
-					r.Term = new(Context, new(T.MakeR(1))); // unary inverse
+					r.Term = new(Context, new(T.unit)); // unary inverse
 					read.TrimStart(1);
 				}
 				if (End(false)) // unexpected ')', or no op, and return back successful
@@ -339,13 +339,13 @@ public abstract partial class Comparser<T> {
 					return endDefault && !result ? read.TrimStart(1) : result; // if we found an op on the next line, then trim the newlines
 				}
 				bool Encapsulate(Expression p) {
-					expr[^1] = r = new(T.NaN(), new(), null, p, null, false, read.Uncomment(startR, read.From));
+					expr[^1] = r = new(T.nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
 					return true;
 				}
 				bool LeftAssociate(Operator testOp) => testOp.Right ? testOp.Order < left : testOp.Order <= left;
 				bool Fail(Value test) => test.Term == null && (test.Values.Length == 0 || test.Values is [{ Term: null }]);
 				bool F() {
-					(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(), T.NaN(), [], null, null);
+					(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(), T.nan, [], null, null);
 					int e, end = read.Text.Length, prevF = read.From;
 					char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']', '/'];
 					if (read.From < read.Text.Length)
@@ -379,7 +379,7 @@ public abstract partial class Comparser<T> {
 					var startFrom = read.From;
 					if (Char('_')) {
 						read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
-						number = new(T.NaN()); // '_' is NaN
+						number = new(T.nan); // '_' is NaN
 						return true;
 					}
 					if (RealNumber(out var real)) {

@@ -2,7 +2,7 @@
 public abstract partial class Comparser<T>{
 	public class Value {
 		// simple value if it is only a number not containing an expression term (can remain present even if it is replaced with a term)
-		public T Leaf = T.NaN();
+		public T Leaf = T.nan;
 		// Vector elements (nestable)
 		public Value[] Values = [];
 		// Main term and operand (second term)
@@ -30,7 +30,7 @@ public abstract partial class Comparser<T>{
 		private string Pv(int decimals, bool pure, int type = 0, string a = "", string b = "") {
 			if (Values.Length <= 0)
 				return Error > 0 ? PrintError() 
-					: Leaf.IsNaN() && type != 1 
+					: T.IsNaN(Leaf) && type != 1 
 						? type == 2 
 							? DrawString(String) 
 							: String != "" 
@@ -46,7 +46,7 @@ public abstract partial class Comparser<T>{
 				s += Values[i].Pv(decimals, pure, type, "(", ")");
 			}
 			return s + b;
-			string DrawString(string s, char? c = null) => pure && c != null ? s : c + s + c;
+			string DrawString(string str, char? c = null) => pure && c != null ? str : c + str + c;
 		}
 
 		private string PrintError() => Numbers.Static.Errors[(byte)Error];// (Error & 1) > 0 ? "Stack Overflow." :(Error & 2) > 0 ? "Bad Expression" : "";
@@ -82,8 +82,8 @@ public abstract partial class Comparser<T>{
 		
 		public bool Match(Value a) => MatchP(UnCollapseScalar(a));
 		private bool MatchP(Value a) { // defArguments.Match(callArguments)
-			if (!Leaf.IsNaN())
-				return /*a.*/Leaf.IsNaN() || T.AreEqual(Leaf, a.Leaf); 
+			if (!T.IsNaN(Leaf))
+				return /*a.*/T.IsNaN(Leaf) || T.AreEqual(Leaf, a.Leaf); 
 			if (Values.Length == 0) return true; // callArguments always starts with Values
 			if (Values.Length < a.Values.Length) return false;
 			if (Values.Length > a.Values.Length) {
@@ -92,7 +92,7 @@ public abstract partial class Comparser<T>{
 				for (int i = 0; i < a.Values.Length; ++i)
 					(newVal[i] = a.Values[i]).Operand = Values[i].Operand;
 				for (int i = a.Values.Length; i < Values.Length; ++i)
-					newVal[i] =  new(T.NaN()) { Operand =  Values[i].Operand }; // put nans into unsupplied values
+					newVal[i] =  new(T.nan) { Operand =  Values[i].Operand }; // put nans into unsupplied values
 				a.Values = newVal;
 			}else for(int i = 0; i < Values.Length;++i)
 				a.Values[i].Operand = Values[i].Operand;
@@ -104,7 +104,7 @@ public abstract partial class Comparser<T>{
 		}
 		public bool SameArg(Value a) => SameArgP(UnCollapseScalar(a));
 		private bool SameArgP(Value a) { // defArguments.SameArg(callArguments)
-			if (!Leaf.IsNaN())
+			if (!T.IsNaN(Leaf))
 				return T.AreEqual(Leaf, a.Leaf); 
 			if (Values.Length == 0) return true; // callArguments always starts with Values
 			if (Values.Length != a.Values.Length) return false;
@@ -182,8 +182,8 @@ public abstract partial class Comparser<T>{
 			var bvl = bv.Leaf;
 			var av0 = av.Values.Length == 0 ? null : av.Values[0];
 			var bv0 = bv.Values.Length == 0 ? null : bv.Values[0];
-			var a0L = av0 == null ? T.NaN() : av0.Leaf;
-			var b0L = bv0 == null ? T.NaN() : bv0.Leaf;
+			var a0L = av0 == null ? T.nan : av0.Leaf;
+			var b0L = bv0 == null ? T.nan : bv0.Leaf;
 			var a0O = av0?.Op ?? null;
 			var b0O = bv0?.Op ?? null;*/
 			Value[] vA = (av = CollapseScalar(av)).Values, vB = (bv = CollapseScalar(bv)).Values;
@@ -216,7 +216,7 @@ public abstract partial class Comparser<T>{
 			}
 			return vals;
 
-			CallFunction? Virtual(Value v) => call && v.Leaf.IsNaN() && (context.UserFunctions.TryGetValue(v.String, out var f) || context.DefaultFunctions.TryGetValue(v.String, out f)) ? f : null;
+			CallFunction? Virtual(Value v) => call && T.IsNaN(v.Leaf) && (context.UserFunctions.TryGetValue(v.String, out var f) || context.DefaultFunctions.TryGetValue(v.String, out f)) ? f : null;
 			Value CallVirtual(CallFunction f, Value v) {
 				var exp = f.Call(new(context, "", new CancellationTokenSource().Token), args);
 				exp.V.Values = [v];

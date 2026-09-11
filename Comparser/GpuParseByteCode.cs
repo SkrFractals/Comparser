@@ -10,11 +10,11 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 
 		private class Subs(Comparser<T> context, CancellationToken cancel) {
 			private static readonly Value 
-				X0 = new([new(T.Zero(), 0, "x")]), // pattern match x as 0
-				X = new([new(T.NaN(), 0, "x")]), // passable argument x
-				Xy = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y")]), // passable xy
-				Xyz = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "z")]), // passable xyz
-				Xyzw = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "z"), new(T.NaN(), 0, "w")]); // passable xyzw
+				X0 = new([new(T.zero, 0, "x")]), // pattern match x as 0
+				X = new([new(T.nan, 0, "x")]), // passable argument x
+				Xy = new([new(T.nan, 0, "x"), new(T.nan, 0, "y")]), // passable xy
+				Xyz = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "z")]), // passable xyz
+				Xyzw = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "z"), new(T.nan, 0, "w")]); // passable xyzw
 			public readonly Comparser<T> Context = context;
 			public readonly CallCustom Sinc = new([(X0, new(new(context, "1", cancel), out _, None), null), 
 					(X, new(new(context, "sin(x)inv(x)", cancel), out _, X), null)]),
@@ -67,7 +67,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 		public bool ParseByteCode(CancellationToken cancel, Comparser<T> context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {
 			
 			List<byte> header = []; // header string
-			WriteInt(INumber<T>.ToBytes(T.Zero()).Length, header); // leaf size -> header
+			WriteInt(INumber<T>.ToBytes(T.zero).Length, header); // leaf size -> header
 			List<List<byte>> funcCodes = [header]; // first slot is reserved for the function counter
 			List<string[]> funcPrints = []; // print function definitions
 			Dictionary<CallCustom, int> calls = []; // found custom function recalls
@@ -126,10 +126,10 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						OpCode.Min => new(OpCode.Neg, new(OpCode.Max, new(OpCode.Neg, v))),
 						OpCode.SoftMin => new(OpCode.Neg, new(OpCode.SoftMax, new(OpCode.Neg, v))), 
 						OpCode.SoftMinB => new(OpCode.Call, v, _subs!.SftMinB),//new(OpCode.Neg, new(OpCode.SoftMaxB, new(OpCode.Neg, v))), 
-						OpCode.SoftAbs => new(OpCode.Call, v, _subs!.SftAbs),//new([new(T.Zero()), v], OpCode.SoftMax),
-						OpCode.SoftAbsB => new(OpCode.Call, v, _subs!.SftAbsB),//new([new(T.Zero()), v], OpCode.SoftMaxB),
+						OpCode.SoftAbs => new(OpCode.Call, v, _subs!.SftAbs),//new([new(T.zero), v], OpCode.SoftMax),
+						OpCode.SoftAbsB => new(OpCode.Call, v, _subs!.SftAbsB),//new([new(T.zero), v], OpCode.SoftMaxB),
 						OpCode.SoftNeg => new(OpCode.Neg, new(OpCode.SoftAbs, new(OpCode.Neg, v))),//new(OpCode.Call, v, subs!.SftNeg),//
-						OpCode.SoftNegB => new(OpCode.Call, v, _subs!.SftNegB),//new([new(T.Zero()), v], OpCode.SoftMinB),
+						OpCode.SoftNegB => new(OpCode.Call, v, _subs!.SftNegB),//new([new(T.zero), v], OpCode.SoftMinB),
 						OpCode.Exp10 => new(OpCode.Exp, new([Ln10, v], OpCode.Mul)),
 						OpCode.Exp2 => new(OpCode.Exp, new([Ln2, v], OpCode.Mul)), 
 						OpCode.Log10 => new([new(OpCode.Log, v), Iln10], OpCode.Mul),

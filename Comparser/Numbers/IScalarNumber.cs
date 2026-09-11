@@ -3,105 +3,25 @@ using System.Runtime.CompilerServices;
 using static Comparser.Comparser.Numbers.Static;
 
 namespace Comparser.Comparser.Numbers;
-public interface INumber<T> where T : unmanaged, INumber<T> {
-	//public bool Is0();
-	//public bool IsNaN();
-	
-	public static abstract bool Is0(T t);
-	public static abstract bool IsNaN(T t);
+public interface IScalarOf<T,S> where T : unmanaged, INumber<T> where S : unmanaged {
 
-	#region Export
-	public static abstract string[] epsUnit { get; }
-	public static abstract double[] EpsValues(T r, T e);
-	public string ToString(int d);
-	public static (double h, double s, double v) Log2Hsv(T t/*, double repeatValue = 1*/) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Log(s) * .5 /*% repeatValue*/); }
-	public static (double h, double s, double v) Lin2Hsv(T t/*, double repeatValue = 1*/) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Sqrt(s) /*% repeatValue*/); }
-	public static (double h, double s, double v) Exp2Hsv(T t/*, double _*/) => (ToHue(t), 1, 1 - Math.Exp(-+t));
-	public static double ToHue(T t) => Static.Cycle(T.Arg(t) / Math.Tau);
 
-	public static byte[] ToBytes(T str) {
-		var size = Marshal.SizeOf(str);
-		var arr = new byte[size];
-		var ptr = IntPtr.Zero;
-		try {
-			ptr = Marshal.AllocHGlobal(size);
-			Marshal.StructureToPtr(str, ptr, true);
-			Marshal.Copy(ptr, arr, 0, size);
-		} finally {
-			Marshal.FreeHGlobal(ptr);
-		}
-		return arr;
-	}
-	public static T FromBytes(byte[] arr) {
-		var str = new T();
-		var size = Marshal.SizeOf(str);
-		var ptr = IntPtr.Zero;
-		try {
-			ptr = Marshal.AllocHGlobal(size);
-			Marshal.Copy(arr, 0, ptr, size);
-			str = (T)Marshal.PtrToStructure(ptr, str.GetType())!;
-		} finally {
-			Marshal.FreeHGlobal(ptr);
-		}
-		return str;
-	}
-	#endregion
-
-	#region Constants
-	public static abstract T zero { get; }
-	public static abstract T nan { get; }
-	public static abstract T unit { get; }
-	public static abstract T one { get; }
-	public static abstract T u { get; }
-	public static abstract T minusUnit { get; }
-	public static abstract T minusOne { get; }
-	public static abstract T minusU { get; }
-	#endregion
 
 	#region Helpers
-	public static abstract double Mix(T t, Func<double, double, double> del);
-	public static abstract T D1(T a, Func<double, double> d);
-	public static abstract T D2(T a, T b, Func<double, double, double> d);
-	public static abstract T D3(T a, T b, T c, Func<double, double, double, double> d);
-
-	public static T ComplexOp(T t, Func<Complex, Complex> func) {
-		var r = func(Abs(t) * Complex.Complex_InvArg(T.Arg(t)));
-		return INumber<Complex, double>.Abs(r) * T.InvArg(Complex.Arg(r), T.Axis(t));
-	}
+	public static abstract S Mix(T t, Func<S, S, S> del);
+	public static abstract T D1(T a, Func<S, S> d);
+	public static abstract T D2(T a, T b, Func<S, S, S> d);
+	public static abstract T D3(T a, T b, T c, Func<S, S, S, S> d);
 	#endregion
 	
 	#region Basics
-	public static bool IsTrue(T t) => +t >= 1;
-	public static bool IsFalse(T t) => +t < 1;
-	public static T True(bool t) => t ? T.unit : T.zero;
-	public static abstract bool AreEqual(T a, T b);
-	public static abstract T MakeR(double r);
-	public static abstract double Re(T t);
-	public static abstract double Im(T t);
-	public static abstract double ImMag(T t);
-	public static T T_I(T t) => T.MakeR(T.ImMag(t));
-	public static abstract T operator ~(T t);
-	public static abstract T operator -(T t);
-	public static abstract T operator !(T t);
-	public static abstract T U(T t);
-	public static abstract T MulU(T r);
-	public static abstract T NegU(T t);
-	public static abstract double operator +(T t);
-	public static abstract T Frac(T t);
-	public static abstract T Trunc(T t);
-	public static abstract T Floor(T t);
-	public static abstract T Round(T t);
-	public static abstract T Ceil(T t);
-	public static abstract T Cycle(T t);
-	public static abstract T Inv(T t);
-	public static T I_Inv(T t) => Conj(t) / SqrAbs(t);
-	public static abstract double Arg(T t);
-	public static abstract T InvArg(double p, T axis);
-	public static abstract T Axis(T t);
-	public static abstract T Sqrt(T t);
-	public static abstract T Sqr(T t);
-	public static abstract T Cub(T t);
-	public static abstract T Quart(T t);
+	public static abstract T MakeR(S r);
+	public static abstract S Re(T t);
+	public static abstract S Im(T t);
+	public static abstract S ImMag(T t);
+	public static abstract S operator +(T t);
+	public static abstract S Arg(T t);
+	public static abstract T InvArg(S p, T axis);
 	// |x|
 	public static double Abs(T t) => Math.Sqrt(+t);
 	// x / |x|

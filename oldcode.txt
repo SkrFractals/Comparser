@@ -4,11 +4,11 @@
 		}
 		public void SetValue() {
 			Values = [];
-			Value = T.NaN();
+			Value = T.nan;
 		}
 		public void SetValues(Value[] values) {
 			Values = values;
-			Value = T.NaN();
+			Value = T.nan;
 		}
 		public static Value[] CopyValues(Value[] v) {
 			var a = new Value[v.Length];
@@ -280,7 +280,7 @@ private static unsafe void Gamma_Stirling_Positive_Batched(T x, T* result, int u
 	}
 	T B() => (b - .5) * T.Log(b) - b; // base
 	T C() { // corrections
-		T k = T.Zero(), xp = b;
+		T k = T.zero, xp = b;
 		for (var i = 0; i < corrections; ++i)
 			k += B2G[i] * (xp /= T.Sqr(b)); // B2G[i] = B2[i]/(6ii+4i+2), B2[i] = B_2(i+1)
 		return k;
@@ -317,7 +317,7 @@ private static unsafe void Gamma_Stirling_Positive_Batched(T x, T* result, int u
         						scale /= divBase;
         						//byte f = 0;
         						IndexLog(scale, 64);
-        						//T.IndexAndAddToRgb(field,T.Floor(ValueToScreen(scale)), 64 * T.One());
+        						//T.IndexAndAddToRgb(field,T.Floor(ValueToScreen(scale)), 64 * T.one);
         						Lg(scale, scale * divBase, 32);
         						var s = divBase * scale;
         						var es = eStart;
@@ -334,12 +334,12 @@ private static unsafe void Gamma_Stirling_Positive_Batched(T x, T* result, int u
         						for (double i = 0; i <= .95;) {
         							var newFrom = newTo;
         							IndexLog(newTo = (i += 1.0 / 9) * to + (1 - i) * from, b);
-        							//T.IndexAndAddToRgb(field,T.Floor(Vs(newTo = (i += 1.0 / 9) * to + (1 - i) * from)), b * T.One());
+        							//T.IndexAndAddToRgb(field,T.Floor(Vs(newTo = (i += 1.0 / 9) * to + (1 - i) * from)), b * T.one);
         							//if(newFrom < ei && newTo > si)
         							Lg(newFrom, newTo, ++b);
         						}
         					}
-        					void IndexLog(T v, byte b) => T.IndexAndAddToRgb(field,T.Floor(length * T.D2(T.D1(v, Math.Log) - start, end - start, Static.Div)), b * T.One());
+        					void IndexLog(T v, byte b) => T.IndexAndAddToRgb(field,T.Floor(length * T.D2(T.D1(v, Math.Log) - start, end - start, Static.Div)), b * T.one);
         					
         					/*var scale = divBase*L(ei); // find some power of 10 that is above the ei bounds, to go down from there
         					// main tiling squares (only this dividing should have equal distances visually)

@@ -4,19 +4,26 @@ public readonly struct Real(double r = 0) : INumber<Real> {
 	public readonly double R = r;
 
 	#region Query
-	public bool Is0() => R == 0;
-	public bool IsNaN() => double.IsNaN(R);
+	public static bool Is0(Real r) => r.R == 0;
+	public static bool IsNaN(Real r) => double.IsNaN(r.R);
 	//public static bool operator ==(Real a, Real b) => a.R == b.R && a.I == b.I;
 	//public static bool operator !=(Real a, Real b) => a.R != b.R || a.I != b.I;
-
+	public static string[] epsUnit => ["ε"];
+	public static double[] EpsValues(Real r, Real e) => [r.R, e.R];
 	public override string ToString() => ToString(-1);
 	public string ToString(int d) => _sr(R, d);
 	#endregion
 
 	#region Constants
-	public static Real Zero() => new(0);
-	public static Real One() => new(1);
-	public static Real NaN() => new(double.NaN);
+	public static Real zero => default;
+	public static Real nan => new(double.NaN);
+	public static Real unit => new(1);
+	public static Real one => new(1);
+	public static Real u => default;
+	public static Real minusUnit => new(-1);
+	public static Real minusOne => new(-1);
+	public static Real minusU => default;
+	
 	#endregion
 
 	#region Helpers
@@ -34,12 +41,12 @@ public readonly struct Real(double r = 0) : INumber<Real> {
 	public static Real MakeR(double r) => new(r);
 	
 	// conjugate: a - bi
-	public static Real operator !(Real r) => r;
+	public static Real operator ~(Real r) => r;
 	// negative: - a - bi
 	public static Real operator -(Real r) => new(-r.R);
 	// i * real
-	public static Real operator ~(Real r) => r; // ?
-	public static Real U(Real r) => Zero();
+	public static Real operator !(Real r) => nan; // ?
+	public static Real U(Real r) => zero;
 	public static Real MulU(Real r) => r; // ?
 	public static Real NegU(Real r) => -r; // ??
 	// |real|^2
@@ -61,7 +68,7 @@ public readonly struct Real(double r = 0) : INumber<Real> {
 	public static double Arg(Real r) => r.R < 0 ? Math.PI : 0;
 	// from angle
 	public static Real InvArg(double p, Real _) { var a = p % Math.Tau; return new(a == 0 ? 1 : Math.Abs(a - Math.PI) < 1e-8 ? -1 : double.NaN); }
-	public static Real Axis(Real q) => NaN();
+	public static Real Axis(Real q) => nan;
 	// square root
 	public static Real Sqrt(Real r) => new(Math.Sqrt(r.R));
 	// real^2
@@ -85,8 +92,8 @@ public readonly struct Real(double r = 0) : INumber<Real> {
 	public static Real operator +(Real r, double x) => new(r.R + x);
 	// real + real
 	public static Real operator +(double x, Real r) => new(r.R + x);
-	public static Real AddV(Real r, double x) => NaN();
-	public static Real AddV(double x, Real r) => NaN();
+	public static Real AddV(Real r, double x) => nan;
+	public static Real AddV(double x, Real r) => nan;
 	#endregion
 
 	#region Subtractions
@@ -96,8 +103,8 @@ public readonly struct Real(double r = 0) : INumber<Real> {
 	public static Real operator -(Real r, double x) => new(r.R - x);
 	// real - real
 	public static Real operator -(double x, Real r) => new(x - r.R);
-	public static Real SubV(Real r, double x) => NaN();
-	public static Real SubV(double x, Real r) => NaN();
+	public static Real SubV(Real r, double x) => nan;
+	public static Real SubV(double x, Real r) => nan;
 	#endregion
 
 	#region Multiplications

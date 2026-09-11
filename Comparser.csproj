@@ -11,6 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Comparser\Numbers\Dual.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Update="Controls\ComparserControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

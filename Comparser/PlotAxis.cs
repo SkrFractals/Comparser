@@ -24,7 +24,7 @@ public abstract partial class Comparser<T>{
 				//if (_lc && _le)
 				//	return GetCe();
 				T t;
-				if (v is Value vs && !(t=vs.GetLeaf()).IsNaN())
+				if (v is Value vs && !T.IsNaN(t=vs.GetLeaf()))
 					start = t;
 				return GetCe();
 			}
@@ -32,7 +32,7 @@ public abstract partial class Comparser<T>{
 				//if (_ls && _le)
 				//	return GetSe();
 				T t;
-				if (v is Value vc && !(t=vc.GetLeaf()).IsNaN())
+				if (v is Value vc && !T.IsNaN(t=vc.GetLeaf()))
 					center = t;
 				return GetSe();
 			}
@@ -40,16 +40,16 @@ public abstract partial class Comparser<T>{
 				//if (_ls && _lc)
 				//	return GetSc();
 				T t;
-				if (v is Value ve && !(t=ve.GetLeaf()).IsNaN())
+				if (v is Value ve && !T.IsNaN(t=ve.GetLeaf()))
 					end = t;
 				return GetSc();
 			}
 			public void SetSce(object? s, object? e) {
 				Locked = 0; // do not restore, lock restoration is called right after this
 				T t;
-				if (s is Value vs && !(t = vs.GetLeaf()).IsNaN())
+				if (s is Value vs && !T.IsNaN(t=vs.GetLeaf()))
 					start = t;
-				if (e is Value ve && !(t = ve.GetLeaf()).IsNaN())
+				if (e is Value ve && !T.IsNaN(t=ve.GetLeaf()))
 					start = t;
 			}
 			//public string SetLog(bool l);
@@ -173,7 +173,7 @@ public abstract partial class Comparser<T>{
 					lineB[0] = divided * (1 - mod);
 					for (int i = 1; i < lineB.Length - 2; ++i)
 						lineB[i] = (divided >>= 1) * (1 + mod);
-					lineB[^2] = T.One() * divided;
+					lineB[^2] = T.one * divided;
 					lineB[^1] = mod * divided;
 					for (byte b = 0; b < lineB.Length; ++b, h /= 10) {
 						T fs = T.Floor(lStart / h), fe = T.Floor(lEnd / h);

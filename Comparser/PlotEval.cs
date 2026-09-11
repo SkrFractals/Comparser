@@ -3,12 +3,12 @@ public abstract partial class Comparser<T> {
 	public partial class PlotEval {
 		private Expression? _exp;
 		//private string _text;
-		private T _mSt = T.NaN();
-		private T _mDt = T.NaN();
+		private T _mSt = T.nan;
+		private T _mDt = T.nan;
 		private int _mLt;
 		//private readonly Comparser<T> _context;
 		public CancellationToken Cancel;
-		//private static readonly Value Xyt = new([new(T.NaN(), 0, "x"), new(T.NaN(), 0, "y"), new(T.NaN(), 0, "t")]);
+		//private static readonly Value Xyt = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "t")]);
 		public PlotEval(object? exp) => _exp = exp as Expression;
 		//public PlotEval(CancellationToken cancel, Comparser<T> context, string text) => _exp = new(new(_context = context, exp = text, cancel), out _, Xyt);
 		/*public void ReParse(CancellationToken cancel, string text) {

@@ -132,12 +132,12 @@ public abstract partial class Comparser<T> {
 	private class FuncRgb(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, (double, double, double)> del) : FuncHsv(read, parent, args, oc, (_)=>(0,0,0)) {
 		protected override Value To(Value val, object? _) => Triple(Static.Hsv2rgb(del(val.GetLeaf()/*, 1*/)));
 	}
-	private class FuncLog2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2hsv, INumber<T>.Log2hsv) { }
-	private class FuncLog2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2rgb, INumber<T>.Log2hsv) { }
-	private class FuncLin2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2hsv, INumber<T>.Lin2hsv) { }
-	private class FuncLin2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2rgb, INumber<T>.Lin2hsv) { }
-	private class FuncExp2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Exp2hsv, INumber<T>.Exp2hsv) { }
-	private class FuncExp2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Exp2rgb, INumber<T>.Exp2hsv) { }
+	private class FuncLog2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2hsv, INumber<T>.Log2Hsv) { }
+	private class FuncLog2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2rgb, INumber<T>.Log2Hsv) { }
+	private class FuncLin2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2hsv, INumber<T>.Lin2Hsv) { }
+	private class FuncLin2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2rgb, INumber<T>.Lin2Hsv) { }
+	private class FuncExp2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Exp2hsv, INumber<T>.Exp2Hsv) { }
+	private class FuncExp2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Exp2rgb, INumber<T>.Exp2Hsv) { }
 
 	#endregion
 
@@ -201,22 +201,22 @@ public abstract partial class Comparser<T> {
 			}
 			_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.NaN(), 0, V.Values[0].String);
+			_args.Values[iteratorIndex] = new(T.nan, 0, V.Values[0].String);
 			_expr =  new(new(read.Context, V.Values.Length == 4 ? V.Values[3].String : "", read.Cancel), out _, _args);
 		}
 		private readonly Expression _expr;
 		private readonly Value _args;
 		override protected Value EvalF(ushort depth, Value v, Value args) {
 			if (v.Values.Length != 4)
-				return new(T.NaN());
+				return new(T.nan);
 			int from = (int)Math.Round(T.Re(v.Values[1].Leaf)),
 				to = (int)Math.Round(T.Re(v.Values[2].Leaf));
 			if (Math.Abs(from - to) > Context._iterOverflow)
-				return new(T.NaN()); // iteration range over limit, perhaps accidental huge/infinity value in the range?
+				return new(T.nan); // iteration range over limit, perhaps accidental huge/infinity value in the range?
 			var iteratorIndex = args.Values.Length;
 			//_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.NaN(), v.Error, v.Values[0].String);
+			_args.Values[iteratorIndex] = new(T.nan, v.Error, v.Values[0].String);
 			//var exp = new Expression(Context, v.Values[3].Text, ni);
 			return Result(EvalK, from, to);
 			Value EvalK(int f) {
@@ -237,7 +237,7 @@ public abstract partial class Comparser<T> {
 				return a;
 			foreach (var i in a.Values)
 				NaN(i);
-			a.Leaf = T.NaN();
+			a.Leaf = T.nan;
 			return a;
 		}
 	}
