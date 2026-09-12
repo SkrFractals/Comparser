@@ -185,7 +185,22 @@ public static class Static {
 	public static double Sqr(double x) => x * x;
 	public static double Lerp(double a, double b, double t) => a * (1 - t) + b * t;
 	#endregion
+	public static readonly TimeSpan SleepyTime = TimeSpan.FromSeconds(1/20.0);
 	public static string[] Errors = ["", "NaN", "Stack Overflow", "Bad Expression", "Unexpected"];
+	public static void TaskManager(Task[] taskArr, int tasks, int chunks, int total, CancellationToken cancel, Action<float, float, int> run) {
+		int task = 0;
+		if (taskArr.Length != tasks) taskArr = new Task[tasks]; // allocate array if it doesn't exist yet, or has the wrong size
+		for (float t = 0, dr = (float)total / (chunks * tasks); task < tasks; t += dr) // split into 8 chunks, each split into threads, so that easy and hard lines get split evenly
+		{
+			float tt = t;
+			int ttask = task++;
+			taskArr[ttask] = Task.Run(() => run(tt,dr,ttask), cancel); // run the tasks and give them row chunks to process
+		}
+		// wait for tasks to finish:
+		for (var done = 0; done < tasks; Thread.Sleep(Static.SleepyTime))
+		for (task = done = 0; task < tasks; ++task)
+			done = taskArr[task].IsCompleted ? done + 1 : done;
+	}
 }
 
 

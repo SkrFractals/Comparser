@@ -24,51 +24,53 @@ public abstract partial class Comparser<T> {
 		/// </summary>
 		/// <param name="depth">depth of stack</param>
 		/// <param name="args">arguments</param>
+		/// <param name="allowCache">should be disable when multitasking as it is not thread safe</param>
 		/// <returns>Evaluated value of this expression</returns>
-		public virtual Value Eval(ushort depth, Value args) {
-			if (_cache.GetEval(args)) return _cache.Result?.Eval!;
+		public virtual Value Eval(ushort depth, Value args, bool allowCache) {
+			if (allowCache && _cache.GetEval(args)) return _cache.Result?.Eval!;
 			Value result = new(new Value[V.Values.Length]);
-			FailReason error = FailReason.Success;
+			var error = FailReason.Success;
 			if (V.Values.Length == 0)
-				result = EvalValue(depth, V, args);
+				result = EvalValue(depth, V, args, allowCache);
 			else
 				for (var e = 0; e < V.Values.Length; Err(ref error, result.Values[e]), ++e)
-					result.Values[e] = EvalValue(depth, V.Values[e], args);
+					result.Values[e] = EvalValue(depth, V.Values[e], args, allowCache);
 			var t = V.Text;
 			if (error == 0) {
 				result = CollapseScalar(result);
 				result.Text = t;
 			}else result = new(error, t);
-			_cache.Insert(args, result);
+			if(allowCache)
+				_cache.Insert(args, result);
 			return result;
 		}
-		public Value EvalCopy(ushort depth, Value args) => new Expression(Context, V, _cache).Eval(depth, args);
-		protected Value EvalValue(ushort depth, Value v, Value args/*, bool allowArg = false*/) {
+		public Value EvalCopy(ushort depth, Value args, bool allowCache) => new Expression(Context, V, _cache).Eval(depth, args, allowCache);
+		protected Value EvalValue(ushort depth, Value v, Value args/*, bool allowArg = false*/, bool allowCache) {
 			var a = args.Values;
 			if (v.Values.Length == 0) {
 				var eval =  Value.Operate2(
-					v.Term?.Eval(depth, args) ?? new([v.Arg.Length == 0 ? v : GetArg(v.Arg, a)], v.Error, v.Text, v.String),
-					v.Operand?.Eval(depth, args) ?? None, v.Op.Op, v.Op.SOp, depth, Context, args, v.Op is Mul);
+					v.Term?.Eval(depth, args, allowCache) ?? new([v.Arg.Length == 0 ? v : GetArg(v.Arg, a)], v.Error, v.Text, v.String),
+					v.Operand?.Eval(depth, args, allowCache) ?? None, v.Op.Op, v.Op.SOp, depth, Context, args, allowCache, v.Op is Mul);
 				eval.Operand = v.Operand; // copy possible default argument
 				if(eval.Text == "") eval.Text = v.Text;
 				return eval;
 			}
 			Value result = new(new Value[v.Values.Length]);
-			for (var e = 0; e < v.Values.Length; ++e) result.Values[e] = EvalValue(depth, v.Values[e], args);
+			for (var e = 0; e < v.Values.Length; ++e) result.Values[e] = EvalValue(depth, v.Values[e], args, allowCache);
 			result.Text = v.Text;
 			return result;
 			Value GetArg(int[] arg, Value[] argVals) {
 				for (var i = 0; arg[i] < argVals.Length; ++i) {
 					var valI = argVals[arg[i]];
 					if (i + 1 == arg.Length)
-						return EvalArg(depth, valI, args);
+						return EvalArg(depth, valI, args, allowCache);
 					argVals = valI.Values;
 				}
 				return v;
 			}
 		}
-		private Value EvalArg(ushort depth, Value arg, Value args) => depth > Context._stackOverflow ? StackOverflow 
-			: T.IsNaN(arg.Leaf) && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args) ?? arg : arg;
+		private Value EvalArg(ushort depth, Value arg, Value args, bool allowCache) => depth > Context._stackOverflow ? StackOverflow 
+			: T.IsNaN(arg.Leaf) && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args, allowCache) ?? arg : arg;
 		
 		#endregion
 		
@@ -125,7 +127,7 @@ public abstract partial class Comparser<T> {
 					Op = { Negative = Char('-') },
 					Leaf = T.nan
 				});
-				nextOp = r.Op = new();
+				nextOp = new();
 				_ = End(false) // unexpected ')', or no op, and return back successful
 					|| ReadUnaryOperatorReturned() // read unary
 					|| ReadTermReturned() // read term
@@ -165,18 +167,20 @@ public abstract partial class Comparser<T> {
 				bool ReadTermProperNeedsFailTest() {
 					// definitions do not allow parenthesis unless they got one right at the beginning of the top level
 					// if opening parenthesis, allow a newline,and read a subterm to encapsulate
-					if ((parseAs != ParseAs.Definition || left == 0) && Char('(') && read.TrimStart(1) && SubTerm(out r.Term, ')') 
-						|| Char('"') && ReadString(out r.Term) // try read string
-						|| TryFunc() // try read function
-						) return true;
 					var startTerm = read.From;
-					var success = ReadNumber(out var n) || ReadConst(out n) // read number OR const OR argument, const and argument can also be a delegate call:
-							&& (!(Context.UserFunctions.TryGetValue(n.String, out var f) || Context.DefaultFunctions.TryGetValue(n.String, out f)) // does the string value match any function name?
-								|| read.GotoFirstFailed(0, 2, ['('], 1, out _, out _) // if yes, try to eat the next opening parenthesis
-								|| !CallFunction(f, startTerm, read.From - 1, ParseDictionary.Type.PointerF)); // and then actually parse calling that function
-					if (success) // these calls only return value, need to encapsulate that into a term
-						r.Term = new(Context, n, cache); 
-					return !success;
+					if (Char('"') && ReadString(out r.Term) && Delegate(r.Term.V.String) // try string, and possibly delegate it
+						|| (parseAs != ParseAs.Definition || left == 0) && Char('(') && !read.TrimStart(1) && SubTerm(out r.Term, ')') // try parenthesis group
+						|| TryFunc() // try read function
+						|| !(ReadNumber(out var n) || ReadConst(out n) && Delegate(n.String)) // read number OR const OR argument, const/argument and possibly delegate it:
+						) return true;
+					// these calls only return value, need to encapsulate that into a term
+					r.Term = new(Context, n, cache);
+					return false;
+
+					bool Delegate(string s) => !(Context.UserFunctions.TryGetValue(s, out var f) || Context.DefaultFunctions.TryGetValue(s, out f)) // does the string value match any function name?
+						|| read.GotoFirstFailed(0, 2, ['('], 1, out _, out _) // if yes, try to eat the next opening parenthesis
+						|| !CallFunction(f, startTerm, read.From - 1, ParseDictionary.Type.PointerF); // and then actually parse calling that function
+
 				}
 			}
 			bool ReadUnaryOperatorReturned() {
@@ -271,18 +275,18 @@ public abstract partial class Comparser<T> {
 				read.TrimStart(o.EatOp > 0 ? 1 : 0);
 				o.Negative = r.Op.Negative; // move negative flag to the new operator
 				if (NotLeftAssociate(o))
-					return true;
+					return false;
 				nextOp = o; // perform left-associativity by returning back, and the parent will encapsulate
-				return false;
+				return true;
 			}
 			#endregion
 
 			#region Read Function/Delegate Calls
 			bool TryFunc() {
 				var startFrom = read.From;
-				foreach (var f in Context.Context.Get(read.Text, read.From, Functions))
-					if (f.name.Length > 0 && !FailRequiredSymbol('(', (byte)f.name.Length))
-						return CallFunction((CallFunction)f.obj.Obj, startFrom, startFrom + f.name.Length, f.obj.Type);
+				foreach (var (name, obj) in Context.Context.Get(read.Text, read.From, Functions))
+					if (name.Length > 0 && !FailRequiredSymbol('(', (byte)name.Length))
+						return CallFunction((CallFunction)obj.Obj, startFrom, startFrom + name.Length, obj.Type);
 				return false;
 			}
 			bool CallFunction(CallFunction f, int startFrom, int endFrom, ParseDictionary.Type type) {
@@ -374,6 +378,7 @@ public abstract partial class Comparser<T> {
 					return !F();
 				}
 				var s = read.Uncomment(before, read.From - 1);
+				read.AddC(before, read.From - 1, ParseDictionary.Type.String);
 				for (var i = 0; (i = s.IndexOf('\\', i)) >= 0;) {
 					if (i + 1 < s.Length)
 						switch (s[i + 1]) {
@@ -510,25 +515,19 @@ public abstract partial class Comparser<T> {
 			// experimental - pre-evaluate parts of expressions that are not dependent on any arguments:
 			bool CollapseTerm(ref Expression exp) {
 				if (Context.PreEvaluate && !CollapseValue(exp.V))
-					exp = new(Context, exp.Eval(0, None));
+					exp = new(Context, exp.Eval(0, None, false));
 				return false;
 			}
-			bool CollapseValue(Value v) {
-				if (!Context.PreEvaluate)
-					return true;
-				if (v.Values.Length > 0)
-					return v.HasArgs |= CollapseValues(v.Values);
-				if (v.Arg.Length > 0 || v.Term != null && (v.Term.V.HasArgs || v.Operand != null && v.Operand.V.HasArgs))
-					return v.HasArgs = true;
-				return false;
-				bool CollapseValues(Value[] vals) {
-					var has = false;
-					foreach (var val in vals)
-						has |= CollapseValue(val);
-					return has;
-				}
-			}
-			bool Char(char c, byte offset = 0) {
+            bool CollapseValue(Value v) => !Context.PreEvaluate || (v.Values.Length > 0
+                    ? (v.HasArgs |= CollapseValues(v.Values))
+                    : (v.Arg.Length > 0 || v.Term != null && (v.Term.V.HasArgs || v.Operand != null && v.Operand.V.HasArgs)) && (v.HasArgs = true));
+            bool CollapseValues(Value[] vals) {
+                var has = false;
+                foreach (var val in vals)
+                    has |= CollapseValue(val);
+                return has;
+            }
+            bool Char(char c, byte offset = 0) {
 				var o = read.From + offset;
 				var test = read.Text.Length > o && read.Text[o] == c;
 				if (!test)
@@ -557,7 +556,7 @@ public abstract partial class Comparser<T> {
 		public Expression(Comparser<T> context, Value t, int cache = 0) {
 			_cache = new(cache);
 			Context = context;
-			V = new([new(t.Leaf, t.Op, t.Arg, t.Term, t.Operand, t.Op.Negative, t.String)], t.Error, t.Text);
+			V = new(t.Values.Length > 0 ? t.Values : [new(t.Leaf, t.Op, t.Arg, t.Term, t.Operand, t.Op.Negative, t.String)], t.Error, t.Text);
 		}
 		// copy
 		private Expression(Comparser<T> context, Value t, CallFunction.EvalCache cache) {
@@ -567,7 +566,6 @@ public abstract partial class Comparser<T> {
 		}
 		#endregion
 		
-		private static (string, ParseDictionary.S) NoConstant = ("", new());
 		private const byte Functions = (byte)ParseDictionary.Type.UserF | (byte)ParseDictionary.Type.DefaultF;
 		private const byte Constants = (byte)ParseDictionary.Type.UserC | (byte)ParseDictionary.Type.DefaultC;
 	}

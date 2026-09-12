@@ -15,21 +15,21 @@ partial class PlotSettingsPanel {
 		base.Dispose(disposing);
 	}
 
-	#region Component Designer generated code
-	/// <summary>
-	/// Required method for Designer support - do not modify
-	/// the contents of this method with the code editor.
-	/// </summary>
-	private void InitializeComponent() {
-		SuspendLayout();
-		// 
-		// PlotSettingsControl
-		// 
-		AutoScaleMode = AutoScaleMode.None;
-		Size = new Size(320, 320);
-		Name = "PlotSettingsControl";
-		ResumeLayout(false);
-	}
+    #region Component Designer generated code
+    /// <summary>
+    /// Required method for Designer support - do not modify
+    /// the contents of this method with the code editor.
+    /// </summary>
+    private void InitializeComponent() {
+        SuspendLayout();
+        // 
+        // PlotSettingsPanel
+        // 
+        AutoScaleMode = AutoScaleMode.None;
+        Name = "PlotSettingsPanel";
+        Size = new Size(320, 320);
+        ResumeLayout(false);
+    }
 
-	#endregion
+    #endregion
 }

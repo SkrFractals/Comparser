@@ -19,6 +19,8 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public static bool MemX, MemXy;
 	public static int Decimals = 3;
 	public static int Algebra = 1;
+	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
+	public static int Tasks =  Environment.ProcessorCount - (Environment.ProcessorCount >> 3); 
 	private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	public static IComparser? Context;
 	private bool _darkMode = true, _preEvaluate = true;
@@ -42,7 +44,8 @@ public partial class SettingsPanel : UserControl, IPanel {
 		autoBox_TextChanged(reportBox, EventArgs.Empty);
 		UpdateAuto();
 		UpdateReport();
-		
+		preEvalBox.Checked = true;
+		taskBox.Text = MaxTasks.ToString();
 		plotLabel.Text = "Auto Plot";
 		autoLabel.Text = "Auto Build:";
 		decLabel.Text = "Decimals:";
@@ -97,6 +100,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 	}
 	private void reportBox_TextChanged(object sender, EventArgs e) {
 		if (!int.TryParse(reportBox.Text, out ReportingDelay) || ReportingDelay < 100) ReportingDelay = 100;
+	}
+	private void taskBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(taskBox.Text, out Tasks) || Tasks < 1) Tasks = 1;
+		if (Tasks > MaxTasks) Tasks = MaxTasks;
 	}
 	private void preEvalBox_CheckedChanged(object sender, EventArgs e) {
 		_preEvaluate = preEvalBox.Checked;

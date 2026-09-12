@@ -181,6 +181,10 @@ public abstract partial class Comparser<T> {
 		Frac,		// = Sub(X,Trunc(X))
 		Ceil,		// = Neg(Floor(Neg(X)))
 		Cycle,		// = x - Floor(x)
+		Clamp01,	// = Clamp(x,0,1)
+		
+		SoftClamp01,	// = SoftClamp(x,0,1)
+		SoftClamp01B,	// = SoftClampB(X,0,1)
 		Sgn,		// = Mul(X,Inv(Abs(X)))
 		Sqrt,		// = Pow(X,.5)
 		Cbrt,		// = Pow(X,1.0/3)
@@ -190,13 +194,15 @@ public abstract partial class Comparser<T> {
 		// Special
 		Gauss,      // = Exp(Neg(Sqr(X)))
 		// Colors
-		Rgb2hsv,
+		Rgb2hsv, // TODO implement in some way
 		Hsv2rgb,
 		Log2hsv,
 		Lin2hsv,
-		Exp2hsv,
+		Log2hsvC,
+		Lin2hsvC,
 		Log2rgb,
 		Lin2rgb,
-		Exp2rgb
+		Log2rgbC,
+		Lin2rgbC,
 	}
 }

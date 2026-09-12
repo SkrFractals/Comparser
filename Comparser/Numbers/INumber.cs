@@ -14,10 +14,17 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract string[] epsUnit { get; }
 	public static abstract double[] EpsValues(T r, T e);
 	public string ToString(int d);
-	public static (double h, double s, double v) Log2Hsv(T t/*, double repeatValue = 1*/) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Log(s) * .5 /*% repeatValue*/); }
-	public static (double h, double s, double v) Lin2Hsv(T t/*, double repeatValue = 1*/) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Sqrt(s) /*% repeatValue*/); }
-	public static (double h, double s, double v) Exp2Hsv(T t/*, double _*/) => (ToHue(t), 1, 1 - Math.Exp(-+t));
+	public static (double h, double s, double v) Log2Hsv(T t) { var s = +t; return (ToHue(t), FallOffLog(s), Math.Log(s) * .5); }
+	public static (double h, double s, double v) Lin2Hsv(T t) { var s = +t; return (ToHue(t), FallOff(s), Math.Sqrt(s)); }
+	public static (double h, double s, double v) Log2HsvC(T t) { var s = +t; return (ToHue(t), FallOffLog(s), Static.Cycle(Math.Log(s) * .5)); }
+	public static (double h, double s, double v) Lin2HsvC(T t) { var s = +t; return (ToHue(t), FallOff(s), Static.Cycle(Math.Sqrt(s))); }
+	//public static (double h, double s, double v) Exp2Hsv(T t) => (ToHue(t), 1, FallOff(+t));
+	/*public static (double h, double s, double v) Log2Hsv(T t) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Log(s) * .5); }
+	public static (double h, double s, double v) Lin2Hsv(T t) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Sqrt(s) ); }
+	public static (double h, double s, double v) Exp2Hsv(T t) => (ToHue(t), 1, 1 - Math.Exp(-+t));*/
 	public static double ToHue(T t) => Static.Cycle(T.Arg(t) / Math.Tau);
+	private static double FallOff(double s) =>  /*.999 - */.999 * Math.Exp(-s); //1 - Math.Exp(-s);// .999 - .999 * Math.Exp(-s);
+	private static double FallOffLog(double s) =>  .999 / (1+Math.Log(1+Math.Sqrt(s))); 
 
 	public static byte[] ToBytes(T str) {
 		var size = Marshal.SizeOf(str);
@@ -93,6 +100,9 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T Round(T t);
 	public static abstract T Ceil(T t);
 	public static abstract T Cycle(T t);
+	public static T Clamp01(T t) => T.Clamp(t,T.zero,T.one);
+	public static T SoftClamp01(T t) => SoftClamp(t, T.zero, T.one);
+	public static T SoftClamp01B(T t, T b) => SoftClampB(t, T.zero, T.one, b);
 	public static abstract T Inv(T t);
 	public static T I_Inv(T t) => Conj(t) / +t;
 	public static abstract double Arg(T t);

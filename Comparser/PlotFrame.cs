@@ -2,12 +2,18 @@
 using Comparser.Forms;
 namespace Comparser.Comparser;
 public abstract partial class Comparser<T> {
+	
 	public partial class PlotEval {
 		public class PlotFrame(bool centerPixels = true) {
 			// z = coordinate Z input, t = coordinate TIME input, x = screen space x, y = screenspace y, f = frame, w = screen width, h = screen height, l = frame count 
 			//Value args = new([new(T.nan, 0, "z"), new(T.nan, 0, "t"), new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "f"), new(T.nan, 0, "w"), new(T.nan, 0, "h"), new(T.nan, 0, "l")]);
-			Value args = new([new(T.nan, 0, "z"), new(T.nan, 0, "t")]);
-			private readonly double _c = centerPixels ? .5 : 0;
+			private Value[] _args = [];// = new([new(T.nan, 0, "z"), new(T.nan, 0, "t")]);
+
+			public int Progress { get { var f = 0; foreach (var t in _taskProgress) f += t; return f; } }
+			private int[] _taskProgress = [];
+
+
+            private readonly double _c = centerPixels ? .5 : 0;
 			private static Complex MapC((Complex s, Complex x, Complex y) a, int x, int y) => a.s + (x + .5) * a.x + (y + .5) * a.y;
 			private static Complex Map((Complex s, Complex x, Complex y) a, int x, int y) => a.s + x * a.x + y * a.y;
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, int, Complex> _map = centerPixels ? &MapC : &Map;
@@ -15,6 +21,7 @@ public abstract partial class Comparser<T> {
 			private static double MapClu((Complex s, Complex x, Complex y) a, int x) => a.s.R + x * a.x.R;
 			private static double MapClCv((Complex s, Complex x, Complex y) a, int y) => a.s.I + (y + .5) * a.y.I;
 			private static double MapClv((Complex s, Complex x, Complex y) a, int y) => a.s.I + y * a.y.I;
+			
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, double> _mapClU = centerPixels ? &MapClCu : &MapClu;
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, double> _mapClV = centerPixels ? &MapClCv : &MapClv;
 			private readonly unsafe delegate*<double, int> _rnd = centerPixels ? &Static.Floor : &Static.Round;
@@ -22,9 +29,18 @@ public abstract partial class Comparser<T> {
 			private T _mSx1 = T.nan, _mDx1 = T.nan, _mY1 = T.nan, _t1 = T.nan; // ax.S, ax.d, yC, frame
 			private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
+			private Task[] _taskArr = [];
+			public static void MakeArgs(int tasks, ref Value[] taskArr, ref int[] taskProgress) {
+				if (taskArr.Length < tasks) taskArr = new Value[tasks];
+                if (taskProgress.Length < tasks) taskProgress = new int[tasks];
+				for (int i = 0; i < tasks; ++i) {
+					taskArr[i] = new([new(T.nan, 0, "z"), new(T.nan, 0, "t")]);
+					taskProgress[i] = 0;
+				}
+			}
 			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.zero;
-				int mLx = 0, mLy = 0, x = 0, y = 0, yw = 0;
+				int mLx = 0, mLy = 0; /*yw = 0;*/
 				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
 					(mSx, mDx, mLx, mSy, mDy, mLy) = (_mSx2, _mDx2, _mLx2, _mSy2, _mDy2, _mLy2);
 				(_plotXy, _memXy) = (_memXy, _plotXy); // swap mem
@@ -32,140 +48,163 @@ public abstract partial class Comparser<T> {
 					_plotXy = new Value[ax.length * ay.length]; // length mismatch: re-alloc
 				(_mLx2, _mLy2, _mSx2, _mSy2, _mDx2, _mDy2) = (ax.length, ay.length, ax.start, ay.start, ax.d, ay.d);
 				if (AxisMatchA(mSx, mDx, ax) && AxisMatchA(mSy, mDy, ay)) {
-					changed = false; 
+					changed = false;
 					(_plotXy, _memXy) = (_memXy, _plotXy);
 					return _plotXy;
 				}
-				changed = true;	 
-				// (z,t,x,y,f,w,h,l)
-				args.Values[1].Leaf = _t2 = memFrame; // t
-				//args.Values[4].Leaf = T.MakeR(frame); // f
-				//args.Values[5].Leaf = T.MakeR(ax.length); // w
-				//args.Values[6].Leaf = T.MakeR(ay.length); // h
-				//args.Values[7].Leaf = T.MakeR(at.length); // l
-				if (!SettingsPanel.MemXy || refresh) // refresh completely without trying to transfer anything from memory
-					return Rows(ay.length, Finish);
+				changed = true;
+
 				double dXs = +ax.d, dYs = +ay.d;
-				(Complex s, Complex x, Complex y) pm, mp;
-				if (Math.Min(mLx, mLy) == 0 || FailAffineMap(mSx + mSy, Math.Min(dXs, dYs)))
-					return Rows(ay.length, Finish); // Planes don't coincide.
-				Complex cul = _map(mp, 0, 0), cur = _map(mp, mLx, 0), cdl = _map(mp, 0, mLy), cdr = _map(mp, mLx, mLy);
-				(Complex l, Complex h) 
-					i1 = cul.I < cdr.I ? (cul, cdr) : (cdr, cul), 
-					i2 = cur.I < cdl.I ? (cur, cdl) : (cdl, cur),
-					r1 = cul.R < cdr.R ? (cul, cdr) : (cdr, cul), 
-					r2 = cur.R < cdl.R ? (cur, cdl) : (cdl, cur);
-				//Complex uv, bounds, dBounds, top, bottom, left, right, midLeft, midRight;
-				var (top, mid) = i1.l.I < i2.l.I ? (i1.l, r2) : (i2.l, r1);
-				Complex bounds,
-					bottom = i1.h.I >= i2.h.I ? i1.h : i2.h,
-					left = r1.l.R < r2.l.R ? r1.l : r2.l,
-					right = r1.h.R >= r2.h.R ? r1.h : r2.h;
-				var (midLeft, midRight) = mid.l.R < mid.h.R ? (mid.l, mid.h) : (mid.h, mid.l);
-				if (top.I >= ay.length || bottom.I < 0 || left.R >= ax.length || right.R < 0)
-					return Rows(ay.length, Finish); // parallelogram is out of image bounds, just re-eval everything early
-				Rows(Math.Min(ay.length, (int)top.I), Finish);
-				// is the accumulated error in non-collinear axis over the bounding parallelogram exceeding 1 pixel in that other axis?
-				bool dCol = Static.Sqr(mp.y.R / mp.x.R) * +(cur - cul) < dYs && Static.Sqr(mp.x.I / mp.y.I) * +(cdl - cul) < dXs,
-					sCol = Static.Sqr(mp.y.I / mp.x.I) * +(cur - cul) < dYs && Static.Sqr(mp.x.R / mp.y.R) * +(cdl - cul) < dXs;
-				if (dCol || sCol) {
-					bounds = new(Math.Min(ax.length, Math.Floor(left.R)), Math.Min(ax.length, Math.Ceiling(right.R)));
-					double modX, modY, pX = 0, phaseX = -Math.Min(0, bounds.R), phaseY = -Math.Min(0, top.I);
-					int mulX = mLx, mulY = 1, py = 0, ex = Math.Min(ax.length, (int)bounds.I/* - 1*/);
-					if (sCol) {
-						mp = (Complex.Swap(mp.s), Complex.Swap(mp.x), Complex.Swap(mp.y));
-						pm = (Complex.Swap(pm.s), Complex.Swap(pm.x), Complex.Swap(pm.y));
-						(mulX, mulY) = (mulY, mulX);
-						modX = mp.y.I; modY = mp.x.R;
-					} else (modX, modY) = (mp.x.R, mp.y.I);
-					Action xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
-					Action ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
-					void NoX() {
-						for (Begin(); x < ex && !cancel.IsCancellationRequested; ++x)
-							_plotXy[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
+				(Complex s, Complex x, Complex y) pm = new(), mp = new();
+				bool reEval = !SettingsPanel.MemXy || refresh || Math.Min(mLx, mLy) == 0 || FailAffineMap(mSx + mSy, Math.Min(dXs, dYs));
+				int task = 0, chunks = 1, tasks = SettingsPanel.Tasks;
+				Action<int, int, int> reeval = reEval ? PlotXr : PlotX;
+				MakeArgs(tasks, ref _args, ref _taskProgress);
+				// (z,t,x,y,f,w,h,l)
+				for (int i = 0; i < tasks; ++i)
+					_args[i].Values[1].Leaf = _t2 = memFrame; // t
+				
+				if (tasks <= 1) // single threaded
+					return Rows(ref _taskProgress[0], ref task, ay.length, Finish, _args[0]);
+				Static.TaskManager(_taskArr, tasks, chunks, ay.length, cancel, MultiPlotX);
+				return _plotXy;
+
+				void MultiPlotX(float yf, float subChunkLength, int taskIndex) {
+				
+					float chd, chunkDistance = tasks * subChunkLength;
+					for (int c = 0; c < chunks; ++c) {
+						int y = (int)Math.Round(chd = yf + c * chunkDistance);
+						reeval(y, (int)Math.Round(chd + subChunkLength), taskIndex);
 					}
-					void YesX() {
-						for (Begin(); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
-							_plotXy[x + yw] = (pX % modX < 1) ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval();
-					}
-					Rows(Math.Min(ay.length, (int)bottom.I), ytest);
-					void YesY() { pX = phaseX; py = _rnd(_mapClV(pm, y)); if (phaseY % modY < 1) xtest(); Finish(); ++phaseY; }
-					void NoY() { py = _rnd(_mapClV(pm, y)); xtest(); Finish(); }
-				} else {
-					// parallelogram bounds incrementing rows, determine if the left/right bvertex is the higher one, and set up the ordering of the phases:
-					top = new(top.R, top.I + 1);
-					bottom = new(bottom.R, bottom.I - 1);
-					bool rightFirst = midRight.I < midLeft.I;
-					(midLeft, midRight) = rightFirst 
-						? (new Complex(midLeft.R + 1, midLeft.I - 1), new Complex(midRight.R - 1, midRight.I + 1)) 
-						: (new(midLeft.R + 1, midLeft.I + 1), new(midRight.R - 1, midRight.I - 1));
-					double pDet = pm.x.R * pm.y.I - pm.y.R * pm.x.I, inv00 = pm.y.I / pDet, inv01 = -pm.y.R / pDet, inv10 = -pm.x.I / pDet, inv11 = pm.x.R / pDet; // inverse transform to determine one unique memory pixel
-					double bri = bottom.I - midRight.I, bli = bottom.I - midLeft.I, lti = midLeft.I - top.I, rti = midRight.I - top.I; // subtractions used many times
-					double secL = (bottom.R - midLeft.R) / bli, secR = (bottom.R - midRight.R) / bri; // the second interval bounds accumulators
-					Complex[] d = new Complex[3], i = new Complex[4], bK = new Complex[4]; // incremental step of both bounds per row, vertices sorted from top, bounds keyframes per vertex (to eliminate incremental drifts when stepping over vertices)
-					d[0] = new((midLeft.R - top.R) / lti, (midRight.R - top.R) / rti);
-					d[2] = new(secL, secR);
-					i[0] = top;
-					i[3] = bottom;
-					bK[0] = new(Math.Ceiling(top.R), Math.Floor(top.R));
-					bK[3] = new(Math.Ceiling(bottom.R), Math.Floor(bottom.R));
-					(d[1], i[1], i[2], bK[1], bK[2]) = midLeft.I > midRight.I // is left under right? (we will assume left comes first, so they will be swapped)
-						? (new Complex(d[1].R, secR), midRight, midLeft, // right is first
-							new Complex(Math.Ceiling(Static.Lerp(top.R, midLeft.R, rti / lti)), Math.Floor(midRight.R)), // 2nd keyframe is right vertex, and left vertex is in-between top-left
-							new Complex(Math.Ceiling(midLeft.R), Math.Floor(Static.Lerp(bottom.R, midRight.R, bli / bri)))) // 3rd keyframe is left vertex, and right vertex is in-between right-bottom
-						: (new(secL, d[0].I), midLeft, midRight, // left is first
-							new(Math.Ceiling(midLeft.R), Math.Floor(Static.Lerp(top.R, midRight.R, lti / rti))), // 2nd keyframe is left vertex, and right vertex is in-between top-right
-							new(Math.Ceiling(Static.Lerp(bottom.R, midLeft.R, bri / bli)), Math.Floor(midRight.R))); // 3rd keyframe is right vertex, and left vertex is in-between left-bottom
-					Complex dBounds, uv;
-					for (var p = 0; p < 4;) {
-						if (i[++p].I < 0) continue;
-						for (; p < 4; Rows((int)i[p].I, PgRow), ++p) { // iterate rows until each next vertex
-							var p1 = p - 1;
-							dBounds = d[p1]; // how much will each bounds value be incremented each row?
-							bounds = INumber<Complex>.Lerp(bK[p1], bK[p], (y - i[p1].I) / (i[p].I - i[p1].I)) // take the initial bounds for this interval (lerp out location between keyframes)
-								+ new Complex(Math.Max(dBounds.R, 0), Math.Min(dBounds.I, 0))
-								- new Complex(Math.Min(dBounds.R, 0), Math.Max(dBounds.I, 0))
-								+ new Complex(1, -1); // make one initial step if it is inwards, to avoid sampling outside the memory, better have 1px on the edge re-eval than to ask for bounds for every pixel
-							if (i[p].I < ay.length)
-								continue;
-							Rows(ay.length, PgRow); // the vertex is below the bottom, co just continue all the way to the bottom, and then break
+				}
+				void PlotXr(int y, int ye, int taskIndex) => Rows(ref _taskProgress[taskIndex], ref y, ye, Finish, _args[taskIndex]);
+				void PlotX(int y, int ye, int taskIndex) => PlotXret(ref y, ye, taskIndex);
+				Value[] PlotXret(ref int y, int ye, int taskIndex, int yw = 0) {
+                    var args = _args[taskIndex];
+					var progress = _taskProgress[taskIndex];
+                    Complex cul = _map(mp, 0, 0), cur = _map(mp, mLx, 0), cdl = _map(mp, 0, mLy), cdr = _map(mp, mLx, mLy);
+					(Complex l, Complex h)
+						i1 = cul.I < cdr.I ? (cul, cdr) : (cdr, cul),
+						i2 = cur.I < cdl.I ? (cur, cdl) : (cdl, cur),
+						r1 = cul.R < cdr.R ? (cul, cdr) : (cdr, cul),
+						r2 = cur.R < cdl.R ? (cur, cdl) : (cdl, cur);
+					//Complex uv, bounds, dBounds, top, bottom, left, right, midLeft, midRight;
+					var (top, mid) = i1.l.I < i2.l.I ? (i1.l, r2) : (i2.l, r1);
+					Complex bounds,
+						bottom = i1.h.I >= i2.h.I ? i1.h : i2.h,
+						left = r1.l.R < r2.l.R ? r1.l : r2.l,
+						right = r1.h.R >= r2.h.R ? r1.h : r2.h;
+					var (midLeft, midRight) = mid.l.R < mid.h.R ? (mid.l, mid.h) : (mid.h, mid.l);
+					if (top.I >= ye || bottom.I < 0 || left.R >= ax.length || right.R < 0)
+						return Rows(ref progress, ref y, ye, Finish, args); // parallelogram is out of image bounds, just re-eval everything early
+					Rows(ref progress, ref y, Math.Min(ye, (int)top.I), Finish, args);
+					// is the accumulated error in non-collinear axis over the bounding parallelogram exceeding 1 pixel in that other axis?
+					bool dCol = Static.Sqr(mp.y.R / mp.x.R) * +(cur - cul) < dYs && Static.Sqr(mp.x.I / mp.y.I) * +(cdl - cul) < dXs,
+						sCol = Static.Sqr(mp.y.I / mp.x.I) * +(cur - cul) < dYs && Static.Sqr(mp.x.R / mp.y.R) * +(cdl - cul) < dXs;
+					if (dCol || sCol) {
+						bounds = new(Math.Min(ax.length, Math.Floor(left.R)), Math.Min(ax.length, Math.Ceiling(right.R)));
+						double modX, modY, pX = 0, phaseX = -Math.Min(0, bounds.R), phaseY = -Math.Min(0, top.I);
+						int mulX = mLx, mulY = 1, py = 0, ex = Math.Min(ax.length, (int)bounds.I /* - 1*/);
+						if (sCol) {
+							mp = (Complex.Swap(mp.s), Complex.Swap(mp.x), Complex.Swap(mp.y));
+							pm = (Complex.Swap(pm.s), Complex.Swap(pm.x), Complex.Swap(pm.y));
+							(mulX, mulY) = (mulY, mulX);
+							modX = mp.y.I;
+							modY = mp.x.R;
+						} else (modX, modY) = (mp.x.R, mp.y.I);
+						int x = 0;
+						Action<int> xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
+						Action<int, int, int, Value> ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
+						void NoX(int y) {
+							for (Begin(ref x, y, args); x < ex && !cancel.IsCancellationRequested; ++x)
+								_plotXy[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
+						}
+						void YesX(int y) {
+							for (Begin(ref x, y, args); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
+								_plotXy[x + yw] = (pX % modX < 1) ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval(x, y, args);
+						}
+						Rows(ref progress, ref y, Math.Min(ye, (int)bottom.I), ytest, args);
+						void YesY(int _, int y, int yww, Value aArgs) {
+							pX = phaseX;
+							py = _rnd(_mapClV(pm, y));
+							if (phaseY % modY < 1) xtest(y);
+							Finish(x, y, yww, aArgs);
+							++phaseY;
+						}
+						void NoY(int _, int y, int yww, Value aArgs) {
+							py = _rnd(_mapClV(pm, y));
+							xtest(y);
+							Finish(x, y, yww, aArgs);
+						}
+					} else {
+						// parallelogram bounds incrementing rows, determine if the left/right bvertex is the higher one, and set up the ordering of the phases:
+						top = new(top.R, top.I + 1);
+						bottom = new(bottom.R, bottom.I - 1);
+						bool rightFirst = midRight.I < midLeft.I;
+						(midLeft, midRight) = rightFirst
+							? (new Complex(midLeft.R + 1, midLeft.I - 1), new Complex(midRight.R - 1, midRight.I + 1))
+							: (new(midLeft.R + 1, midLeft.I + 1), new(midRight.R - 1, midRight.I - 1));
+						double pDet = pm.x.R * pm.y.I - pm.y.R * pm.x.I, inv00 = pm.y.I / pDet, inv01 = -pm.y.R / pDet, inv10 = -pm.x.I / pDet, inv11 = pm.x.R / pDet; // inverse transform to determine one unique memory pixel
+						double bri = bottom.I - midRight.I, bli = bottom.I - midLeft.I, lti = midLeft.I - top.I, rti = midRight.I - top.I; // subtractions used many times
+						double secL = (bottom.R - midLeft.R) / bli, secR = (bottom.R - midRight.R) / bri; // the second interval bounds accumulators
+						Complex[] d = new Complex[3], i = new Complex[4], bK = new Complex[4]; // incremental step of both bounds per row, vertices sorted from top, bounds keyframes per vertex (to eliminate incremental drifts when stepping over vertices)
+						d[0] = new((midLeft.R - top.R) / lti, (midRight.R - top.R) / rti);
+						d[2] = new(secL, secR);
+						i[0] = top;
+						i[3] = bottom;
+						bK[0] = new(Math.Ceiling(top.R), Math.Floor(top.R));
+						bK[3] = new(Math.Ceiling(bottom.R), Math.Floor(bottom.R));
+						(d[1], i[1], i[2], bK[1], bK[2]) = midLeft.I > midRight.I // is left under right? (we will assume left comes first, so they will be swapped)
+							? (new Complex(d[1].R, secR), midRight, midLeft, // right is first
+								new Complex(Math.Ceiling(Static.Lerp(top.R, midLeft.R, rti / lti)), Math.Floor(midRight.R)), // 2nd keyframe is right vertex, and left vertex is in-between top-left
+								new Complex(Math.Ceiling(midLeft.R), Math.Floor(Static.Lerp(bottom.R, midRight.R, bli / bri)))) // 3rd keyframe is left vertex, and right vertex is in-between right-bottom
+							: (new(secL, d[0].I), midLeft, midRight, // left is first
+								new(Math.Ceiling(midLeft.R), Math.Floor(Static.Lerp(top.R, midRight.R, lti / rti))), // 2nd keyframe is left vertex, and right vertex is in-between top-right
+								new(Math.Ceiling(Static.Lerp(bottom.R, midLeft.R, bri / bli)), Math.Floor(midRight.R))); // 3rd keyframe is right vertex, and left vertex is in-between left-bottom
+						Complex dBounds, uv;
+						for (var p = 0; p < 4;) {
+							if (i[++p].I < 0) continue;
+							for (; p < 4; Rows(ref progress, ref y, (int)i[p].I, PgRow, args), ++p) { // iterate rows until each next vertex
+								var p1 = p - 1;
+								dBounds = d[p1]; // how much will each bounds value be incremented each row?
+								bounds = INumber<Complex>.Lerp(bK[p1], bK[p], (y - i[p1].I) / (i[p].I - i[p1].I)) // take the initial bounds for this interval (lerp out location between keyframes)
+									+ new Complex(Math.Max(dBounds.R, 0), Math.Min(dBounds.I, 0))
+									- new Complex(Math.Min(dBounds.R, 0), Math.Max(dBounds.I, 0))
+									+ new Complex(1, -1); // make one initial step if it is inwards, to avoid sampling outside the memory, better have 1px on the edge re-eval than to ask for bounds for every pixel
+								if (i[p].I < ye)
+									continue;
+								Rows(ref progress, ref y, ye, PgRow, args); // the vertex is below the bottom, co just continue all the way to the bottom, and then break
+								break;
+							}
 							break;
 						}
-						break;
+						void PgRow(int ix, int iy, int yww, Value aArgs) {
+							Begin(ref ix, iy, aArgs);
+							for (int e = Math.Min(ax.length, (int)bounds.I); ix < e && !cancel.IsCancellationRequested; _plotXy[ix + yww] = Fracs(out var p) ? _memXy[p] : Eval(ix, iy, aArgs), ++ix)
+								uv = _map(pm, ix, iy);
+							Finish(ix, iy, yww, aArgs);
+							// ReSharper disable AccessToModifiedClosure
+							bounds += dBounds;
+							// ReSharper restore AccessToModifiedClosure
+						}
+						bool Fracs(out int p) {
+							int px = _rnd(uv.R), py = _rnd(uv.I);
+							double du = uv.R - (px + _c), dv = uv.I - (py + _c);
+							p = px + py * mLx;
+							return Test(inv00 * du + inv01 * dv) && Test(inv10 * du + inv11 * dv);
+						}
 					}
-					void PgRow() {
-						Begin();
-						for (int e = Math.Min(ax.length, (int)bounds.I); x < e && !cancel.IsCancellationRequested; _plotXy[x + yw] = Fracs(out var p) ? _memXy[p] : Eval(), ++x)
-							uv = _map(pm, x, y);
-						Finish();
-						// ReSharper disable AccessToModifiedClosure
-						bounds += dBounds;
-						// ReSharper restore AccessToModifiedClosure
-					}
-					bool Fracs(out int p) {
-						int px = _rnd(uv.R), py = _rnd(uv.I);
-						double du = uv.R - (px + _c), dv = uv.I - (py + _c);
-						p = px + py * mLx;
-						return Test(inv00 * du + inv01 * dv) && Test(inv10 * du + inv11 * dv);
-					}
-				}
-				return Rows(ay.length, Finish);
+					return Rows(ref progress, ref y, ye, Finish, args);
 
-				bool Test(double t) => t is < .5 and >= -.5;
-				bool AxisMatchA(T s, T d, Plot.PlotAxis a) => Math.Max(+(s - a.start), +((d - a.d) * a.length)) <= +a.d * recallTolerance;
-				Value[] Rows(int ye, Action a) { for (; y < ye && !cancel.IsCancellationRequested; a(), ++y) (x, yw) = (0, y * ax.length); return _plotXy; }
-				void Begin() { int e = Math.Min(ax.length, (int)bounds.R); for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E(); } // to the left of the outer bounds
-				void Finish() { for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E(); } // to the right of the outer bounds
-				Value Eval() {
-					var l = args.Values;
-					l[0].Leaf = ax.Sample(x) + ay.Sample(y);
-					//l[2].Leaf = T.MakeR(x);
-					//l[3].Leaf = T.MakeR(y);
-					return exp.Eval(0, args); 
+					bool Test(double t) => t is < .5 and >= -.5;
+					void Begin(ref int x, int y, Value args) {
+						int e = Math.Min(ax.length, (int)bounds.R);
+						for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E(x, y, yw, args);
+					} // to the left of the outer bounds
 				}
-				void E() => _plotXy[x + yw] = Eval();
 				bool FailAffineMap(T mS, double e) {
-					T s; double xx = +mDx, xy = mDx | mDy, yy = +mDy, d = xx * yy - xy * xy; // Gram matrix of the old plot's two basis vectors.
+					T s;
+					double xx = +mDx, xy = mDx | mDy, yy = +mDy, d = xx * yy - xy * xy; // Gram matrix of the old plot's two basis vectors.
 					if (Math.Abs(d) <= 1e-8 || !(InPlane(mDx, mDy, ax.d, xx, xy, yy, d, e *= e)
 						&& InPlane(mDx, mDy, ay.d, xx, xy, yy, d, e)
 						&& InPlane(mDx, mDy, s = aS - mS, xx, xy, yy, d, e))) {
@@ -185,8 +224,24 @@ public abstract partial class Comparser<T> {
 					double qx = q | dx, qy = q | dy, u = (qx * yy - qy * xy) / det, v = (qy * xx - qx * xy) / det;
 					return +(q - dx * u - dy * v) <= tolerance;
 				}
+				Value[] Rows(ref int progress, ref int y, int ye, Action<int, int, int, Value> a, Value args) {
+					int yw;
+					for (int x; y < ye && !cancel.IsCancellationRequested; a(x, y, yw, args), ++y) (x, yw, progress) = (0, y * ax.length, progress + 1);
+					return _plotXy;
+				}
+				void Finish(int x, int y, int yw, Value args) {
+					for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E(x, y, yw, args);
+				} // to the right of the outer bounds
+				bool AxisMatchA(T s, T d, Plot.PlotAxis a) => Math.Max(+(s - a.start), +((d - a.d) * a.length)) <= +a.d * recallTolerance;
+				void E(int x, int y, int yw, Value args) => _plotXy[x + yw] = Eval(x, y, args);
+				Value Eval(int x, int y, Value args) {
+					var l = args.Values;
+					l[0].Leaf = ax.Sample(x) + ay.Sample(y);
+					//l[2].Leaf = T.MakeR(x);
+					//l[3].Leaf = T.MakeR(y);
+					return exp.Eval(0, args, tasks <= 1);
+				}
 			}
-
 			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				Value[] memY = []; changed = true;
 				int memYo = -1, mLx = 0;
@@ -198,13 +253,12 @@ public abstract partial class Comparser<T> {
 				Remember(); // fetch a 
 				_mY1 = yC;
 				_mLx1 = ax.length;
+				//int task = 0, chunks = 1, tasks = SettingsPanel.Tasks;
+				MakeArgs(1, ref _args, ref _taskProgress);
 				// (z,t,x,y,f,w,h,l)
+				var args = _args[0];
 				args.Values[1].Leaf = _t1 = memFrame; // t
-				//args.Values[3].Leaf = T.MakeR(y); // y
-				//args.Values[4].Leaf = T.MakeR(frame); // f
-				//args.Values[5].Leaf = T.MakeR(ax.length); // w
-				//args.Values[6].Leaf = T.MakeR(ay.length); // h
-				//args.Values[7].Leaf = T.MakeR(at.length); // l
+			
 				if (memYo < 0) return ReEval(); // no memory
 				(_mSx1, _mDx1) = (ax.start, ax.d);
 				// we have some memory Y match
@@ -272,7 +326,7 @@ public abstract partial class Comparser<T> {
 				Value Eval(int x) {
 					args.Values[0].Leaf = ax.Sample(x) + yC;
 					//args.Values[2].Leaf = T.MakeR(x);
-					return exp.Eval(0, args);
+					return exp.Eval(0, args, /*tasks <= 1*/SettingsPanel.Tasks <= 1);
 				}
 			}
 		}
@@ -475,3 +529,13 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 					return exp.Eval(0, args);
 				}
 			}*/
+//args.Values[4].Leaf = T.MakeR(frame); // f
+//args.Values[5].Leaf = T.MakeR(ax.length); // w
+//args.Values[6].Leaf = T.MakeR(ay.length); // h
+//args.Values[7].Leaf = T.MakeR(at.length); // l
+
+//args.Values[3].Leaf = T.MakeR(y); // y
+//args.Values[4].Leaf = T.MakeR(frame); // f
+//args.Values[5].Leaf = T.MakeR(ax.length); // w
+//args.Values[6].Leaf = T.MakeR(ay.length); // h
+//args.Values[7].Leaf = T.MakeR(at.length); // l

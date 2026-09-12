@@ -6,10 +6,10 @@ public interface IComparser {
 	public object MakeArgs((string alias, object value)[] args);
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null);
 	// Re-evaluates already parsed expression with new arguments
-	public object Eval(object exp, object? args = null);
+	public object Eval(object exp, object? args = null, bool allowCache = true);
 	// Parses and evaluates the text with selected arguments (and returns the expression for possible re-evaluation)
 	//public object ParseEval(string text, int from, out object expr, object? args = null);
-	public object ParseEval(CancellationToken cancel, string text, int from, out object expr, out (int position, Color color)[] colors, object? args = null);
+	public object ParseEval(CancellationToken cancel, string text, int from, out object expr, out (int position, Color color)[] colors, object? args = null, bool allowCache = true);
 	// Parses and evaluates the text with selected arguments (and returns the expression for possible re-evaluation, and eats the parsed part, allows it to be incomplete - leaving the remainder in the ref text)
 	//public object ParseEval(string text, ref int from, object? args = null);
 	// Parses and evaluates the text with selected arguments (without returning the parsed expression, only immediate one-time evaluation)
@@ -72,14 +72,14 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		colors = read.GetColors(); // export colors
 		return e;
 	}
-	public object Eval(object exp, object? args) => exp is Expression e ? e.Eval(0, AsValue(args)) : None;
+	public object Eval(object exp, object? args, bool allowCache) => exp is Expression e ? e.Eval(0, AsValue(args), allowCache) : None;
 	//public object ParseEval(string text, int from, out object expr, object? args) { var e = (Expression)Parse(text, from, args); expr = e; return e.Eval(0, AsInput(args)); }
-	public object ParseEval(CancellationToken cancel, string text, int from, out object expr, out (int position, Color color)[] colors, object? args) {
+	public object ParseEval(CancellationToken cancel, string text, int from, out object expr, out (int position, Color color)[] colors, object? args, bool allowCache) {
 		var read = new Reader(this, text, cancel, from);
 		var e = new Expression(read, out _, AsValue(args), from);
 		expr = e; // export expression
 		colors = read.GetColors(); // export colors
-		return e.Eval(0, AsValue(args));
+		return e.Eval(0, AsValue(args), allowCache);
 	}
 	//public object ParseEval(string text, ref int from, object? args) => new Expression(this, text, ref from, out _, AsInput(args)).Eval(0, AsInput(args));
 	//public object ParseEval(string text, int from, object? args) => ParseEval(text, ref from, args);
@@ -318,7 +318,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 						//skipStart = read.From;
 						read.TrimStart(1);
 						var expression = new Expression(read, out _, args);
-						eval = expression.Eval(0, None);
+						eval = expression.Eval(0, None, false);
 					}
 					string LoadDef() {
 						var stage = 0;
@@ -457,7 +457,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 				}
 				bool FailEval(out Value evaluated, Expression.ParseAs parseAs = Expression.ParseAs.Expression) {
 					var expression = new Expression(read, out _, None, 0, 0, parseAs);
-					evaluated = UnCollapseScalar(expression.Eval(0, None));
+					evaluated = UnCollapseScalar(expression.Eval(0, None, false));
 					return false;
 				}
 				bool FailEvalClose(out Value evaluated, Expression.ParseAs parseAs = Expression.ParseAs.Expression) 
@@ -976,19 +976,19 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 			//var mSy = _mSy2 - yC;
 			while (lo < hi) {
 				var mid = lo + hi >> 1;
-				int d = Colors[mid].Item1;
+				int d = Colors[mid].position;
 				if (d == from || hi == 1 + lo) {
 					lo = mid; break; }
-				if (d < from) lo = mid + 1; // target is closer to d stepped towards hi
+				if (d < from) lo = mid; // target is closer to d stepped towards hi
 				else hi = mid; // target is closer to d stepped away from hi
 			}
-			var comment = Colors[Math.Min(lo, Colors.Count-1)].Item2 == ParseDictionary.Type.Comment;
+			var comment = Colors[Math.Min(lo, Colors.Count-1)].color == ParseDictionary.Type.Comment;
 			var end = Math.Min(Text.Length, to);
 			var s = "";
 			while (from < end && ++lo < Colors.Count) {
-				var t = Colors[lo].Item1;
+				var t = Colors[lo].position;
 				if (!comment && t > from) s += lo >= Colors.Count ? Text[from..] : Text[from..t];
-				comment = Colors[lo].Item2 == ParseDictionary.Type.Comment;
+				comment = Colors[lo].color == ParseDictionary.Type.Comment;
 				from = t;
 			}
 			if (from < to && !comment) s += Text[from..end];
@@ -1054,7 +1054,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["logb", "LogB", "Logb"], new Cf2(INumber<T>.LogB, OpCode.LogB)); // log_b(x)
 		A(["softabsb", "SoftAbsb", "Softabsb", "sftabsb", "SftAbsb", "Sftabsb", "softplusb", "SoftPlusb", "Softplusb", "sftplusb", "SftPlusb", "Sftplusb"], new Cf2(INumber<T>.SoftAbsB, OpCode.SoftAbsB)); // = e^(1+ln(z))
 		A(["softnegb", "SoftNegb", "Softnegb", "sftnegb", "SftNegb", "Sftnegb", "softminusb", "SoftMinusb", "Softminusb", "sftminusb", "SftMinusb", "Sftminusb"], new Cf2(INumber<T>.SoftNegB, OpCode.SoftNegB)); // = e^(1+ln(z))
-
+		A(["softclamp01b", "SoftClamp01B", "softclampbnorm", "SoftClampBNorm", "Softclampbnorm"], new Cf2(INumber<T>.SoftClamp01B, OpCode.SoftClamp01B)); // component-wise clamp
 
 		// triple arguments
 		A(["clamp", "Clamp"], new Cf3(T.Clamp, OpCode.Clamp)); // component-wise clamp
@@ -1132,6 +1132,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["round", "Round", "rnd", "Rnd"], new Cf(T.Round, OpCode.Round)); // = round
 		A(["ceiling", "Ceiling", "ceil", "Ceil"], new Cf(T.Ceil, OpCode.Ceil)); // = round up
 		A(["cyc", "Cyc", "cycle", "Cycle", "lmod", "Lmod", "pfrac", "Pfrac"], new Cf(T.Cycle, OpCode.Cycle)); // = positive frac cycle. cyc(1.25)=0.25, cyc(-.75)=0.25. Also equals x-floor(x)
+		A(["clamp01", "Clamp01", "clampnorm", "ClampNorm", "Clampnorm"], new Cf(INumber<T>.Clamp01, OpCode.Clamp01)); // component-wise clamp
+		A(["softclamp01", "SoftClamp01", "softclampnorm", "SoftClampNorm", "Softclampnorm"], new Cf(INumber<T>.Clamp01, OpCode.Clamp01)); // component-wise clamp
 		A(["sign", "Sign", "sgn", "Sgn"],OpSign); // = z/|z|
 		A(["neg", "Neg", "negative", "Negative"], new Cf(INumber<T>.Neg, OpCode.Neg)); // = -z
 		A(["inv","Inv", "inverse", "Inverse"], new Cf(T.Inv, OpCode.Inv)); // = 1/z
@@ -1155,10 +1157,12 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["hsv2rgb", "Hsv2rgb", "Hsv2Rgb", "hsvtorgb", "HsvToRgb", "Hsvtorgb"], new Ce(typeof(FuncHsv2rgb)));
 		A(["log2hsv", "Log2hsv", "Log2Hsv", "logtohsv", "LogToHsv", "Logtohsv"], new Ce(typeof(FuncLog2hsv)));
 		A(["lin2hsv", "Lin2hsv", "Lin2Hsv", "lintohsv", "LinToHsv", "Lintohsv"], new Ce(typeof(FuncLin2hsv)));
-		A(["exp2hsv", "Exp2hsv", "Exp2Hsv", "exptohsv", "ExpToHsv", "Exptohsv"], new Ce(typeof(FuncExp2hsv)));
+		A(["log2hsvc", "Log2hsv", "Log2HsvC", "logtohsvc", "LogToHsvC", "Logtohsvc"], new Ce(typeof(FuncLog2hsvC)));
+		A(["lin2hsvc", "Lin2hsv", "Lin2HsvC", "lintohsvc", "LinToHsvC", "Lintohsvc"], new Ce(typeof(FuncLin2hsvC)));
 		A(["log2rgb", "Log2rgb", "Log2Rgb", "logtorgb", "LogToRgb", "Logtorgb"], new Ce(typeof(FuncLog2rgb)));
 		A(["lin2rgb", "Lin2rgb", "Lin2Rgb", "lintorgb", "LinToRgb", "Lintorgb"], new Ce(typeof(FuncLin2rgb)));
-		A(["exp2rgb", "Exp2rgb", "Exp2Rgb", "exptorgb", "ExpToRgb", "Exptorgb"], new Ce(typeof(FuncExp2rgb)));
+		A(["log2rgbc", "Log2rgbc", "Log2RgbC", "logtorgbc", "LogToRgbC", "Logtorgbc"], new Ce(typeof(FuncLog2rgbC)));
+		A(["lin2rgbc", "Lin2rgbc", "Lin2RgbC", "lintorgbc", "LinToRgbC", "Lintorgbc"], new Ce(typeof(FuncLin2rgbC)));
 
 		// specials
 		A(["fact", "Fact", "factorial", "Factorial"], OpFact); // factorial

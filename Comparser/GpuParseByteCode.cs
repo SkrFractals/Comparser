@@ -49,11 +49,12 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				SftClamp = new([(Xyz, new(new(context, "x+log(1+exp(y+neg(x)))+neg(log(1+exp(z+neg(z))))",  cancel), out _, Xyz), null)]),
 				
 				// TODO these could use a precomputed log(b)
-				SftAbsB = new([(Xy, new(new(context, "log(1+exp(log(y)x))inv(log(y))",  cancel), out _, X), null)]),
+				SftAbsB = new([(Xy, new(new(context, "log(1+exp(log(y)x))inv(log(y))",  cancel), out _, Xy), null)]),
 				SftNegB = new([(Xy, new(new(context, "neg(log(1+exp(neg(log(y)x))))inv(log(y))",  cancel), out _, Xy), null)]),
 				SftMaxB = new([(Xyz, new(new(context, "log(exp(log(z)x)+exp(log(z)y))inv(log(z))",  cancel), out _, Xyz), null)]),
 				SftMinB = new([(Xyz, new(new(context, "neg(log(exp(log(z)neg(x))+exp(log(z)neg(y))))inv(log(z))",  cancel), out _, Xyz), null)]),
-				SftClampB = new([(Xyzw, new(new(context, "x+(log(1+exp(log(w)(y+neg(x))))+neg(log(1+exp(log(w)(z+neg(z))))))inv(log(w))",  cancel), out _, Xyz), null)]),
+				SftClampB = new([(Xyzw, new(new(context, "x+(log(1+exp(log(w)(y+neg(x))))+neg(log(1+exp(log(w)(z+neg(x))))))inv(log(w))", cancel), out _, Xyzw), null)]),
+				SoftClamp01B = new([(Xy, new(new(context, "x+(log(1+exp(log(y)(neg(x))))+neg(log(1+exp(log(y)(1+neg(z))))))inv(log(y))", cancel), out _, Xy), null)]),
 				
 				ExpB = new([(Xy, new(new(context, "exp(log(y)x)",  cancel), out _, Xy), null)]),
 				LogB = new([(Xy, new(new(context, "log(x)inv(log(y))",  cancel), out _, Xy), null)]),
@@ -161,6 +162,9 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						OpCode.Frac => new(OpCode.Call, v, _subs!.Frac),
 						OpCode.Ceil => new(OpCode.Neg, new(OpCode.Floor, new(OpCode.Neg, v))),
 						OpCode.Cycle => new(OpCode.Call, v, _subs!.Cycle),
+						OpCode.Clamp01 =>new([v, new (T.zero), new(T.unit)],OpCode.Clamp),
+						OpCode.SoftClamp01B => new(OpCode.Call, v, _subs!.SoftClamp01B),
+						OpCode.SoftClamp01 => new([v, new (T.zero), new(T.unit)],OpCode.SoftClamp),
 						OpCode.Sgn => new(OpCode.Call, v, _subs!.Sgn),
 						OpCode.Sqrt => new([v, new(T.MakeR(.5))], OpCode.Pow),
 						OpCode.Sqr => new(OpCode.Call, v, _subs!.Square),

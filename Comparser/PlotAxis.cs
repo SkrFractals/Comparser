@@ -17,7 +17,9 @@ public abstract partial class Comparser<T>{
 	public partial class Plot {
 		public class PlotAxis(Comparser<T> c, T initStart, T initStep, int initLength = 0) : IPlotAxis {
 
-			private Comparser<T> _context = c;
+			public PlotAxis(PlotAxis copy) : this(copy._context, copy.start, copy.d, copy.length) { }
+
+            private Comparser<T> _context = c;
 			public void SetL(int l) => Locked = l;
 
 			public (string c, string e) SetS(object? v) {
@@ -200,8 +202,10 @@ public abstract partial class Comparser<T>{
 			}
 			public bool Shift(int pixels) {
 				if (LockRange) return false;
+				var l = Locked; // temporarily disable pinning, so that moving start will only translate the image
+				Locked = -1;
 				start += pixels * d;
-				//_dirtyR = true;
+				Locked = l;
 				return true;
 			}
 

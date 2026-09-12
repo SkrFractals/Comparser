@@ -30,7 +30,7 @@ public abstract partial class Comparser<T> {
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
-			return _plot[frame].GetPlotX(out changed, _exp, ax, ay,  at, y, frame, _mSt + frame * _mDt, recallTolerance, Cancel);
+			return _plot[frame].GetPlotX(out changed, _exp, new(ax), new(ay),  new(at), y, frame, _mSt + frame * _mDt, recallTolerance, Cancel);
 		}
 		public Value[] GetPlotXy(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
 			if (_exp is null) throw new("No expression");
@@ -38,7 +38,7 @@ public abstract partial class Comparser<T> {
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
-			return _plot[frame].GetPlotXy(out changed, _exp, ax, ay, at, frame, _mSt + frame * _mDt, recallTolerance, Cancel);
+			return _plot[frame].GetPlotXy(out changed, _exp, new(ax), new(ay), new(at), frame, _mSt + frame * _mDt, recallTolerance, Cancel);
 		}
 		public class AxisOverlap {
 			public static bool New(Plot.PlotAxis a, T mSa, T mDa, int mLa, /*int memoryLength,*/ double recallTolerance, out AxisOverlap o)

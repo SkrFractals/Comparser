@@ -1,4 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
+using Comparser.Forms;
 using System.Drawing.Imaging;
 namespace Comparser.Comparser;
 public enum PlotMode : byte {
@@ -58,30 +59,34 @@ public abstract partial class Comparser<T>{
 			public PlotEval? Eval = newEval; // evaluator (code, default=z)
 			public Value[] Values = []; // evaluated value buffer
 										//public ChannelProperties R = new(), G = new(), B = new(), H = new(), S = new(), V = new();
-			private Value _args = new();
-			public void PrepareArgs(int w, int h, int l) {
-				_args = new([
-					new(T.nan, FailReason.Success, "v"),
-					new(T.nan, FailReason.Success, "c"),
-					new(T.nan, FailReason.Success, "z"),
-					new(T.nan, FailReason.Success, "t"),
-					new(T.nan, FailReason.Success, "x"),
-					new(T.nan, FailReason.Success, "y"),
-					new(T.nan, FailReason.Success, "f"),
-					new(T.MakeR(w), FailReason.Success, "w"),
-					new(T.MakeR(h), FailReason.Success, "h"),
-					new(T.MakeR(l), FailReason.Success, "l")
-				]);
+			private Value[] _args = [];
+			public void PrepareArgs(int w, int h, int l,int tasks) {
+				if (_args.Length < tasks)
+					_args = new Value[tasks];
+				for(int t = 0; t< tasks; ++t)
+					_args[t] = new([
+						new(T.nan, FailReason.Success, "v"),
+						new(T.nan, FailReason.Success, "c"),
+						new(T.nan, FailReason.Success, "z"),
+						new(T.nan, FailReason.Success, "t"),
+						new(T.nan, FailReason.Success, "x"),
+						new(T.nan, FailReason.Success, "y"),
+						new(T.nan, FailReason.Success, "f"),
+						new(T.MakeR(w), FailReason.Success, "w"),
+						new(T.MakeR(h), FailReason.Success, "h"),
+						new(T.MakeR(l), FailReason.Success, "l")
+					]);
 			}
-			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, T z, T t, double x, double y, double f) {
-				_args.Values[0].Values = [value ?? new()];
-				_args.Values[1].Values = [new(T.MakeR(c.r)), new(T.MakeR(c.g)), new(T.MakeR(c.b))];
-				_args.Values[2].Leaf = z;
-				_args.Values[3].Leaf = t;
-				_args.Values[4].Leaf = T.MakeR(x);
-				_args.Values[5].Leaf = T.MakeR(y);
-				_args.Values[6].Leaf = T.MakeR(f);
-				var rgb = ColorCodeRgb?.Eval(0, _args);
+			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, T z, T t, double x, double y, double f, int taskIndex) {
+				var args = _args[taskIndex];
+				args.Values[0].Values = [value ?? new()];
+				args.Values[1].Values = [new(T.MakeR(c.r)), new(T.MakeR(c.g)), new(T.MakeR(c.b))];
+				args.Values[2].Leaf = z;
+				args.Values[3].Leaf = t;
+				args.Values[4].Leaf = T.MakeR(x);
+				args.Values[5].Leaf = T.MakeR(y);
+				args.Values[6].Leaf = T.MakeR(f);
+				var rgb = ColorCodeRgb?.Eval(0, args, taskIndex == 0);
 				if (rgb is null)
 					return (0,0,0);
 				if (rgb.Values.Length >= 3) {
@@ -232,8 +237,8 @@ public abstract partial class Comparser<T>{
 				InputX.Shift(dx);
 			if (dy == 0)
 				return;
-			InputY.Shift(dx);
-			OutputY.Shift(dx);
+			InputY.Shift(dy);
+			OutputY.Shift(dy);
 			//double rx = (double)dx / InputR[0].length, ry = (double)dy / InputR[1].length;
 			/*if (dx != 0 && InputX.Shift(dx))
 				_dirtyXy = _dirtyX = true;
@@ -248,20 +253,25 @@ public abstract partial class Comparser<T>{
 			private readonly List<(Expression? e, int c)> _outs = [];
 			private int _length = -1;
 			private PlotMode _mode;
-			private Bitmap?[] _bitmaps = []; // [frames]
-			private int _w, _h;
-			public bool GetBitmap(out Bitmap bmp, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false) {
+			public Bitmap?[] _bitmaps = []; // [frames]
+            public Bitmap?[] _workMaps = [];
+            private int _w, _h;
+			public bool GetBitmap(out Bitmap bmp, out Bitmap workMap, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false) {
 				if (Match() && w == _w && h == _h && length == _length && mode == _mode && !dirty) {
 					var b = _bitmaps[frame];
-					if (b == null) {
+					var wb = _workMaps[frame];
+					if (b == null || wb == null) {
 						bmp = _bitmaps[frame] = new(w, h);
+						workMap = _workMaps[frame] = new(w, h);
 						return false;
 					}
-					bmp = b;
+                    bmp = b;
+					workMap = wb;
 					return true;
 				}
 				_mode = mode;
-				bmp = (_bitmaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
+                workMap = (_workMaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
+                bmp = (_bitmaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
 				return false;
 				bool Match() {
 					var match = true;
@@ -283,6 +293,7 @@ public abstract partial class Comparser<T>{
 				}
 			}
 		}
+		private readonly Task[] _taskArr = [];
 		private bool _dirty;
 		private readonly Renders _r = new();
 		public Bitmap Update(int w, int h, int l, CancellationToken cancel) {
@@ -335,83 +346,115 @@ public abstract partial class Comparser<T>{
 				for (var i = 0; i < axis.Length; ++i) // combine axis lines
 					axis[i] = Max(axis[i], a.lines[i]);
 			}
-			if (_r.GetBitmap(out var bmp, w, h, l, Frame, Mode, OutputR, _dirty)) // nothing has changed, no need to redraw the screen
+			if (_r.GetBitmap(out var bmp, out var work, w, h, l, Frame, Mode, OutputR, _dirty)) // nothing has changed, no need to redraw the screen
 				return bmp;
 			_dirty = false;
 			unsafe {
-				if (bmp.Width != _linesX.Length || bmp.Height != _linesY.Length)
+				//var nbmp = new Bitmap(bw), bh);
+				int bw = bmp.Width, bh = bmp.Height;
+				if (bw != _linesX.Length || bh != _linesY.Length)
 					return bmp;
-				var lb = bmp.LockBits(new(0, 0, bmp.Width, bmp.Height), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-				byte* p, ptr = (byte*)(void*)lb.Scan0;
-				var intPtr = 0;
+				var lb = work.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+				byte* ptr = (byte*)(void*)lb.Scan0;
+				
 				var t = InputT.Sample(Frame);
-
+				int tasks = SettingsPanel.Tasks, chunks = tasks <= 1 ? 1 : 16;
 				switch (Mode) {
 					case PlotMode.XContour:
 					case PlotMode.XFill:
+						
+					
 						foreach (var o in OutputR)
-							o.PrepareArgs(InputX.length, OutputY.length, InputT.length);
+							o.PrepareArgs(InputX.length, OutputY.length, InputT.length, tasks);
 						var yz = OutputY.Sample(FixedY);
-						for (var y = 0; y < bmp.Height; ++y) {
-							if (cancel.IsCancellationRequested)
-								break;
-
-							p = ptr + lb.Stride * y;
-							var yColor = _linesY[y];
-							for (var x = intPtr = 0; x < bmp.Width; ++x, ++intPtr, p += 3) {
+						if(tasks <= 1) MultiX(0,bh, 0); else Static.TaskManager(_taskArr, tasks, chunks, bh, cancel, MultiX);
+						break;
+						void MultiX(float yf, float subChunkLength, int taskIndex) => Multi(yf,subChunkLength, taskIndex, TaskDrawX);
+						void TaskDrawX(int ys, int ye, int taskIndex) {
+							for (var y = ys; y < ye; ++y) {
 								if (cancel.IsCancellationRequested)
 									break;
-								var z = InputX.Sample(x) + yz;
-								var rgbc = Max(_linesX[x], yColor);
-								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
-								//T v;
-								if (Mode == PlotMode.XContour)
-									foreach (var o in OutputR) {
-										if (o.Eval?.Null() ?? true) continue;
-										Value[] prev = o.Values[x].GetValues(), next = o.Values[Math.Min(x + 1, o.Values.Length - 1)].GetValues();
-										for (int i = 0; i < prev.Length; ++i)
-											if (C(OutputY.ValueToScreen(prev[i].GetLeaf()), OutputY.ValueToScreen(next[i].GetLeaf())))
-												c = o.ProcessColor(prev[i], c, z, t, x, y, Frame);
-									}
-								else foreach (var o in OutputR) if (!(o.Eval?.Null() ?? true)) foreach (var prevV in o.Values[intPtr].GetValues())
-									if ((y < OutputY.ValueToScreen(T.zero)) == (OutputY.ValueToScreen(prevV.GetLeaf()) < y))
-										c = o.ProcessColor(prevV, c, z, t, x, y, Frame);
-								(p[2], p[1], p[0]) = GetRgb(c);
+								
+								byte* p = ptr + lb.Stride * y;
+								var yColor = _linesY[y];
+								for (int x = 0, intPtr = 0; x < bw; ++x, ++intPtr, p += 3) {
+									if (cancel.IsCancellationRequested)
+										break;
+									var z = InputX.Sample(x) + yz;
+									var rgbc = Max(_linesX[x], yColor);
+									(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
+									//T v;
+									if (Mode == PlotMode.XContour)
+										foreach (var o in OutputR) {
+											if (o.Eval?.Null() ?? true) continue;
+											Value[] prev = o.Values[x].GetValues(), next = o.Values[Math.Min(x + 1, o.Values.Length - 1)].GetValues();
+											for (int i = 0; i < prev.Length; ++i)
+												if (C(OutputY.ValueToScreen(prev[i].GetLeaf()), OutputY.ValueToScreen(next[i].GetLeaf())))
+													c = o.ProcessColor(prev[i], c, z, t, x, y, Frame, taskIndex);
+										}
+									else
+										foreach (var o in OutputR)
+											if (!(o.Eval?.Null() ?? true))
+												foreach (var prevV in o.Values[intPtr].GetValues())
+													if ((y < OutputY.ValueToScreen(T.zero)) == (OutputY.ValueToScreen(prevV.GetLeaf()) < y))
+														c = o.ProcessColor(prevV, c, z, t, x, y, Frame, taskIndex);
+									(p[2], p[1], p[0]) = GetRgb(c);
+								}
+								continue;
+								bool C(int v, int n) => y < v != y <= n || y <= v != y < n;
 							}
-							continue;
-							bool C(int v, int n) => y < v != y <= n || y <= v != y < n;
 						}
-						break;
+
 					default:
 						foreach (var o in OutputR)
-							o.PrepareArgs(InputX.length, InputY.length, InputT.length);
-						for (var y = 0; y < bmp.Height; ++y) {
-							if (cancel.IsCancellationRequested)
-								break;
-							yz = InputY.Sample(y);
-							p = ptr + lb.Stride * y;
-							var yColor = _linesY[y];
-							for (var x = 0; x < bmp.Width; ++x, ++intPtr, p += 3) {
+							o.PrepareArgs(InputX.length, InputY.length, InputT.length, tasks);
+						if(tasks <= 1) MultiXy(0,bh, 0); else Static.TaskManager(_taskArr, tasks, chunks, bh, cancel, MultiXy);
+						break;
+						void MultiXy(float yf, float subChunkLength, int taskIndex) => Multi(yf, subChunkLength, taskIndex, TaskDrawXy);
+						void TaskDrawXy(int ys, int ye, int taskIndex) {
+							var intPtr = ys * bw;
+							for (var y = ys; y < ye; ++y) {
+								
 								if (cancel.IsCancellationRequested)
 									break;
-								var z = InputX.Sample(x) + yz;
-								var rgbc = Max(_linesX[x], yColor);
-								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
-								foreach (var o in OutputR) if (!(o.Eval?.Null() ?? true))
-									//foreach (var prevV in o.Values[intPtr].GetValues())
-									c = o.ProcessColor(o.Values[intPtr], c, z, t, x, y, Frame);
-								(p[2], p[1], p[0]) = GetRgb(c);
+								var yz2 = InputY.Sample(y);
+								byte* p = ptr + lb.Stride * y;
+								var yColor = _linesY[y];
+								
+								for (var x = 0; x < bw; ++x, ++intPtr, p += 3) {
+									if (cancel.IsCancellationRequested)
+										break;
+									var z = InputX.Sample(x) + yz2;
+									var rgbc = Max(_linesX[x], yColor);
+									(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
+									foreach (var o in OutputR)
+										if (!(o.Eval?.Null() ?? true))
+											//foreach (var prevV in o.Values[intPtr].GetValues())
+											c = o.ProcessColor(o.Values[intPtr], c, z, t, x, y, Frame, taskIndex);
+									(p[2], p[1], p[0]) = GetRgb(c);
+								}
 							}
 						}
-						break;
+				}
+                work.UnlockBits(lb);
+                (_r._bitmaps[Frame], _r._workMaps[Frame]) = (_r._workMaps[Frame], _r._bitmaps[Frame]);
+
+                void Multi(float yf, float subChunkLength, int taskIndex, Action<int, int, int> taskDraw) {
+					//var args = (Value)argsO;
+
+
+					float chunkDistance = tasks * subChunkLength;
+					for (var c = 0; c < chunks; ++c) {
+						float chd;
+						int y = (int)Math.Round(chd = yf + c * chunkDistance);
+						taskDraw(y, (int)Math.Round(chd + subChunkLength), taskIndex);
+					}
 				}
 				(byte, byte, byte) GetRgb((double r, double g, double b) c) => ((byte)Math.Clamp(c.r * 255, 0, 255), (byte)Math.Clamp(c.g * 255, 0, 255),(byte)Math.Clamp(c.b * 255, 0, 255));
-				bmp.UnlockBits(lb);
-			}
-			return bmp;
+              
+            }
+			return work;
 			Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
-			//(double r, double g, double b) MaxD((double r, double g, double b) a, (double r, double g, double b) b)
-			//	=> (Math.Max(a.r, b.r), Math.Max(a.g, b.g), Math.Max(a.b, b.b));
 		}
 		public static int ValueToScreenLin(T value, T start, T d) => (int)(T.Re(~d * (value - start))/+d);//length * T.D2(value - start, end - start, Static.Div);
 		public static T ScreenToValueLin(int x, T start, T d) => start + x * d;//INumber<T>.Lerp(start, end, new((double)x / length));
