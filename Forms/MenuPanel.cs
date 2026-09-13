@@ -37,14 +37,14 @@ public partial class MenuPanel : UserControl, IPanel {
 		Log = new(this, LogForm = new());
 		Code = new(this, _codeForm = new());
 		Exp = new(this, _expForm = new());
-		Set = new(this, _setForm = new());
+		SettingsPanel set = new(this, _setForm = new());
 		PlotSet = new(this, PlotSetForm = new());
 		Plot = new(this, _plotForm = new());
 		//ParentForm[] p = [LogForm, _codeForm, _expForm, _setForm, _plotForm];
 		//foreach (var i in p) i.Show();
 		//_plotForm.Show(); // for some reason I have to do this, otherwise the plotter could have its splitContainer permanently docked wrong
 		//_plotForm.Size = new(640, 480);
-		Set.SetDarkMode();
+		set.SetDarkMode();
 		//_plotForm.Close();
 		//foreach (var i in p) i.Close();
 		var m = FormStartPosition.Manual;
@@ -61,7 +61,6 @@ public partial class MenuPanel : UserControl, IPanel {
 	public readonly ParentForm? LogForm, PlotSetForm;
 	public readonly ComparserPanel? Code;
 	public readonly LogPanel? Log;
-	public readonly SettingsPanel? Set;
 	public readonly PlotPanel? Plot;
 	public readonly ExpressionPanel? Exp;
 	public readonly PlotSettingsPanel? PlotSet;

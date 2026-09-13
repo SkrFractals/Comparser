@@ -253,16 +253,16 @@ public abstract partial class Comparser<T>{
 			private readonly List<(Expression? e, int c)> _outs = [];
 			private int _length = -1;
 			private PlotMode _mode;
-			public Bitmap?[] _bitmaps = []; // [frames]
-            public Bitmap?[] _workMaps = [];
+			public Bitmap?[] Bitmaps = []; // [frames]
+            public Bitmap?[] WorkMaps = [];
             private int _w, _h;
 			public bool GetBitmap(out Bitmap bmp, out Bitmap workMap, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false) {
 				if (Match() && w == _w && h == _h && length == _length && mode == _mode && !dirty) {
-					var b = _bitmaps[frame];
-					var wb = _workMaps[frame];
+					var b = Bitmaps[frame];
+					var wb = WorkMaps[frame];
 					if (b == null || wb == null) {
-						bmp = _bitmaps[frame] = new(w, h);
-						workMap = _workMaps[frame] = new(w, h);
+						bmp = Bitmaps[frame] = new(w, h);
+						workMap = WorkMaps[frame] = new(w, h);
 						return false;
 					}
                     bmp = b;
@@ -270,8 +270,8 @@ public abstract partial class Comparser<T>{
 					return true;
 				}
 				_mode = mode;
-                workMap = (_workMaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
-                bmp = (_bitmaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
+                workMap = (WorkMaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
+                bmp = (Bitmaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
 				return false;
 				bool Match() {
 					var match = true;
@@ -437,7 +437,7 @@ public abstract partial class Comparser<T>{
 						}
 				}
                 work.UnlockBits(lb);
-                (_r._bitmaps[Frame], _r._workMaps[Frame]) = (_r._workMaps[Frame], _r._bitmaps[Frame]);
+                (_r.Bitmaps[Frame], _r.WorkMaps[Frame]) = (_r.WorkMaps[Frame], _r.Bitmaps[Frame]);
 
                 void Multi(float yf, float subChunkLength, int taskIndex, Action<int, int, int> taskDraw) {
 					//var args = (Value)argsO;

@@ -218,7 +218,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		) + 10;
 		var offset = width - _lines.Width;
 		if (offset != 0) {
-			// update width of the linepanel, and adjust the codeBox to it
+			// update width of the line panel, and adjust the codeBox to it
 			_lines.Width = width;
 			codeBox.Left += offset;
 			codeBox.Width -= offset;

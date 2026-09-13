@@ -24,7 +24,7 @@ public partial class PlotPanel : UserControl, IPanel {
             Rgb = new(rgb, rgbChanged, "log2rgb(v)", ["v", "c", "z", "t", "x", "y", "f", "w", "h", "l"]),
             Code = new(code, codeChanged, "z*sin(t)", ["z", "t"]);
         public readonly string Name = name;
-        public int Clip = 0;
+        public int Clip;
     }
     public class AxisControls {
         public EventHandler? Changed;
@@ -219,8 +219,8 @@ public partial class PlotPanel : UserControl, IPanel {
     private AxisControls? _inputX, _inputY, _inputT, _outputY;
     private bool _rangeX = true, _rangeY = true, _rangeO = true, _rangeT = true, _lockedRes;
     private Task? _draw;
-    private Bitmap? bmp, loadBmp;
-    private Stopwatch plotDelay = new();
+    private Bitmap? _bmp, _loadBmp;
+    private readonly Stopwatch _plotDelay = new();
     private volatile bool _finishedImage;
     private bool _dirtyImage;
     private int _length = 1, _frame;
@@ -230,7 +230,7 @@ public partial class PlotPanel : UserControl, IPanel {
     #region Actions
     private void ClickBuild(object? sender, EventArgs e) {
         if (_dirtyImage && _draw != null) {
-            cancel.Cancel();
+            _cancel.Cancel();
             return;
         }
         UpdatePlot(true);
@@ -455,8 +455,8 @@ public partial class PlotPanel : UserControl, IPanel {
         if (_finishedImage) {
             _s.Unblock();
             _finishedImage = false;
-            (bmp, loadBmp) = (loadBmp, bmp);
-            plotLocation = renderLocation;
+            (_bmp, _loadBmp) = (_loadBmp, _bmp);
+            _plotLocation = _renderLocation;
             plotBox.Invalidate();
             //if (bmp != null)
             //    plotBox.Image = bmp;
@@ -467,33 +467,33 @@ public partial class PlotPanel : UserControl, IPanel {
         // draw blocks/delays
         if (SettingsPanel.AutoPlot && _dirtyImage || forced) {
             if (!(forced || _s.animatedBox.Checked)) {
-                if (plotDelay.IsRunning) {
-                    if (plotDelay.ElapsedMilliseconds < SettingsPanel.PlotDelay && plotLocation.p.X == 0 && plotLocation.p.Y == 0)
+                if (_plotDelay.IsRunning) {
+                    if (_plotDelay.ElapsedMilliseconds < SettingsPanel.PlotDelay && _plotLocation.p is { X: 0, Y: 0 })
                         return;
-                    plotDelay.Stop();
-                } else plotDelay.Restart();
+                    _plotDelay.Stop();
+                } else _plotDelay.Restart();
             }
         } else return;
         _s.Block();
-        renderLocation = (new(0, 0), new(plotBox.Width, plotBox.Height));
+        _renderLocation = (new(0, 0), new(plotBox.Width, plotBox.Height));
         _dirtyImage = false;
         _draw = Task.Run(() => UpdatePlotAsync(plotBox.Width, plotBox.Height));
 
         //plotBox.Size = plotBox.Image.Size;
         //_dirty = false;
     }
-    private CancellationTokenSource cancel = new();
-    private CancellationToken token;
+    private CancellationTokenSource _cancel = new();
+    //private CancellationToken _token;
     private void UpdatePlotAsync(int w, int h) {
         if (GetPlot() is { } p) { 
-            loadBmp = p.Update(w, h, _length, token = (cancel = new CancellationTokenSource()).Token); 
+            _loadBmp = p.Update(w, h, _length, /*_token =*/ (_cancel = new CancellationTokenSource()).Token); 
         }
         _finishedImage = true;
         _draw = null;
     }
     private void DirtyImage(bool restartTimer = true) {
         if(restartTimer)
-            plotDelay.Restart();
+            _plotDelay.Restart();
         _dirtyImage = true;
         _s.buildButton.Text = _draw == null ? "PLOT" : "CANCEL";
     }
@@ -535,7 +535,7 @@ public partial class PlotPanel : UserControl, IPanel {
         UpdatePlot();
     }
     private void PlotBox_Paint(object sender, PaintEventArgs e) {
-        if (bmp == null)
+        if (_bmp == null)
             return;
         // Faster rendering with crisp pixels
         e.Graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
@@ -543,7 +543,7 @@ public partial class PlotPanel : UserControl, IPanel {
         byte attempt = 0;
         while (attempt < 10) {
             try {
-                e.Graphics.DrawImage(bmp, new Rectangle(plotLocation.p.X, plotLocation.p.Y, plotBox.Width, plotBox.Height));
+                e.Graphics.DrawImage(_bmp, new Rectangle(_plotLocation.p.X, _plotLocation.p.Y, plotBox.Width, plotBox.Height));
                 attempt = 10;
             } catch (Exception) {
                 ++attempt;
@@ -553,11 +553,11 @@ public partial class PlotPanel : UserControl, IPanel {
     }
 
     private bool _dragging, _dragged/*, dirtyDrag*/;
-    private Point lastCursor;
-    private (Point p, Size s) plotLocation, renderLocation;
+    private Point _lastCursor;
+    private (Point p, Size s) _plotLocation, _renderLocation;
     private void plotBox_MouseDown(object sender, MouseEventArgs e) {
         _dragging = true;
-        lastCursor = e.Location;
+        _lastCursor = e.Location;
         _dragged = false;
     }
 
@@ -572,15 +572,15 @@ public partial class PlotPanel : UserControl, IPanel {
         if (!_dragging)
             return;
        
-        var delta = lastCursor;
-        if (delta.X == 0 && delta.Y == 0)
+        var delta = _lastCursor;
+        if (delta is { X: 0, Y: 0 })
             return;
         _dragged = true;
-        lastCursor = e.Location;
-        delta = new(delta.X - lastCursor.X, delta.Y - lastCursor.Y);
+        _lastCursor = e.Location;
+        delta = new(delta.X - _lastCursor.X, delta.Y - _lastCursor.Y);
         // Move the current buffer and render buffer locations:
-        plotLocation.p = new(plotLocation.p.X - delta.X, plotLocation.p.Y - delta.Y);
-        renderLocation.p = new(renderLocation.p.X - delta.X, renderLocation.p.Y - delta.Y);
+        _plotLocation.p = new(_plotLocation.p.X - delta.X, _plotLocation.p.Y - delta.Y);
+        _renderLocation.p = new(_renderLocation.p.X - delta.X, _renderLocation.p.Y - delta.Y);
         DirtyImage(false); // make me want to start a render
         plotBox.Invalidate(); // draw the image and the new shifted location
         GetPlot()?.Shift(delta.X, delta.Y);
