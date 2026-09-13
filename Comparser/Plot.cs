@@ -30,6 +30,7 @@ public interface IPlot {
 	public void LockRangeO(bool l);
 	public void LockRangeT(bool l);
 	public void SetLockRes(bool l);
+	public int GetPercent();
 }
 public abstract partial class Comparser<T>{
 	public partial class Plot : IPlot {
@@ -142,6 +143,18 @@ public abstract partial class Comparser<T>{
 			//OutputHsv = new(Context = comparser, "[repeatValue=1; (1)s(x)=sqrabs(x)] (arg(x)+pi)360/tau, 1-exp(-s(x)), sqrt(s(x))%repeatValue /* repeatValue: Value cycle slowness, (1)s(x): caches sqrabs for reuse", _x);
 			//Update(width, height, length, new CancellationToken());
 		}
+		public int GetPercent() {
+			int done = 0, total = 0;
+			foreach (var o in OutputR) {
+				done += o.Eval.GetPercent();
+				++total;
+			}
+			total = (total + 1) * InputY.length;
+			foreach (var p in percent)
+				done += p;
+			return total == 0 ? 0 : 100 * done / total;
+		}
+		private int[] percent = [];
 		public void ChangeMode(PlotMode xy) {
 			Mode = xy;
 			//_dirtyX = _dirtyXy = true;
@@ -250,7 +263,7 @@ public abstract partial class Comparser<T>{
 				_dirtyXy = true;*/
 		}
 		public class Renders {
-			private readonly List<(Expression? e, int c)> _outs = [];
+			private readonly List<(Expression? e, PlotEval? v, int c)> _outs = [];
 			private int _length = -1;
 			private PlotMode _mode;
 			public Bitmap?[] Bitmaps = []; // [frames]
@@ -278,11 +291,11 @@ public abstract partial class Comparser<T>{
 					for (var i = 0; i < rgbs.Count; ++i) {
 						var ri = rgbs[i];
 						if (i < _outs.Count) {
-							var (e, c) = _outs[i];
-							if (e == ri.ColorCodeRgb && c == ri.Clip)
+							var (e, v, c) = _outs[i];
+							if (e == ri.ColorCodeRgb && c == ri.Clip && v == ri.Eval)
 								continue;
-							_outs[i] = (ri.ColorCodeRgb, ri.Clip);
-						} else _outs.Add((ri.ColorCodeRgb, ri.Clip));
+							_outs[i] = (ri.ColorCodeRgb, ri.Eval, ri.Clip);
+						} else _outs.Add((ri.ColorCodeRgb, ri.Eval, ri.Clip));
 						match = false;
 					}
 					if (rgbs.Count >= _outs.Count)
@@ -302,6 +315,11 @@ public abstract partial class Comparser<T>{
 								 // prepare axis lines and plot values if they are dirty
 			if (InputX.DirtyL)
 				Lines(InputX, _linesX);
+			int tasks = SettingsPanel.Tasks, chunks = tasks <= 1 ? 1 : 16;
+			if (percent.Length != tasks) percent = new int[tasks];
+			else
+				for (int task = 0; task < tasks; ++task)
+					percent[task] = 0;
 			switch (Mode) {
 				case PlotMode.XContour:
 				case PlotMode.XFill:
@@ -355,10 +373,9 @@ public abstract partial class Comparser<T>{
 				if (bw != _linesX.Length || bh != _linesY.Length)
 					return bmp;
 				var lb = work.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
-				byte* ptr = (byte*)(void*)lb.Scan0;
-				
+				var ptr = (byte*)(void*)lb.Scan0;
 				var t = InputT.Sample(Frame);
-				int tasks = SettingsPanel.Tasks, chunks = tasks <= 1 ? 1 : 16;
+				
 				switch (Mode) {
 					case PlotMode.XContour:
 					case PlotMode.XFill:
@@ -400,6 +417,7 @@ public abstract partial class Comparser<T>{
 														c = o.ProcessColor(prevV, c, z, t, x, y, Frame, taskIndex);
 									(p[2], p[1], p[0]) = GetRgb(c);
 								}
+								++percent[taskIndex];
 								continue;
 								bool C(int v, int n) => y < v != y <= n || y <= v != y < n;
 							}
@@ -433,6 +451,7 @@ public abstract partial class Comparser<T>{
 											c = o.ProcessColor(o.Values[intPtr], c, z, t, x, y, Frame, taskIndex);
 									(p[2], p[1], p[0]) = GetRgb(c);
 								}
+								++percent[taskIndex];
 							}
 						}
 				}

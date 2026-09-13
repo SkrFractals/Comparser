@@ -197,7 +197,10 @@ public abstract partial class Comparser<T>{
 			}*/
 			public bool Zoom(int c, double zoomSize) {
 				if (LockRange) return false;
-				start = INumber<T>.Lerp(start, end, (double)c / length) + c * (d *= zoomSize);
+				var l = Locked; // temporarily disable pinning, so that moving start will only translate the image
+				Locked = -1;
+				start = INumber<T>.Lerp(start, end, (double)c / length) - c * (d *= zoomSize);
+				Locked = l;
 				return true;//_dirtyR = true;
 			}
 			public bool Shift(int pixels) {

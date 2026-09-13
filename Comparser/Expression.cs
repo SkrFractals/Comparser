@@ -285,7 +285,7 @@ public abstract partial class Comparser<T> {
 			bool TryFunc() {
 				var startFrom = read.From;
 				foreach (var (name, obj) in Context.Context.Get(read.Text, read.From, Functions))
-					if (name.Length > 0 && !FailRequiredSymbol('(', (byte)name.Length))
+					if (name.Length > 0 && !FailRequiredSymbol('(', (byte)name.Length, true))
 						return CallFunction((CallFunction)obj.Obj, startFrom, startFrom + name.Length, obj.Type);
 				return false;
 			}
@@ -462,9 +462,9 @@ public abstract partial class Comparser<T> {
 				};
 				return endDefault && !result ? read.TrimStart(1) : result; // if we found an op on the next line, then trim the newlines
 			}
-			bool FailRequiredSymbol(char c, int offset = 0) {
+			bool FailRequiredSymbol(char c, int offset = 0, bool doNotFail = false) {
 				if (read.GotoFirstFailed(offset, 0, [c], 1, out _, out var found))
-					return F();
+					return doNotFail || F();
 				read.From = found + 1; // goto behind the char we found
 				return false;
 			}

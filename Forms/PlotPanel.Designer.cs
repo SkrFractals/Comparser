@@ -30,6 +30,7 @@ partial class PlotPanel {
         // fps
         // 
         fps.Enabled = true;
+        fps.Interval = 50;
         fps.Tick += Fps_Tick;
         // 
         // plotBox
@@ -46,6 +47,7 @@ partial class PlotPanel {
         plotBox.MouseMove += plotBox_MouseMove;
         plotBox.MouseUp += plotBox_MouseUp;
         plotBox.Paint += PlotBox_Paint;
+        plotBox.MouseWheel += PlotBox_MouseWheel;
         // 
         // PlotPanel
         // 

@@ -197,7 +197,7 @@ public abstract partial class Comparser<T>{
 				int an = (vA[a] = CollapseScalar(vA[a])).Values.Length, 
 					bn = (vB[b] = CollapseScalar(vB[b])).Values.Length;
 				vals.Values[i] = an == 0 && Virtual(vA[a]) is { } f
-					? CallVirtual(f, vB[b], allowCache)
+					? CallVirtual(f, vB[b])
 					: an + bn == 0
 					? new(o(vA[a].Leaf, vB[b].Leaf), vA[a].Error, so(vA[a].String, vB[b].String)) 
 					: Operate2(
@@ -209,7 +209,7 @@ public abstract partial class Comparser<T>{
 			if (s != 0)
 				return vals;
 			if (Virtual(av) is { } ff)
-				vals = CallVirtual(ff, bv, allowCache);
+				vals = CallVirtual(ff, bv);
 			else {
 				vals.Leaf = o(av.Leaf, bv.Leaf);
 				vals.String = so(av.String, bv.String);
@@ -219,8 +219,8 @@ public abstract partial class Comparser<T>{
 			return vals;
 
 			CallFunction? Virtual(Value v) => call && T.IsNaN(v.Leaf) && (context.UserFunctions.TryGetValue(v.String, out var f) || context.DefaultFunctions.TryGetValue(v.String, out f)) ? f : null;
-			Value CallVirtual(CallFunction f, Value v, bool allowCache) {
-				var exp = f.Call(new(context, "", new CancellationTokenSource().Token), args);
+			Value CallVirtual(CallFunction f, Value v) {
+				var exp = f.Call(new(context, "", CancellationToken.None), args);
 				exp.V.Values = [v];
 				return exp.Eval((ushort)(1 + depth), args, allowCache);
 			}

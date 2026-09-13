@@ -22,7 +22,7 @@ public partial class PlotPanel : UserControl, IPanel {
     public class Output(string name, RichTextBox rgb, RichTextBox code, EventHandler rgbChanged, EventHandler codeChanged) {
         public readonly TextField
             Rgb = new(rgb, rgbChanged, "log2rgb(v)", ["v", "c", "z", "t", "x", "y", "f", "w", "h", "l"]),
-            Code = new(code, codeChanged, "z*sin(t)", ["z", "t"]);
+            Code = new(code, codeChanged, "zcos(t)", ["z", "t"]);
         public readonly string Name = name;
         public int Clip;
     }
@@ -93,9 +93,12 @@ public partial class PlotPanel : UserControl, IPanel {
             //var (fir, sec) = (first.Box.ReadOnly, second.Box.ReadOnly);
             first.Box.Tag = second.Box.Tag = true;
             (first.Box.Text, second.Box.Text) = del(Eval(_context, change));
+            Parse(first, false);
+            Parse(second, false);
             first.Box.Tag = second.Box.Tag = false;
             //first.Box.ReadOnly = fir; second.Box.ReadOnly = sec;
             States?.Log(Ls); // any of them will work
+            Changed?.Invoke(this, EventArgs.Empty);
         }
         public void SetLength(int l) => SetSce(_axis.SetLength(l));
     }
@@ -136,6 +139,9 @@ public partial class PlotPanel : UserControl, IPanel {
         _s.buildButton.Click += ClickBuild;
         _s.saveButton.Click += ClickSave;
         _s.loadButton.Click += ClickLoad;
+        _s.fysButton.Click += FysClick;
+        _s.fycButton.Click += FycClick;
+        _s.fyeButton.Click += FyeClick;
         _var.Form.FormBorderStyle = FormBorderStyle.Sizable;
         Init();
         parent.SetMinSize();
@@ -176,6 +182,12 @@ public partial class PlotPanel : UserControl, IPanel {
         _inputY?.Changed += (_, _) => DirtyImage();
         _inputT?.Changed += (_, _) => DirtyImage();
         _outputY?.Changed += (_, _) => DirtyImage();
+        _inputY?.Changed += FyChanged;
+
+        // blocks scrolling over them from changing their value
+        _s.modeSelect.MouseWheel += SettingsPanel.ComboBox_MouseWheel;
+        _s.outputSelect.MouseWheel += SettingsPanel.ComboBox_MouseWheel;
+        
         _ = new LogSce(_inputX!, s); // input X / DONE
         _ = new LogSce(_inputY!, s); // 2d input Y / DONE
         _ = new LogSce(_inputT!, s); // input time / DONE
@@ -204,8 +216,10 @@ public partial class PlotPanel : UserControl, IPanel {
         ReEval(/*p*/);
     }
     public void ReEval(/*IPlot p*/) {
-        for (var i = 0; i < _outputs.Count; ++i)
-            GetPlot()?.SetCode(i, Parse(_outputs[i].Code));
+        for (var i = 0; i < _outputs.Count; ++i) {
+            GetPlot()?.SetCode(i, Parse(_outputs[i].Code, false));
+            GetPlot()?.SetRgb(i, Parse(_outputs[i].Rgb, false));
+        }
         //p.SetDirty();
         DirtyImage();
     }
@@ -357,6 +371,10 @@ public partial class PlotPanel : UserControl, IPanel {
         plotBox.Dock = DockStyle.Fill;
         Refresh(_w, plotBox.Width.ToString());
         Refresh(_h, plotBox.Height.ToString());
+        RefreshAxes();
+        LogState(_s.widthBox); // any of them will log the whole state
+    }
+    private void RefreshAxes() {
         if (GetPlot() is not { } p)
             return;
         p.Resize(plotBox.Width, plotBox.Height, _length);
@@ -366,7 +384,6 @@ public partial class PlotPanel : UserControl, IPanel {
         RefreshSce(p, _inputY, 1);
         //RefreshSce(p, InputT, 2);
         RefreshSce(p, _outputY, 3);
-        LogState(_s.widthBox); // any of them will log the whole state
         DirtyImage();
     }
     private void RefreshSce(IPlot p, AxisControls? a, int i) {
@@ -423,21 +440,28 @@ public partial class PlotPanel : UserControl, IPanel {
         //s.oysLabel.Visible = s.oysButton.Visible = s.oysBox.Visible = s.oycLabel.Visible = s.oycButton.Visible = s.oycBox.Visible = s.oyeLabel.Visible = s.oyeButton.Visible = s.oyeBox.Visible = !enabled;
         //s.fyBox.ReadOnly = s.iysLabel.Visible = s.iysButton.Visible = s.iysBox.Visible = s.iycLabel.Visible = s.iycButton.Visible = s.iycBox.Visible = s.iyeLabel.Visible = s.iyeButton.Visible = s.iyeBox.Visible = enabled;
     }
-    private void FyChanged(object? sender, EventArgs e) {
-        (_fixedY, var v) = GetPlot()?.SetFixedY(Eval(this, _fy)) ?? (0, "?");
+    private void FyChanged(object? sender, EventArgs e) => ChangeFy(Eval(this, _fy));
+    private void FysClick(object? sender, EventArgs e) => ChangeFy(/*_inputY?.S.Value*/0.0);
+    private void FycClick(object? sender, EventArgs e) => ChangeFy(/*_inputY?.C.Value*/plotBox.Height / 2.0);
+    private void FyeClick(object? sender, EventArgs e) => ChangeFy(plotBox.Height);
+    private void ChangeFy(object? e) {
+        (_fixedY, var v) = GetPlot()?.SetFixedY(e) ?? (0, "?");
         _s.fyLabel.Text = "Y: " + v;
         LogState(_s.fyBox);
         DirtyImage();
     }
+   
     #endregion
 
     #region Time
     private void TfChanged(object? sender, EventArgs e) {
         GetPlot()?.SetFrame(Math.Min(_length - 1, _frame = (int)(SettingsPanel.Context?.AsDouble(Eval(this, _tf)) ?? 0)));
+        DirtyImage();
+        UpdatePlot(true);
         if (_s.animatedBox.Checked)
             return; // do not log undo for automatic animation frame advances
         LogState(_s.itfBox);
-        DirtyImage();
+       
     }
     private void TlChanged(object? sender, EventArgs e) {
         /*InputT?.SetLength(*/
@@ -486,7 +510,7 @@ public partial class PlotPanel : UserControl, IPanel {
     //private CancellationToken _token;
     private void UpdatePlotAsync(int w, int h) {
         if (GetPlot() is { } p) { 
-            _loadBmp = p.Update(w, h, _length, /*_token =*/ (_cancel = new CancellationTokenSource()).Token); 
+            _loadBmp = p.Update(w, h, _length, CancellationToken.None); 
         }
         _finishedImage = true;
         _draw = null;
@@ -530,7 +554,8 @@ public partial class PlotPanel : UserControl, IPanel {
     #endregion
 
     private void Fps_Tick(object? sender, EventArgs e) {
-        if (_s.animatedBox.Checked && _draw == null)
+        _s.percentLabel.Text = (GetPlot()?.GetPercent().ToString() ?? "0")+"%";
+        if (_s.animatedBox.Checked && _draw == null && !_finishedImage)
             nextButton_Click(_s.nextButton, EventArgs.Empty);
         UpdatePlot();
     }
@@ -543,7 +568,7 @@ public partial class PlotPanel : UserControl, IPanel {
         byte attempt = 0;
         while (attempt < 10) {
             try {
-                e.Graphics.DrawImage(_bmp, new Rectangle(_plotLocation.p.X, _plotLocation.p.Y, plotBox.Width, plotBox.Height));
+                e.Graphics.DrawImage(_bmp, new Rectangle(_plotLocation.p.X, _plotLocation.p.Y, _plotLocation.s.Width, _plotLocation.s.Height));
                 attempt = 10;
             } catch (Exception) {
                 ++attempt;
@@ -551,6 +576,7 @@ public partial class PlotPanel : UserControl, IPanel {
             }
         }
     }
+  
 
     private bool _dragging, _dragged/*, dirtyDrag*/;
     private Point _lastCursor;
@@ -567,7 +593,7 @@ public partial class PlotPanel : UserControl, IPanel {
             return;
         _var.Root.ShowC(_var.Root.PlotSetForm, _var.Form);
     }
-
+    
     private void plotBox_MouseMove(object sender, MouseEventArgs e) {
         if (!_dragging)
             return;
@@ -584,6 +610,27 @@ public partial class PlotPanel : UserControl, IPanel {
         DirtyImage(false); // make me want to start a render
         plotBox.Invalidate(); // draw the image and the new shifted location
         GetPlot()?.Shift(delta.X, delta.Y);
+        RefreshAxes();
+    }
+    private void PlotBox_MouseWheel(object sender, MouseEventArgs e) {
+        var delta = e.Delta;
+        _dragged = true;
+        var centerX = (float)e.Location.X / plotBox.Width;
+        var centerY = (float)e.Location.Y / plotBox.Height;
+        if (delta > 0) {
+            _plotLocation = (new(_plotLocation.p.X * 2 - e.Location.X, _plotLocation.p.Y * 2 - e.Location.Y), _plotLocation.s * 2);
+            _renderLocation = (new(_renderLocation.p.X * 2 - e.Location.X, _renderLocation.p.Y * 2 - e.Location.Y), _renderLocation.s * 2);
+           
+           GetPlot()?.ZoomBinary(e.Location.X, e.Location.Y, true);
+            
+        } else {
+            _plotLocation = (new((_plotLocation.p.X + e.Location.X) / 2, (_plotLocation.p.Y + e.Location.Y) / 2), _plotLocation.s / 2);
+            _renderLocation = (new((_renderLocation.p.X  + e.Location.X) / 2, (_renderLocation.p.Y + e.Location.Y) / 2), _renderLocation.s / 2);
+            GetPlot()?.ZoomBinary(e.Location.X, e.Location.Y, false);
+        }
+        DirtyImage(false); // make me want to start a render
+        plotBox.Invalidate(); // draw the image and the new shifted location
+        RefreshAxes();
     }
 }
 

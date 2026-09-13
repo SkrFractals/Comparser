@@ -65,7 +65,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	public object MakeArgs((string alias, object value)[] pairs) => new Value([.. pairs.Select(p => new Value((T)p.value, 0, p.alias))]);
 	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(T.nan, 0, p)).ToArray());
 	private static Value AsValue(object? e) => e as Value ?? new();
-	public double AsDouble(object? e) =>  T.Re(AsValue(e).GetLeaf());
+	public double AsDouble(object? e) =>  e switch { Value v => T.Re(v.GetLeaf()), double d => d, int i => i, _ => 0 };
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null) {
 		var read = new Reader(this, text, cancel, from);
 		var e = new Expression(read, out _, AsValue(args), from);
@@ -173,6 +173,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 							"printnumber" => Actions.PrintNumber, // prints just the numerical value, without fallback to string values.	NaN + NaNi, 2
 							"printstring" => Actions.PrintString, // prints only the string value, even if there's a numeric value			returnedString, '1+1'
 							"do" => Actions.Do,
+							"include" => Actions.Include,
 							"if" => Actions.If,
 							"while" => Actions.While,
 							"return" => Actions.Return,
@@ -208,12 +209,19 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 							if (pref.Length > _doOverflow) {
 								e = "DO overflow limit exceeded.";
 								Lg();
+							} else ExpandCode(eval.ToLines());
+							Cl(FailReason.Success);
+							break;
+						case Actions.Include:
+							if (pref.Length > _doOverflow) {
+								e = "INCLUDE overflow limit exceeded.";
+								Lg();
 							} else {
-								var expand = eval.ToLines(); // ToString(true) recursively exports only string values as lines
-								var newRead = _currentReader = new(this, expand, cancel);
-								ReadLines(pref + (read.Line + 1) + "/", newRead);
-								_currentReader = read;
-								read.AppendC(newRead.Colors);
+								var file = eval.GetString();
+								if (!File.Exists(file)) {
+									e = "Failed to include a file: " + file;
+									Lg();
+								} else ExpandCode(File.ReadAllText(file));
 							}
 							Cl(FailReason.Success);
 							break;
@@ -276,6 +284,12 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 									--loops;
 								}
 								Cl(FailReason.Unexpected);
+							}
+							void ExpandCode(string expand) {
+								var newRead = _currentReader = new(this, expand, cancel);
+								ReadLines(pref + (read.Line + 1) + "/", newRead);
+								_currentReader = read;
+								read.AppendC(newRead.Colors);
 							}
 						}
 						if (doContinue)
@@ -573,16 +587,17 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		PrintNumber = 3,
 		PrintString = 4,
 		Do = 5,
-		If = 6,
-		While = 7,
-		Return = 8,
-		Break = 9,
-		Continue = 10,
-		StackOverflow = 11, 
-		IterOverflow = 12,
-		WhileOverflow = 13,
-		DoOverflow = 14,
-		Operator = 15
+		Include = 6,
+		If = 7,
+		While = 8,
+		Return = 9,
+		Break = 10,
+		Continue = 11,
+		StackOverflow = 12, 
+		IterOverflow = 13,
+		WhileOverflow = 14,
+		DoOverflow = 15,
+		Operator = 16
 	}
 	[Flags] public enum FailReason : byte {
 		Success = 0,
@@ -1031,6 +1046,14 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		C(["γ", "gamma", "Gamma", "GAMMA"], INumber<T>.C_Gamma()); // euler constant
 		C(["one", "One", "ONE"], T.one); // all components one
 		C(["unit", "Unit", "UNIT"], T.unit); // all components one
+		C(["ln2", "LN2", "Ln2"], T.MakeR(Math.Log(2))); // ln(2)
+		C(["ln10", "LN10", "Ln10"], T.MakeR(Math.Log(10))); // ln(10)
+		C(["sqrt2", "SQRT2", "Sqrt2", "√2"], T.MakeR(Math.Sqrt(2))); // sqrt(2)
+		C(["sqrt3", "SQRT3", "Sqrt3", "√3"], T.MakeR(Math.Sqrt(3))); // sqrt(3)
+		C(["sqrt5", "SQRT5", "Sqrt5", "√5"], T.MakeR(Math.Sqrt(5))); // sqrt(5)
+		C(["apery", "APERY", "Apery", "ζ3"], T.MakeR(1.202056903159594285399738161511449990764986292)); // Apery's constant
+		C(["δ", "feigenbaum", "Feigenbaum", "FEIGENBAUM"], T.MakeR(4.669201609102990671853203820466)); // Feigenbaum constant
+		C(["g", "G", "catalan", "Catalan", "CATALAN"], T.MakeR(0.915965594177219015054603514932384110774)); // Catalan's constant
 		foreach(var d in GenericConstants().Values)
 			C([d.String], d.Leaf);
 		
@@ -1146,7 +1169,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["softneg", "SoftNeg", "Softneg", "sftneg", "SftNeg", "Sftneg", "softminus", "SoftMinus", "Softminus", "sftminus", "SftMinus", "Sftminus"], new Cf(INumber<T>.SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
 
 		// powers
-		A(["sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(T.Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
+		A(["√", "sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(T.Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
 		A(["sqr", "Sqr", "square", "Square"], OpSqr); // square = z^2
 		A(["cbrt", "Cbrt", "cuberoot", "CubeRoot", "Cuberoot"], new Cf(INumber<T>.Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
 		A(["cube", "Cube"], new Cf(T.Cub, OpCode.Cub)); // cube = z^3

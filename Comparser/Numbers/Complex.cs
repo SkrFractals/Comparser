@@ -161,7 +161,7 @@ public readonly struct Complex(double r = 0, double i = 0) : INumber<Complex> {
 	// Ln(complex)/2
 	public static Complex LogH(Complex c) => new(Math.Log(+c) * .25, Arg(c) * .5);
 	// e ^ complex
-	public static Complex Exp(Complex c) => Math.Exp(c.R) * Complex_InvArg(c.I);
+	public static Complex Exp(Complex c) => double.IsNegativeInfinity(c.R) ? zero : Math.Exp(c.R) * Complex_InvArg(c.I);
 	public static Complex operator ^(Complex a, Complex b) => Exp(Log(a) * b);
 	// complex ^ real
 	public static Complex operator ^(Complex c, double r) => Exp(Log(c) * r);

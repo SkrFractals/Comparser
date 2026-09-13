@@ -34,7 +34,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public SettingsPanel() => InitializeComponent();
 	public SettingsPanel(MenuPanel root, ParentForm parent) : this() {
 		InitVar(ref _var, this, root, parent, "Comparser - App Settings");
-		
+		algebraBox.SelectedIndex = 1;//AlgebraBox_SelectedIndexChanged(algebraBox, EventArgs.Empty);
 		Context = _algebras[Algebra];
 		DecimalBox_TextChanged(decimalBox, EventArgs.Empty);
 		_var.Root.Code?.CodeChanged = true;
@@ -50,21 +50,9 @@ public partial class SettingsPanel : UserControl, IPanel {
 		autoLabel.Text = "Auto Build:";
 		decLabel.Text = "Decimals:";
 		reportLabel.Text = "Report Logs:";
-
-
-		/*Controls.Add(_s);
-		_s.Location = new(0, 0);
-		_s.Dock = DockStyle.Fill;
-		_s.darkButton.Click += darkButton_Click;
-		_s.algebraBox.SelectedIndexChanged += AlgebraBox_SelectedIndexChanged;
-		_s.decimalBox.TextChanged += DecimalBox_TextChanged;
-		_s.autoButton.Click += autoButton_Click;
-		_s.autoBox.TextChanged += autoBox_TextChanged;
-		_s.reportBox.TextChanged += reportBox_TextChanged;
-		_s.plotButton.Click += plotButton_Click;
-		_s.plotBox.TextChanged += plotBox_TextChanged;
-		_s.xMemBox.CheckedChanged += xMemBox_CheckedChanged;
-		_s.xyMemBox.CheckedChanged += xyMemBox_CheckedChanged;*/
+		
+		// blocks scrolling over int from changing their value
+		algebraBox.MouseWheel += ComboBox_MouseWheel;
 	}
 	#endregion
 
@@ -143,4 +131,6 @@ public partial class SettingsPanel : UserControl, IPanel {
 	};
 	private void UpdatePlot() => plotButton.Text = AutoPlot ? "DELEAYED AUTOMATIC" : "MANUAL";
 	#endregion	
+	
+	public static void ComboBox_MouseWheel(object? sender, MouseEventArgs e) =>	((HandledMouseEventArgs)e).Handled = true;
 }

@@ -41,7 +41,7 @@ public abstract partial class Comparser<T> {
 			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.zero;
 				int mLx = 0, mLy = 0; /*yw = 0;*/
-				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
+				if (+(at.Sample(frame) - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
 					(mSx, mDx, mLx, mSy, mDy, mLy) = (_mSx2, _mDx2, _mLx2, _mSy2, _mDy2, _mLy2);
 				(_plotXy, _memXy) = (_memXy, _plotXy); // swap mem
 				if (_plotXy.Length != (_mLx2 = ax.length) * (_mLy2 = ay.length))
@@ -205,7 +205,7 @@ public abstract partial class Comparser<T> {
 				bool FailAffineMap(T mS, double e) {
 					T s;
 					double xx = +mDx, xy = mDx | mDy, yy = +mDy, d = xx * yy - xy * xy; // Gram matrix of the old plot's two basis vectors.
-					if (Math.Abs(d) <= 1e-8 || !(InPlane(mDx, mDy, ax.d, xx, xy, yy, d, e *= e)
+					if (Math.Abs(d) <= 1e-16 || !(InPlane(mDx, mDy, ax.d, xx, xy, yy, d, e *= e)
 						&& InPlane(mDx, mDy, ay.d, xx, xy, yy, d, e)
 						&& InPlane(mDx, mDy, s = aS - mS, xx, xy, yy, d, e))) {
 						mp = pm = default;
@@ -293,7 +293,7 @@ public abstract partial class Comparser<T> {
 				return ReEval(o.IaEnd);
 
 				void Remember() {
-					if (!(+(frame - _t1) < sqrEy)) return;
+					if (!(+(at.Sample(frame) - _t1) < sqrEy)) return;
 					// the time of this frame is within tolerance to the memorized time
 					if (+(_mY1 - yC) <= +sqrEy) {
 						(memY, memYo, mSx, mDx, mLx) = (_memX, 0, _mSx1, _mDx1, _mLx1); // 1D memory Y match

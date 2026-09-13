@@ -88,6 +88,10 @@ partial class PlotSettingsControl {
         nextButton = new Button();
         itfBox = new RichTextBox();
         animatedBox = new CheckBox();
+        fyeButton = new Button();
+        fycButton = new Button();
+        fysButton = new Button();
+        percentLabel = new Label();
         panel.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
         splitContainer.Panel1.SuspendLayout();
@@ -98,6 +102,10 @@ partial class PlotSettingsControl {
         // panel
         // 
         panel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+        panel.Controls.Add(percentLabel);
+        panel.Controls.Add(fysButton);
+        panel.Controls.Add(fycButton);
+        panel.Controls.Add(fyeButton);
         panel.Controls.Add(clipSelect);
         panel.Controls.Add(oyRangeButton);
         panel.Controls.Add(tRangeButton);
@@ -833,6 +841,46 @@ partial class PlotSettingsControl {
         animatedBox.TabIndex = 25;
         animatedBox.Text = "Animate";
         // 
+        // fyeButton
+        // 
+        fyeButton.Font = new Font("Consolas", 12F, FontStyle.Bold);
+        fyeButton.Location = new Point(146, 495);
+        fyeButton.Name = "fyeButton";
+        fyeButton.Size = new Size(25, 27);
+        fyeButton.TabIndex = 85;
+        fyeButton.Text = "E";
+        fyeButton.UseVisualStyleBackColor = true;
+        // 
+        // fycButton
+        // 
+        fycButton.Font = new Font("Consolas", 12F, FontStyle.Bold);
+        fycButton.Location = new Point(116, 495);
+        fycButton.Name = "fycButton";
+        fycButton.Size = new Size(25, 27);
+        fycButton.TabIndex = 86;
+        fycButton.Text = "C";
+        fycButton.UseVisualStyleBackColor = true;
+        // 
+        // fysButton
+        // 
+        fysButton.Font = new Font("Consolas", 12F, FontStyle.Bold);
+        fysButton.Location = new Point(85, 494);
+        fysButton.Name = "fysButton";
+        fysButton.Size = new Size(25, 27);
+        fysButton.TabIndex = 87;
+        fysButton.Text = "S";
+        fysButton.UseVisualStyleBackColor = true;
+        // 
+        // percentLabel
+        // 
+        percentLabel.AutoSize = true;
+        percentLabel.Font = new Font("Consolas", 12F, FontStyle.Bold);
+        percentLabel.Location = new Point(116, 168);
+        percentLabel.Name = "percentLabel";
+        percentLabel.Size = new Size(45, 19);
+        percentLabel.TabIndex = 88;
+        percentLabel.Text = "100%";
+        // 
         // PlotSettingsControl
         // 
         AutoScaleMode = AutoScaleMode.None;
@@ -876,9 +924,9 @@ partial class PlotSettingsControl {
     public System.Windows.Forms.RichTextBox iteBox;
     public System.Windows.Forms.RichTextBox itcBox;
     public System.Windows.Forms.RichTextBox itsBox;
-	public Button prevButton;
+	public System.Windows.Forms.Button prevButton;
 	public RichTextBox itlBox;
-	public Button nextButton;
+	public System.Windows.Forms.Button nextButton;
 	public RichTextBox itfBox;
     public System.Windows.Forms.ComboBox modeSelect;
     public System.Windows.Forms.RichTextBox heightBox;
@@ -893,35 +941,39 @@ partial class PlotSettingsControl {
     public System.Windows.Forms.RichTextBox iyeBox;
     public System.Windows.Forms.RichTextBox iycBox;
     public System.Windows.Forms.RichTextBox iysBox;
-	public Button addButton;
+	public System.Windows.Forms.Button addButton;
 	public System.Windows.Forms.RichTextBox rgbBox;
-	public Button delButton;
-	public Button xRangeButton;
-	public Button itsButton;
-	public Button itcButton;
-	public Button iteButton;
-	public Button ixsButton;
-	public Button ixcButton;
-	public Button ixeButton;
-	public Button iysButton;
-	public Button iycButton;
-	public Button iyeButton;
-	public Button oysButton;
-	public Button oycButton;
-	public Button oyeButton;
+	public System.Windows.Forms.Button delButton;
+	public System.Windows.Forms.Button xRangeButton;
+	public System.Windows.Forms.Button itsButton;
+	public System.Windows.Forms.Button itcButton;
+    public System.Windows.Forms.Button iteButton;
+	public System.Windows.Forms.Button ixsButton;
+	public System.Windows.Forms.Button ixcButton;
+	public System.Windows.Forms.Button ixeButton;
+	public System.Windows.Forms.Button iysButton;
+	public System.Windows.Forms.Button iycButton;
+	public System.Windows.Forms.Button iyeButton;
+	public System.Windows.Forms.Button oysButton;
+	public System.Windows.Forms.Button oycButton;
+	public System.Windows.Forms.Button oyeButton;
 	public Label oyeLabel;
 	public Label oycLabel;
 	public Label oysLabel;
 	public Label iycLabel;
 	public Label iysLabel;
 	public SplitContainer splitContainer;
-	public Button lockResButton;
-	public Button yRangeButton;
-	public Button tRangeButton;
+	public System.Windows.Forms.Button lockResButton;
+	public System.Windows.Forms.Button yRangeButton;
+	public System.Windows.Forms.Button tRangeButton;
 	public Label fyLabel;
-	public Button oyRangeButton;
-	public Button buildButton;
-	public Button saveButton;
-	public Button loadButton;
+	public System.Windows.Forms.Button oyRangeButton;
+	public System.Windows.Forms.Button buildButton;
+	public System.Windows.Forms.Button saveButton;
+	public System.Windows.Forms.Button loadButton;
 	public System.Windows.Forms.ComboBox clipSelect;
+    public Label percentLabel;
+    public Button fysButton;
+    public Button fycButton;
+    public Button fyeButton;
 }

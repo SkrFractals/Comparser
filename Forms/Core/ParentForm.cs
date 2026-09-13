@@ -33,7 +33,23 @@ public partial class ParentForm : Form {
 	}
 	public Panel GetInnerPanel() => innerPanel;
 
-	/*private const int WM_GETMINMAXINFO = 0x0024;
+    protected override void WndProc(ref Message m) {
+        const int WM_MOUSEACTIVATE = 0x21;
+        const int MA_NOACTIVATE = 3;
+
+        if (m.Msg == WM_MOUSEACTIVATE) {
+            var control = FromHandle(m.HWnd);
+
+            if (control is Button) {
+                m.Result = (IntPtr)MA_NOACTIVATE;
+                return;
+            }
+        }
+
+        base.WndProc(ref m);
+    }
+
+    /*private const int WM_GETMINMAXINFO = 0x0024;
 
 	// Desired minimum client width, including your padding.
 	private const int MinimumClientWidth = 8;

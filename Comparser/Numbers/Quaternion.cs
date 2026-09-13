@@ -235,7 +235,10 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	}
 	// e ^ quaternion
 	public static Quaternion Exp(Quaternion q) {
-		double e = Math.Exp(q.R), v = ImMag(q); // v=sqrt(idot(q))
+		var e = Math.Exp(q.R);
+		if(double.IsNegativeInfinity(e))
+			return zero;
+		var v = ImMag(q); // v=sqrt(idot(q))
 		return v == 0 ? new Quaternion(e) : new Quaternion(e * Math.Cos(v), (e *= Math.Sin(v) / v) * q.I, e * q.J, e * q.K);
 	}
 	public static Quaternion operator ^(Quaternion a, Quaternion b) => Exp(Log(a) * b);

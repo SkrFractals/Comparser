@@ -96,7 +96,7 @@ public interface IPanel{
 			return null;
 		if (cachedParse && field.Exp != null && field.Text == field.Box.Text)
 			return field.Value = c.Eval(field.Exp, args);
-		field.Value = c.ParseEval(cancel ?? new CancellationTokenSource().Token, field.Text = field.Box.Text, 0, out field.Exp, out var colors, PrepareArgs(c, field, args));
+		field.Value = c.ParseEval(cancel ?? CancellationToken.None, field.Text = field.Box.Text, 0, out field.Exp, out var colors, PrepareArgs(c, field, args));
 		ComparserPanel.ApplyColors(colors, field.Box);
 		return field.Value;
 	}
@@ -104,7 +104,7 @@ public interface IPanel{
 		// TODO call re-eval together with expressionControl
 		if (c is null || cachedParse && field.Exp != null && field.Text == field.Box.Text)
 			return null;
-		field.Exp = c.Parse(cancel ?? new CancellationTokenSource().Token, field.Text = field.Box.Text, 0, out var colors, PrepareArgs(c, field, args));
+		field.Exp = c.Parse(cancel ?? CancellationToken.None, field.Text = field.Box.Text, 0, out var colors, PrepareArgs(c, field, args));
 		ComparserPanel.ApplyColors(colors, field.Box);
 		return field.Exp;
 	}
