@@ -310,7 +310,9 @@ Example: a:"sin";print:a(pi/2); /* prints a(pi/2) = 1
 3. Dynamic: _\<variableString\>\<expressionArgument\>_  
 Multiplying a string that matches any default or user function with any value on its right will virtually call that function on that value.
 You can write parentheses for visual resemblance, but it's really an overload of multiplication for strings, so it can also use operator-less multiply.
-Example: twoXsevenY(x,y):2x+7y;a:"twoXsevenY";b(d,x):dx;print:b(a,1,2); /* prints b(a,1,2) = 16  
+Examples:
+twoXsevenY(x,y):2x+7y;a:"twoXsevenY";b(d,x):dx;print:b(a,1,2); /* prints b(a,1,2) = 16
+("sqrt","sqr","frac")(4,2,2.3) = 2, 4, 0.3
   
 ### <img width="15" height="16" alt="image" src="https://github.com/user-attachments/assets/ccd3a95b-4097-4d64-9cf3-387d063e62af" />Comments:  
 /* comments are in between these, and are completely ignored by the parser's logic, unless they are inside strings. */  
