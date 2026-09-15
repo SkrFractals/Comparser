@@ -1,6 +1,7 @@
 ﻿using Comparser.Comparser.Numbers;
 using Comparser.Forms;
 using System.Drawing.Imaging;
+using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
 public enum PlotMode : byte {
 	XFill, // X -> Fill Y
@@ -32,7 +33,7 @@ public interface IPlot {
 	public void SetLockRes(bool l);
 	public int GetPercent();
 }
-public abstract partial class Comparser<T>{
+public /*abstract*/  partial class Comparser/*<T>*/{
 	public partial class Plot : IPlot {
 		public void LockRangeX(bool l) => LockedRangeX = l;
 		public void LockRangeY(bool l) => LockedRangeY = l;
@@ -66,27 +67,27 @@ public abstract partial class Comparser<T>{
 					_args = new Value[tasks];
 				for(int t = 0; t< tasks; ++t)
 					_args[t] = new([
-						new(T.nan, FailReason.Success, "v"),
-						new(T.nan, FailReason.Success, "c"),
-						new(T.nan, FailReason.Success, "z"),
-						new(T.nan, FailReason.Success, "t"),
-						new(T.nan, FailReason.Success, "x"),
-						new(T.nan, FailReason.Success, "y"),
-						new(T.nan, FailReason.Success, "f"),
-						new(T.MakeR(w), FailReason.Success, "w"),
-						new(T.MakeR(h), FailReason.Success, "h"),
-						new(T.MakeR(l), FailReason.Success, "l")
+						new(nan, FailReason.Success, "v"),
+						new(nan, FailReason.Success, "c"),
+						new(nan, FailReason.Success, "z"),
+						new(nan, FailReason.Success, "t"),
+						new(nan, FailReason.Success, "x"),
+						new(nan, FailReason.Success, "y"),
+						new(nan, FailReason.Success, "f"),
+						new((Real)(w), FailReason.Success, "w"),
+						new((Real)(h), FailReason.Success, "h"),
+						new((Real)(l), FailReason.Success, "l")
 					]);
 			}
-			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, T z, T t, double x, double y, double f, int taskIndex) {
+			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, ILeaf z, ILeaf t, double x, double y, double f, int taskIndex) {
 				var args = _args[taskIndex];
 				args.Values[0].Values = [value ?? new()];
-				args.Values[1].Values = [new(T.MakeR(c.r)), new(T.MakeR(c.g)), new(T.MakeR(c.b))];
+				args.Values[1].Values = [new((Real)(c.r)), new((Real)(c.g)), new((Real)(c.b))];
 				args.Values[2].Leaf = z;
 				args.Values[3].Leaf = t;
-				args.Values[4].Leaf = T.MakeR(x);
-				args.Values[5].Leaf = T.MakeR(y);
-				args.Values[6].Leaf = T.MakeR(f);
+				args.Values[4].Leaf = (Real)x;
+				args.Values[5].Leaf = (Real)y;
+				args.Values[6].Leaf = (Real)f;
 				var rgb = ColorCodeRgb?.Eval(0, args, taskIndex == 0);
 				if (rgb is null)
 					return (0,0,0);
@@ -98,7 +99,7 @@ public abstract partial class Comparser<T>{
 					return (0,0,0);
 				var light = Get(0);
 				return (light, light, light);
-				double Get(int i) => Clip switch { 0 => Math.Clamp(T.Re(rgb.Values[i].GetLeaf()), 0, 1), 1 => Loop(T.Re(rgb.Values[i].GetLeaf())), _ => T.Re(rgb.Values[i].GetLeaf()) };
+				double Get(int i) => Clip switch { 0 => Math.Clamp(rgb.Values[i].Re(), 0, 1), 1 => Loop(rgb.Values[i].Re()), _ => rgb.Values[i].Re() };
 				double Loop(double i) => Static.Cycle(i);
 				//byte Get(int i) => (byte)Math.Clamp(255 * T.Re(rgb.Values[i].GetLeaf()), 0, 255);
 			}
@@ -127,16 +128,16 @@ public abstract partial class Comparser<T>{
 		public int Frame;
 		public int SelectedOutput = -1;
 		public bool LockedRangeX = true, LockedRangeY = true, LockedRangeO = true, LockedRangeT = true, LockedRes;
-		public readonly Comparser<T> Context;
+		public readonly Comparser/*<T>*/ Context;
 		//private Bitmap _bmp = new(1,1);
 		private Color[] _linesX = [], _linesY = [], _linesO = [], _linesT = [];
 		//private bool _dirtyX = true, _dirtyXy = true, _dirtyRgb = true;
 		private readonly IPlotAxis[] _axis;
-		public Plot(Comparser<T> context) {
-			_axis = [InputX = new(context, T.zero, T.unit, 1),
-				InputY = new(context, T.zero, T.one - T.unit, 1),
-				InputT = new(context, T.zero, T.unit, 1),
-				OutputY = new(context, T.zero, T.unit, 1)];
+		public Plot(Comparser/*<T>*/ context) {
+			_axis = [InputX = new(context, zero, unit, 1),
+				InputY = new(context, zero, one - unit, 1),
+				InputT = new(context, zero, unit, 1),
+				OutputY = new(context, zero, unit, 1)];
 			OutputR = [];
 			Context = context;
 			//Eval = [new(Context = comparser, "x!")];
@@ -146,7 +147,7 @@ public abstract partial class Comparser<T>{
 		public int GetPercent() {
 			int done = 0, total = 0;
 			foreach (var o in OutputR) {
-				done += o.Eval.GetPercent();
+				done += o.Eval?.GetPercent() ?? 0;
 				++total;
 			}
 			total = (total + 1) * InputY.length;
@@ -180,11 +181,11 @@ public abstract partial class Comparser<T>{
 			_dirty |= ResizeDim(LockedRangeT, l, ref _linesT, InputT);
 			return;
 
-			T NewBounds(PlotAxis a) => a.Locked switch { 0 => a.start, 2 => a.end, _ => a.center };
-			void Adjust(PlotAxis a, T sce) {
+			ILeaf NewBounds(PlotAxis a) => a.Locked switch { 0 => a.start, 2 => a.end, _ => a.center };
+			void Adjust(PlotAxis a, ILeaf sce) {
 				var locked = a.Locked;
 				a.Locked = -1; // do it in left align mode for simplicity
-				a.start = locked switch { 0 => sce, 2 => sce - a.d * a.length, _ => sce - .5 * a.d * a.length };
+				a.start = locked switch { 0 => sce, 2 => Sub(sce, Mul(a.d, (Real)a.length)), _ => Sub(sce, Mul((Real)(a.length >> 1), a.d))  };
 				a.Locked = locked; // and switch back to whatever mode we were in
 			}
 
@@ -193,7 +194,7 @@ public abstract partial class Comparser<T>{
 				if (locked) {
 					if (R(ref lines))
 						return false;
-					a.d *= (double)p / size;
+					a.d = Mul(a.d, (Real)((double)p / size));
 				} else {
 					var b = NewBounds(a);
 					if (R(ref lines))
@@ -315,7 +316,7 @@ public abstract partial class Comparser<T>{
 								 // prepare axis lines and plot values if they are dirty
 			if (InputX.DirtyL)
 				Lines(InputX, _linesX);
-			int tasks = SettingsPanel.Tasks, chunks = tasks <= 1 ? 1 : 16;
+			int tasks = SettingsPanel.Tasks, chunks = tasks <= 1 ? 1 : 8;
 			if (percent.Length != tasks) percent = new int[tasks];
 			else
 				for (int task = 0; task < tasks; ++task)
@@ -397,7 +398,7 @@ public abstract partial class Comparser<T>{
 								for (int x = 0, intPtr = 0; x < bw; ++x, ++intPtr, p += 3) {
 									if (cancel.IsCancellationRequested)
 										break;
-									var z = InputX.Sample(x) + yz;
+									var z = Add(InputX.Sample(x), yz);
 									var rgbc = Max(_linesX[x], yColor);
 									(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
 									//T v;
@@ -413,7 +414,7 @@ public abstract partial class Comparser<T>{
 										foreach (var o in OutputR)
 											if (!(o.Eval?.Null() ?? true))
 												foreach (var prevV in o.Values[intPtr].GetValues())
-													if ((y < OutputY.ValueToScreen(T.zero)) == (OutputY.ValueToScreen(prevV.GetLeaf()) < y))
+													if ((y < OutputY.ValueToScreen(zero)) == (OutputY.ValueToScreen(prevV.GetLeaf()) < y))
 														c = o.ProcessColor(prevV, c, z, t, x, y, Frame, taskIndex);
 									(p[2], p[1], p[0]) = GetRgb(c);
 								}
@@ -442,7 +443,7 @@ public abstract partial class Comparser<T>{
 								for (var x = 0; x < bw; ++x, ++intPtr, p += 3) {
 									if (cancel.IsCancellationRequested)
 										break;
-									var z = InputX.Sample(x) + yz2;
+									var z = Add(InputX.Sample(x), yz2);
 									var rgbc = Max(_linesX[x], yColor);
 									(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
 									foreach (var o in OutputR)
@@ -475,9 +476,9 @@ public abstract partial class Comparser<T>{
 			return work;
 			Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
 		}
-		public static int ValueToScreenLin(T value, T start, T d) => (int)(T.Re(~d * (value - start))/+d);//length * T.D2(value - start, end - start, Static.Div);
-		public static T ScreenToValueLin(int x, T start, T d) => start + x * d;//INumber<T>.Lerp(start, end, new((double)x / length));
-		public static int ValueToScreenLog(T value, T start, T d) => ValueToScreenLin(T.D1(value, Math.Log), start, d);//length * ((T.D1(value, Math.Log) - start) / (end - start));
-		public static T ScreenToValueLog(int x, T start, T d) => T.D1(ScreenToValueLin(x, start, d),Math.Exp); //T.D1(ScreenToValueLin(length, x, start, end), Math.Exp);
+		public static int ValueToScreenLin(ILeaf value, ILeaf start, ILeaf d) => (int)Div(Sub(value, start), d).Re();//length * ILeaf.D2(value - start, end - start, Static.Div);
+		public static ILeaf ScreenToValueLin(int x, ILeaf start, ILeaf d) => Add(start, Mul((Real)x, d));//INumber<ILeaf>.Lerp(start, end, new((double)x / length));
+		public static int ValueToScreenLog(ILeaf value, ILeaf start, ILeaf d) => ValueToScreenLin(D1(value, Math.Log), start, d);//length * ((ILeaf.D1(value, Math.Log) - start) / (end - start));
+		public static ILeaf ScreenToValueLog(int x, ILeaf start, ILeaf d) => D1(ScreenToValueLin(x, start, d),Math.Exp); //ILeaf.D1(ScreenToValueLin(length, x, start, end), Math.Exp);
 	}
 }

@@ -1,8 +1,8 @@
 ﻿using Comparser.Comparser.Numbers;
 namespace Comparser.Comparser;
-public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
+public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T>*/{
 	public partial class GpuValue {
-		private readonly T _leaf = T.nan; // just a complex value sitting here as the tree's leaf.
+		private readonly ILeaf _leaf = nan; // just a complex value sitting here as the tree's leaf.
 		public readonly GpuValue[] Values = []; // Children tree links. For example if I am 1+2x, I will have an OpCode.Add, and Values=[GpuValue(OpCode.Constant, Leaf=1),GpuValue(OpCode.Mul, [GpuValue(OpCode.Constant,2),GpuValue(OpCode.Argument,[0])])]
 		public Expression? Operand;
 		private OpCode _op = OpCode.Nop; // OpCode that will get applied to my Values
@@ -22,7 +22,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			Values = [value];
 			_def = def;
 		}
-		public GpuValue(T value) {
+		public GpuValue(ILeaf value) {
 			_leaf = value;
 			_op = OpCode.Leaf;
 		}
@@ -31,6 +31,6 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			_arg = arg;
 			_op = OpCode.Argument;
 		}
-		private bool IsNaN() => T.IsNaN(_leaf);
+		private bool IsNaN() => _leaf.IsNaN();
 	}
 }

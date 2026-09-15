@@ -1,3 +1,46 @@
+public static ILeaf/*<T>*/ Add(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real/*<T>*/)a + (Real/*<T>*/)b,
+		NumericKind.Complex => (Complex/*<T>*/)a + (Complex/*<T>*/)b,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)a + (Quaternion/*<T>*/)b,
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Sub(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real/*<T>*/)a - (Real/*<T>*/)b,
+		NumericKind.Complex => (Complex/*<T>*/)a - (Complex/*<T>*/)b,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)a - (Quaternion/*<T>*/)b,
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Mul(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real/*<T>*/)a * (Real/*<T>*/)b,
+		NumericKind.Complex => (Complex/*<T>*/)a * (Complex/*<T>*/)b,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)a * (Quaternion/*<T>*/)b,
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Div(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real/*<T>*/)a / (Real/*<T>*/)b,
+		NumericKind.Complex => (Complex/*<T>*/)a / (Complex/*<T>*/)b,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)a / (Quaternion/*<T>*/)b,
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ LDiv(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => Real/*<T>*/.LDiv((Real/*<T>*/)a, (Real/*<T>*/)b),
+		NumericKind.Complex =>  Complex/*<T>*/.LDiv((Complex/*<T>*/)a, (Complex/*<T>*/)b),
+		NumericKind.Quaternion =>  Quaternion/*<T>*/.LDiv((Quaternion/*<T>*/)a, (Quaternion/*<T>*/)b),
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Mod(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real/*<T>*/)a % (Real/*<T>*/)b,
+		NumericKind.Complex => (Complex/*<T>*/)a % (Complex/*<T>*/)b,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)a % (Quaternion/*<T>*/)b,
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Pow(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => a.Re() < 0 ? (Complex/*<T>*/)a ^ (Complex/*<T>*/)b : (Real/*<T>*/)a ^ (Real/*<T>*/)b,
+		NumericKind.Complex => (Complex/*<T>*/)a ^ (Complex/*<T>*/)b,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)a ^ (Quaternion/*<T>*/)b,
+		_ => Real/*<T>*/.nan
+	};
+
 /*public void SetValue(T value) {
 			Values = [];
 			Value = value;

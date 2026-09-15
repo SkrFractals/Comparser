@@ -1,4 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
+using static Comparser.Comparser.Numbers.ILeaf;
 using static Comparser.Forms.PlotPanel;
 namespace Comparser.Comparser;
 public interface IPlotAxis {
@@ -9,49 +10,49 @@ public interface IPlotAxis {
 	public void SetL(int l);
 	//public string SetLog(bool l);
 	public SceState SetLength(int l);
-	public void SetLockRange(bool l); // TODO make control
+	public void SetLockRange(bool l); // ILeaf/*<T>*/ODO make control
 	public SceState GetSce();
 	
 }
-public abstract partial class Comparser<T>{
+public /*abstract*/  partial class Comparser/*<T>*/{
 	public partial class Plot {
-		public class PlotAxis(Comparser<T> c, T initStart, T initStep, int initLength = 0) : IPlotAxis {
+		public class PlotAxis(Comparser/*<T>*/ c, ILeaf/*<T>*/ initStart, ILeaf/*<T>*/ initStep, int initLength = 0) : IPlotAxis {
 
 			public PlotAxis(PlotAxis copy) : this(copy._context, copy.start, copy.d, copy.length) { }
 
-            private Comparser<T> _context = c;
+            private readonly Comparser/*<T>*/ _context = c;
 			public void SetL(int l) => Locked = l;
 
 			public (string c, string e) SetS(object? v) {
 				//if (_lc && _le)
 				//	return GetCe();
-				T t;
-				if (v is Value vs && !T.IsNaN(t=vs.GetLeaf()))
+				ILeaf/*<T>*/ t;
+				if (v is Value vs && !(t = vs.GetLeaf()).IsNaN())
 					start = t;
 				return GetCe();
 			}
 			public (string s, string e) SetC(object? v) {
 				//if (_ls && _le)
 				//	return GetSe();
-				T t;
-				if (v is Value vc && !T.IsNaN(t=vc.GetLeaf()))
+				ILeaf/*<T>*/ t;
+				if (v is Value vc && !(t = vc.GetLeaf()).IsNaN())
 					center = t;
 				return GetSe();
 			}
 			public (string s, string c) SetE(object? v) {
 				//if (_ls && _lc)
 				//	return GetSc();
-				T t;
-				if (v is Value ve && !T.IsNaN(t=ve.GetLeaf()))
+				ILeaf/*<T>*/ t;
+				if (v is Value ve && !(t = ve.GetLeaf()).IsNaN())
 					end = t;
 				return GetSc();
 			}
 			public void SetSce(object? s, object? e) {
 				Locked = 0; // do not restore, lock restoration is called right after this
-				T t;
-				if (s is Value vs && !T.IsNaN(t=vs.GetLeaf()))
+				ILeaf/*<T>*/ t;
+				if (s is Value vs && !(t = vs.GetLeaf()).IsNaN())
 					start = t;
-				if (e is Value ve && !T.IsNaN(t=ve.GetLeaf()))
+				if (e is Value ve && !(t = ve.GetLeaf()).IsNaN())
 					start = t;
 			}
 			//public string SetLog(bool l);
@@ -61,7 +62,7 @@ public abstract partial class Comparser<T>{
 				end = prevE;
 				return GetSce();
 			}
-			public void SetLockRange(bool l) => LockRange = l;
+			public void SetLockRange(bool l) => _lockRange = l;
 			public SceState GetSce() => new(start.ToString(_context.Decimals), center.ToString(_context.Decimals), end.ToString(_context.Decimals), Locked);
 			private (string c, string e) GetCe() => (center.ToString(_context.Decimals), end.ToString(_context.Decimals));
 			private (string s, string e) GetSe() => (start.ToString(_context.Decimals), end.ToString(_context.Decimals));
@@ -75,75 +76,75 @@ public abstract partial class Comparser<T>{
 					if (field == (field = value))
 						return;
 					DirtyL = true;
-					Sv = value ? ScreenToValueLog : ScreenToValueLin;
+					Sv = value ? ScreenIToValueLog : ScreenToValueLin;
 					Vs = value ? ValueToScreenLog : ValueToScreenLin;
 				}
 			} = initLog;*/
-			public bool LockRange;
-			public T start
+			private bool _lockRange;
+			public ILeaf/*<T>*/ start
 			{
 				get;
 				set
 				{
 					var prevCenter = center;
 					var prevEnd = end;
-					if (T.AreEqual(field, field = value)) return;
+					if (field == (field = value)) return;
 					switch (Locked) {
-						case 1: d = 2 * (prevCenter - value) / length;break;
-						case 2: d = (prevEnd - value) / length; break;
+						case 1: d = Mul((Real)(2.0 / length), Sub(prevCenter, value)); break;
+						case 2: d = Div(Sub(prevEnd, value), (Real)length); break;
 					}
 					DirtyL = true;
 				}
 			} = initStart; // how many steps from 0 to the left/top edge?
-			public T d
+			public ILeaf/*<T>*/ d
 			{
 				get;
 				set
 				{
-					if (T.AreEqual(field, field = value)) return;
+					if (field == (field = value)) return;
 					DirtyL = true;
 				}
-			} = initStep; // how much T space will one pixel to the right move?
-			public T Sample(double i) => start + i * d; // right/bottom edge in T space
-			public T size => length * d;
-			public T center
+			} = initStep; // how much ILeaf/*<T>*/ space will one pixel to the right move?
+			public ILeaf/*<T>*/ Sample(double i) => Add(start, Mul((Real)i, d)); // right/bottom edge in ILeaf/*<T>*/ space
+			public ILeaf/*<T>*/ size => Mul((Real)length, d);
+			public ILeaf/*<T>*/ center
 			{
-				get => (start + end) / 2; // right/bottom edge in T space
-				set {
-					T n;
+				get => Div(Add(start, end), (Real)2); // right/bottom edge in ILeaf/*<T>*/ space
+				private set {
+					ILeaf/*<T>*/ n;
 					switch (Locked) {
 						case 0:
-							n = 2 * (value - start) / length;
-							if (T.AreEqual(d, n)) return;
+							n = Mul((Real)(2.0 / length), Sub(value, start));
+							if (d == n) return;
 							d = n;
 							return;
-						case 2: n = 2 * value - end;  /*n = 2 * (end - value);*/ break;
-						default: n = start + value - center; /*n = value - .5 * length * d;*/ break;
+						case 2: n = Sub(Mul((Real)2, value), end);  /*n = 2 * (end - value);*/ break;
+						default: n = Sub(Add(start, value), center); /*n = value - .5 * length * d;*/ break;
 					}
-					if (T.AreEqual(start, n)) return;
+					if (start == n) return;
 					start = n;
 				}
 			}
-			public T end
+			public ILeaf/*<T>*/ end
 			{
-				get => Sample(length); // right/bottom edge in T space
-				set {
-					T n;
+				get => Sample(length); // right/bottom edge in ILeaf/*<T>*/ space
+				private set {
+					ILeaf/*<T>*/ n;
 					switch (Locked) {
 						case 0:
-							n = (value - start) / length;
-							if (T.AreEqual(d, n)) return;
+							n = Div(Sub(value, start), (Real)length);
+							if (d == n) return;
 							d = n;
 							return;
-						case 1: n = 2 * center - value;/*value - .5 * length * d;*/break;
-						default:/* n = value - d * length; */n = start + value - end; break;
+						case 1: n = Sub(Mul((Real)2, center), value);/*value - .5 * length * d;*/break;
+						default:/* n = value - d * length; */n = Sub(Add(start, value), end); break;
 					}
-					if (T.AreEqual(start, n)) return;
+					if (start == n) return;
 					start = n;
 				} 
 			}
-			public Func<int, T, T, T> Sv = ScreenToValueLin;//initLog ? ScreenToValueLog : ScreenToValueLin;
-			public Func<T, T, T, int> Vs = ValueToScreenLin;//initLog ? ValueToScreenLog : ValueToScreenLin;
+			public readonly Func<int, ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/> Sv = ScreenToValueLin;//initLog ? ScreenIToValueLog : ScreenILeaf/*<T>*/oValueLin;
+			public readonly Func<ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/, int> Vs = ValueToScreenLin;//initLog ? ValueILeaf/*<T>*/oScreenLog : ValueILeaf/*<T>*/oScreenLin;
 			public int length
 			{
 				get;
@@ -163,57 +164,57 @@ public abstract partial class Comparser<T>{
 					Lin(start, end);
 					return field;
 				
-				void Lin(T lStart, T lEnd) { 
+				void Lin(ILeaf/*<T>*/ lStart, ILeaf/*<T>*/ lEnd) { 
 					field = new Color[length];
-					return; // TODO this
-					(lStart, lEnd) = (T.D2(lStart, lEnd, Math.Min), T.D2(lStart, lEnd, Math.Max));
-					var h = Lc(lEnd - lStart);
+					return; // ILeaf/*<T>*/ODO this
+					(lStart, lEnd) = (ILeaf/*<T>*/.D2(lStart, lEnd, Math.Min), ILeaf/*<T>*/.D2(lStart, lEnd, Math.Max));
+					var h = Lc(Sub(lEnd, lStart));
 					//if (lEnd.Equals(lStart)) return;
-					var mod = T.D1(lEnd - lStart, (x) => Math.Log(Math.Abs(x)) / Math.Log(divBase) % 1); 
+					var mod = ILeaf/*<T>*/.D1(Sub(lEnd, lStart), x => Math.Log(Math.Abs(x)) / Math.Log(divBase) % 1); 
 					byte divided = 64;
-					var lineB = new T[4];
-					lineB[0] = divided * (1 - mod);
+					var lineB = new ILeaf/*<T>*/[4];
+					lineB[0] = Mul((Real)divided, Sub((Real)1, mod));
 					for (int i = 1; i < lineB.Length - 2; ++i)
-						lineB[i] = (divided >>= 1) * (1 + mod);
-					lineB[^2] = T.one * divided;
-					lineB[^1] = mod * divided;
-					for (byte b = 0; b < lineB.Length; ++b, h /= 10) {
-						T fs = T.Floor(lStart / h), fe = T.Floor(lEnd / h);
-						for (int i = (int)T.Mix(fs, Math.Min), e = (int)T.Mix(fe, Math.Max); i <= e; ++i)
-							T.IndexAndAddToRgb(field, T.Floor( length * T.D2(i * h - start, end - start, Static.Div)), lineB[b]);
+						lineB[i] = Mul((Real)(divided >>= 1), Add((Real)1, mod));
+					lineB[^2] = Mul(one, (Real)divided);
+					lineB[^1] = Mul(mod, (Real)divided);
+					for (byte b = 0; b < lineB.Length; ++b, h = Div(h, (Real)10)) {
+						ILeaf/*<T>*/ fs = Floor(Div(lStart, h)), fe = Floor(Div(lEnd, h));
+						for (int i = (int)ILeaf/*<T>*/.Mix(fs, Math.Min), e = (int)ILeaf.Mix(fe, Math.Max); i <= e; ++i)
+							ILeaf/*<T>*/.IndexAndAddToRgb(field, Floor(Mul((Real)length, D2(Sub(Mul((Real)i, h), start), Sub(end, start), Static.Div))), lineB[b]);
 					}
 				}
-				T Lc(T c) => T.D1(c, (x) => Math.Round(Math.Pow(divBase, Math.Floor(Math.Log(Math.Abs(x)) / Math.Log(divBase)))));
+				ILeaf/*<T>*/ Lc(ILeaf/*<T>*/ c) => ILeaf/*<T>*/.D1(c, (x) => Math.Round(Math.Pow(divBase, Math.Floor(Math.Log(Math.Abs(x)) / Math.Log(divBase)))));
 				}
 			} = []; // plot lines
 			/*public bool Adjust(double zoomOut) { // called when resizing the window and not lock ranged, returns if it happened, when it does, it should keep the memory inside
 				if (LockRange) return false;
-				// TODO change to step/start and calculate memory (the eval should remember its last start/shift/x/y and then look at the new ones and figure out which pixels are reused (move them and then reeval the rest))
-				T c = center, diff = start - c;
+				// TODO change to step/start and calculate memory (the eval should remember its last start/shift/x/y and then look at the new ones and figure out which pixels are reused (move them and then re-eval the rest))
+				ILeaf c = center, diff = start - c;
 				d *= zoomOut;
 				start = c + diff * zoomOut;
 				//_dirtyR = true;
 				return true;
 			}*/
 			public bool Zoom(int c, double zoomSize) {
-				if (LockRange) return false;
+				if (_lockRange) return false;
 				var l = Locked; // temporarily disable pinning, so that moving start will only translate the image
 				Locked = -1;
-				start = INumber<T>.Lerp(start, end, (double)c / length) - c * (d *= zoomSize);
+				start = Sub(Lerp(start, end, (double)c / length), Mul((Real)c, d = Mul(d,(Real)zoomSize)));
 				Locked = l;
 				return true;//_dirtyR = true;
 			}
 			public bool Shift(int pixels) {
-				if (LockRange) return false;
+				if (_lockRange) return false;
 				var l = Locked; // temporarily disable pinning, so that moving start will only translate the image
 				Locked = -1;
-				start += pixels * d;
+				start = Add(start, Mul((Real)pixels, d));
 				Locked = l;
 				return true;
 			}
 
-			public int ValueToScreen(T v) => Vs(v, start, d);
-			public T ScreenToValue(int x) => Sv(x, start, d);
+			public int ValueToScreen(ILeaf/*<T>*/ v) => Vs(v, start, d);
+			public ILeaf ScreenToValue(int x) => Sv(x, start, d);
 		}
 	}
 }

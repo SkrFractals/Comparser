@@ -1,13 +1,121 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Numerics;
 using System.Runtime.CompilerServices;
+namespace Comparser.Comparser.Numbers;
+public interface IScalar<T> where T : unmanaged, IComparable<double>, IComparable, IConvertible, ISpanFormattable, IBinaryFloatingPointIeee754<double>, IMinMaxValue<double> {
+	public static double unit => 1;
+	public static double zero => 0;
+	public static double one => 1;
+	public static double half => .5;
+	public static double tau => Math.Tau;
+	public static double pi => Math.PI;
+	public static double nan => double.NaN;
+	public static double infty => double.PositiveInfinity;
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double ToDouble(double t) => t;
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Sqrt(double t) => T.Sqrt(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Truncate(double t) => T.Truncate(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Floor(double t) => T.Floor(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Round(double t) => T.Round(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Ceiling(double t)  => T.Ceiling(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Cycle(double t) => Static.Cycle(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Abs(double t) => T.Abs(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Cos(double t)  => T.Cos(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Sin(double t)   => T.Sin(t);
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double CopySign(double t)  => T.Sign(t);
+	
+	
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Mod(double a, double b) => a % b;
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public static double Atan2(double a, double b) => T.Atan2(a, b);
+
+}
+/*
 using static Comparser.Comparser.Numbers.Static;
 
 namespace Comparser.Comparser.Numbers;
-/*public interface IScalarOf<T,S> where T : unmanaged, INumber<T> where S : unmanaged {
+public interface IScalar<T> where T : unmanaged, IScalar<T> {
+	public static abstract bool Is0(T r);
+	public static abstract bool IsNaN(T r);
+	public static abstract bool IsTrue(T t);
+	public static abstract bool IsFalse(T t);
+	public static abstract double ToDouble(T t);
+	
+	public static abstract T MakeR(double r);
+	public static abstract T one { get; }
+	public static abstract T zero { get; }
+	public static abstract T nan { get; }
+	public static T unit => T.MakeR(1);
+	public static T infinity => T.MakeR(double.PositiveInfinity);
+	public static T tau => T.MakeR(Math.Tau);
+	public static T pi => T.MakeR(Math.PI);
+	public static T e => T.MakeR(Math.E);
+	public static T gamma => T.MakeR(Static.gamma);
+	public static T phi => T.MakeR(Phi);
+	public static T half => T.MakeR(.5);
+	public static T ln2 => T.MakeR(Ln2);
+	public static T ln10 => T.MakeR(Ln10);
+	public static T sqrt2 => T.MakeR(Sqrt2);
+	public static T sqrt3 => T.MakeR(Sqrt3);
+	public static T sqrt5 => T.MakeR(Sqrt5);
+	public static T apery => T.MakeR(Static.apery);
+	public static T feigenbaum => T.MakeR(Static.feigenbaum);
+	public static T catalan => T.MakeR(Static.catalan);
+	
+	
+	public static abstract T operator -(T a);
+	public static abstract T operator +(T a, T b);
+	public static abstract T operator -(T a, T b);
+	public static abstract T operator *(T a, T b);
+	public static abstract T operator /(T a, T b);
+	public static abstract T operator %(T a, T b);
+	public static abstract T operator +(T a, double b);
+	public static abstract T operator -(T a, double b);
+	public static abstract T operator *(T a, double b);
+	public static abstract T operator /(T a, double b);
+	public static abstract T operator %(T a, double b);
+	public static abstract T operator +(double a, T b);
+	public static abstract T operator -(double a, T b);
+	public static abstract T operator *(double a, T b);
+	public static abstract T operator /(double a, T b);
+	public static abstract T operator %(double a, T b);
+	
+	public static abstract bool operator <(T a, T b);
+	public static abstract bool operator >(T a, T b);
+	public static abstract bool operator <=(T a, T b);
+	public static abstract bool operator >=(T a, T b);
+	public static abstract bool operator ==(T a, T b);
+	public static abstract bool operator !=(T a, T b);
+
+	public static abstract T Sqrt(T t);
+	public static abstract T Trunc(T t);
+	public static abstract T Floor(T t);
+	public static abstract T Round(T t);
+	public static abstract T Ceil(T t);
+	public static abstract T Cycle(T t);
+	public static abstract T Abs(T t);
+	public static abstract T Cos(T t);
+	public static abstract T Sin(T t);
+	public static abstract T CopySign(T t);
+	
+	public static T Mod(T a, T b) => a % b;
+	
+	public static abstract T Atan2(T a, T b);
+}
+/*
 
 
-
-	#region Helpers
+#region Helpers
 	public static abstract S Mix(T t, Func<S, S, S> del);
 	public static abstract T D1(T a, Func<S, S> d);
 	public static abstract T D2(T a, T b, Func<S, S, S> d);

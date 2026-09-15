@@ -56,17 +56,25 @@ public static class Static {
 		return b;
 	}//1.0 / (1 + 1.0 / m);
 	
-	// bernouli numbers
+	// Bernoulli numbers
 	// B2[i]/(2(n+1))! ...for zeta euler
 	public static readonly double[] B2F;
 	// B2[i]/(4ii+6i+2) ...for gamma stirling
 	public static readonly double[] B2G;
 	public const double QTau = Math.Tau / 4;
-	
+
+	public static readonly double Phi = .5 + .5 * Math.Sqrt(5);
 	public static readonly double Ln10 = Math.Log(10);
 	public static readonly double Ln2 = Math.Log(2);
-	public static readonly double LnTh = Math.Log(Math.Tau) / 2;
-	public static readonly double LnTau = Math.Log(Math.Tau);
+	public static readonly double Sqrt2 = Math.Sqrt(2);
+	public static readonly double Sqrt3 = Math.Sqrt(3);
+	public static readonly double Sqrt5 = Math.Sqrt(5);
+	public static readonly double LnTh = .5 * Math.Log(Math.Tau);
+	//public static readonly double LnTau = Math.Log(Math.Tau);
+	public static readonly double Apery = 1.202056903159594285399738161511449990764986292; // Apery's constant
+	public static readonly double Feigenbaum = 4.669201609102990671853203820466; // Feigenbaum constant
+	public static readonly double Catalan = 0.915965594177219015054603514932384110774; // Catalan's constant
+	public static readonly double Gamma = 0.57721566490153286060651209008240243104215933593992; // Euler's constant
 	// gamma_n / n!
 	public const double G1 = -0.0728158454836767248605863758749013191377363383; // gamma1
 	public const double G2 = -0.0096903631928723184845303860352125293590658061 / 2; // gamma2 / 2!
@@ -87,24 +95,27 @@ public static class Static {
 	/// <summary>
 	/// turns hsv into rgb color
 	/// </summary>
-	/// <param name="h">0-1 hue</param>
-	/// <param name="s">0-1 saturation</param>
-	/// <param name="v">0-1 value</param>
+	/// <param name="x">0-1 hue, 0-1 saturation, 0-1 value</param>
 	/// <returns></returns>
-	public static (double r, double g, double b) Hsv2rgb((double h, double s, double v) x) {
+	public static (double r, double g, double b) Hsv2Rgb((double h, double s, double v) x) {
 		if (x.s <= 0)
 			return (x.v, x.v, x.v);
 		var i = (int)Math.Truncate(x.h = Cycle(x.h) * 6);
 		double f = x.h - i, p = x.v * (1.0 - x.s), q = x.v * (1.0 - x.s * f), t = x.v * (1.0 - x.s * (1.0 - f));
 		return i switch { 0 => (x.v, t, p), 1 => (q, x.v, p), 2 => (p, x.v, t), 3 => (p, q, x.v), 4 => (t, p, x.v), _ => (x.v, p, q) };
 	}
-	public static (double h, double s, double v) Rgb2hsv((double r, double g, double b) x) {
+	/// <summary>
+	/// turns rgb into hsv color
+	/// </summary>
+	/// <param name="x">0-1 red, 0-1 green, 0-1 blue</param>
+	/// <returns></returns>
+	public static (double h, double s, double v) Rgb2Hsv((double r, double g, double b) x) {
 		(double min, double max) = x.r < x.g
 			? x.r < x.b ? (x.r, Math.Max(x.g, x.b)) : (x.b, Math.Max(x.r, x.g))
 			: x.g < x.b ? (x.g, Math.Max(x.r, x.b)) : (x.b, Math.Max(x.r, x.g));
 		double delta = max - min, s = max == 0.0 ? 0.0 : delta / max;
 		if (delta == 0)	return (0, s, max);
-		double h = (max == x.r ? ((x.g - x.b) / delta) % 6 : max == x.g ? ((x.b - x.r) / delta) + 2 : ((x.r - x.g) / delta) + 4) / 6;
+		double h = (Math.Abs(max - x.r) < 1e-6 ? (x.g - x.b) / delta % 6 : Math.Abs(max - x.g) < 1e-6 ? ((x.b - x.r) / delta) + 2 : ((x.r - x.g) / delta) + 4) / 6;
 		return (h < 0 ? 1 + h : h, s, max);
 	}
 	public static string _i(string i, string c) => i is "1" or "-1" ? c : i + c; // redundant part of I.ToString
@@ -185,16 +196,17 @@ public static class Static {
 	public static double Sqr(double x) => x * x;
 	public static double Lerp(double a, double b, double t) => a * (1 - t) + b * t;
 	#endregion
-	public static readonly TimeSpan SleepyTime = TimeSpan.FromSeconds(1/20.0);
-	public static string[] Errors = ["", "NaN", "Stack Overflow", "Bad Expression", "Unexpected"];
+
+	private static readonly TimeSpan SleepyTime = TimeSpan.FromSeconds(1/20.0);
+	public static readonly string[] Errors = ["", "NaN", "Stack Overflow", "Bad Expression", "Unexpected"];
 	public static void TaskManager(Task[] taskArr, int tasks, int chunks, int total, CancellationToken cancel, Action<float, float, int> run) {
 		int task = 0;
 		if (taskArr.Length != tasks) taskArr = new Task[tasks]; // allocate array if it doesn't exist yet, or has the wrong size
 		for (float t = 0, dr = (float)total / (chunks * tasks); task < tasks; t += dr) // split into 8 chunks, each split into threads, so that easy and hard lines get split evenly
 		{
 			float tt = t;
-			int ttask = task++;
-			taskArr[ttask] = Task.Run(() => run(tt,dr,ttask), cancel); // run the tasks and give them row chunks to process
+			int tTask = task++;
+			taskArr[tTask] = Task.Run(() => run(tt,dr,tTask), cancel); // run the tasks and give them row chunks to process
 		}
 		// wait for tasks to finish:
 		for (var done = 0; done < tasks; Thread.Sleep(Static.SleepyTime))

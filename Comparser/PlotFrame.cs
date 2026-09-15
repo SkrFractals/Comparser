@@ -1,18 +1,16 @@
 ﻿using Comparser.Comparser.Numbers;
 using Comparser.Forms;
+using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
-public abstract partial class Comparser<T> {
+public /*abstract*/  partial class Comparser/*<T>*/ {
 	
 	public partial class PlotEval {
 		public class PlotFrame(bool centerPixels = true) {
 			// z = coordinate Z input, t = coordinate TIME input, x = screen space x, y = screenspace y, f = frame, w = screen width, h = screen height, l = frame count 
-			//Value args = new([new(T.nan, 0, "z"), new(T.nan, 0, "t"), new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "f"), new(T.nan, 0, "w"), new(T.nan, 0, "h"), new(T.nan, 0, "l")]);
-			private Value[] _args = [];// = new([new(T.nan, 0, "z"), new(T.nan, 0, "t")]);
-
-			public int Progress { get { var f = 0; foreach (var t in _taskProgress) f += t; return f; } }
+			//Value args = new([new(nan, 0, "z"), new(nan, 0, "t"), new(nan, 0, "x"), new(nan, 0, "y"), new(nan, 0, "f"), new(nan, 0, "w"), new(nan, 0, "h"), new(nan, 0, "l")]);
+			private Value[] _args = [];// = new([new(nan, 0, "z"), new(nan, 0, "t")]);
+			public int progressRows { get { var f = 0; foreach (var t in _taskProgress) f += t; return f; } }
 			private int[] _taskProgress = [];
-
-
             private readonly double _c = centerPixels ? .5 : 0;
 			private static Complex MapC((Complex s, Complex x, Complex y) a, int x, int y) => a.s + (x + .5) * a.x + (y + .5) * a.y;
 			private static Complex Map((Complex s, Complex x, Complex y) a, int x, int y) => a.s + x * a.x + y * a.y;
@@ -21,27 +19,24 @@ public abstract partial class Comparser<T> {
 			private static double MapClu((Complex s, Complex x, Complex y) a, int x) => a.s.R + x * a.x.R;
 			private static double MapClCv((Complex s, Complex x, Complex y) a, int y) => a.s.I + (y + .5) * a.y.I;
 			private static double MapClv((Complex s, Complex x, Complex y) a, int y) => a.s.I + y * a.y.I;
-			
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, double> _mapClU = centerPixels ? &MapClCu : &MapClu;
 			private readonly unsafe delegate*<(Complex, Complex, Complex), int, double> _mapClV = centerPixels ? &MapClCv : &MapClv;
 			private readonly unsafe delegate*<double, int> _rnd = centerPixels ? &Static.Floor : &Static.Round;
-			private T _mSx2 = T.nan, _mDx2 = T.nan, _mSy2 = T.nan, _mDy2 = T.nan, _t2 = T.nan; // ax.S, ax.d, ay.x, ay.d, frame
-			private T _mSx1 = T.nan, _mDx1 = T.nan, _mY1 = T.nan, _t1 = T.nan; // ax.S, ax.d, yC, frame
+			private ILeaf _mSx2 = nan, _mDx2 = nan, _mSy2 = nan, _mDy2 = nan, _t2 = nan; // ax.S, ax.d, ay.x, ay.d, frame
+			private ILeaf _mSx1 = nan, _mDx1 = nan, _mY1 = nan, _t1 = nan; // ax.S, ax.d, yC, frame
 			private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
-			private Task[] _taskArr = [];
-			public static void MakeArgs(int tasks, ref Value[] taskArr, ref int[] taskProgress) {
+			private readonly Task[] _taskArr = [];
+			private static void MakeArgs(int tasks, ref Value[] taskArr, ref int[] taskProgress) {
 				if (taskArr.Length < tasks) taskArr = new Value[tasks];
                 if (taskProgress.Length < tasks) taskProgress = new int[tasks];
-				for (int i = 0; i < tasks; ++i) {
-					taskArr[i] = new([new(T.nan, 0, "z"), new(T.nan, 0, "t")]);
-					taskProgress[i] = 0;
-				}
+				for (int i = 0; i < tasks; taskProgress[i++] = 0)
+					taskArr[i] = new([new(nan, 0, "z"), new(nan, 0, "t")]);
 			}
-			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
-				T aS = ax.start + ay.start, mSx, mSy, mDx, mDy = mDx = mSy = mSx = T.zero;
+			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
+				ILeaf aS = Add(ax.start, ay.start), mSx, mSy, mDx, mDy = mDx = mSy = mSx = zero;
 				int mLx = 0, mLy = 0; /*yw = 0;*/
-				if (+(at.Sample(frame) - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
+				if (SqrAbs(Sub(at.Sample(frame), _t2)) <= SqrAbs(at.d) * recallTolerance) // the time of this frame is within tolerance to the memorized time
 					(mSx, mDx, mLx, mSy, mDy, mLy) = (_mSx2, _mDx2, _mLx2, _mSy2, _mDy2, _mLy2);
 				(_plotXy, _memXy) = (_memXy, _plotXy); // swap mem
 				if (_plotXy.Length != (_mLx2 = ax.length) * (_mLy2 = ay.length))
@@ -54,14 +49,15 @@ public abstract partial class Comparser<T> {
 				}
 				changed = true;
 
-				double dXs = +ax.d, dYs = +ay.d;
+				double dXs = SqrAbs(ax.d), dYs = SqrAbs(ay.d);
 				(Complex s, Complex x, Complex y) pm = new(), mp = new();
-				bool reEval = !SettingsPanel.MemXy || refresh || Math.Min(mLx, mLy) == 0 || FailAffineMap(mSx + mSy, Math.Min(dXs, dYs));
-				int task = 0, chunks = 1, tasks = SettingsPanel.Tasks;
-				Action<int, int, int> reeval = reEval ? PlotXr : PlotX;
+				var reEval = !SettingsPanel.MemXy || refresh || Math.Min(mLx, mLy) == 0 || FailAffineMap(Add(mSx, mSy), Math.Min(dXs, dYs));
+				const int chunks = 8;
+				int task = 0, tasks = SettingsPanel.Tasks;
+				Action<int, int, int> reEvalAction = reEval ? PlotXr : PlotX;
 				MakeArgs(tasks, ref _args, ref _taskProgress);
 				// (z,t,x,y,f,w,h,l)
-				for (int i = 0; i < tasks; ++i)
+				for (var i = 0; i < tasks; ++i)
 					_args[i].Values[1].Leaf = _t2 = memFrame; // t
 				
 				if (tasks <= 1) // single threaded
@@ -70,11 +66,11 @@ public abstract partial class Comparser<T> {
 				return _plotXy;
 
 				void MultiPlotX(float yf, float subChunkLength, int taskIndex) {
-				
-					float chd, chunkDistance = tasks * subChunkLength;
-					for (int c = 0; c < chunks; ++c) {
-						int y = (int)Math.Round(chd = yf + c * chunkDistance);
-						reeval(y, (int)Math.Round(chd + subChunkLength), taskIndex);
+					var chunkDistance = tasks * subChunkLength;
+					for (var c = 0; c < chunks; ++c) {
+						var chd = yf + c * chunkDistance;
+						var y = (int)Math.Round(chd);
+						reEvalAction(y, (int)Math.Round(chd + subChunkLength), taskIndex);
 					}
 				}
 				void PlotXr(int y, int ye, int taskIndex) => Rows(ref _taskProgress[taskIndex], ref y, ye, Finish, _args[taskIndex]);
@@ -116,11 +112,11 @@ public abstract partial class Comparser<T> {
 						Action<int> xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
 						Action<int, int, int, Value> ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
 						void NoX(int y) {
-							for (Begin(ref x, y, args); x < ex && !cancel.IsCancellationRequested; ++x)
+							for (Begin(out x, y, args); x < ex && !cancel.IsCancellationRequested; ++x)
 								_plotXy[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
 						}
 						void YesX(int y) {
-							for (Begin(ref x, y, args); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
+							for (Begin(out x, y, args); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
 								_plotXy[x + yw] = (pX % modX < 1) ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval(x, y, args);
 						}
 						Rows(ref progress, ref y, Math.Min(ye, (int)bottom.I), ytest, args);
@@ -140,7 +136,7 @@ public abstract partial class Comparser<T> {
 						// parallelogram bounds incrementing rows, determine if the left/right bvertex is the higher one, and set up the ordering of the phases:
 						top = new(top.R, top.I + 1);
 						bottom = new(bottom.R, bottom.I - 1);
-						bool rightFirst = midRight.I < midLeft.I;
+						var rightFirst = midRight.I < midLeft.I;
 						(midLeft, midRight) = rightFirst
 							? (new Complex(midLeft.R + 1, midLeft.I - 1), new Complex(midRight.R - 1, midRight.I + 1))
 							: (new(midLeft.R + 1, midLeft.I + 1), new(midRight.R - 1, midRight.I - 1));
@@ -178,8 +174,8 @@ public abstract partial class Comparser<T> {
 							}
 							break;
 						}
-						void PgRow(int ix, int iy, int yww, Value aArgs) {
-							Begin(ref ix, iy, aArgs);
+						void PgRow(int _, int iy, int yww, Value aArgs) {
+							Begin(out var ix, iy, aArgs);
 							for (int e = Math.Min(ax.length, (int)bounds.I); ix < e && !cancel.IsCancellationRequested; _plotXy[ix + yww] = Fracs(out var p) ? _memXy[p] : Eval(ix, iy, aArgs), ++ix)
 								uv = _map(pm, ix, iy);
 							Finish(ix, iy, yww, aArgs);
@@ -197,32 +193,31 @@ public abstract partial class Comparser<T> {
 					return Rows(ref progress, ref y, ye, Finish, args);
 
 					bool Test(double t) => t is < .5 and >= -.5;
-					void Begin(ref int x, int y, Value args) {
-						int e = Math.Min(ax.length, (int)bounds.R);
-						for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E(x, y, yw, args);
+					void Begin(out int x, int y, Value argsV) {
+						var e = Math.Min(ax.length, (int)bounds.R);
+						for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E(x, y, yw, argsV);
 					} // to the left of the outer bounds
 				}
-				bool FailAffineMap(T mS, double e) {
-					T s;
-					double xx = +mDx, xy = mDx | mDy, yy = +mDy, d = xx * yy - xy * xy; // Gram matrix of the old plot's two basis vectors.
-					if (Math.Abs(d) <= 1e-16 || !(InPlane(mDx, mDy, ax.d, xx, xy, yy, d, e *= e)
-						&& InPlane(mDx, mDy, ay.d, xx, xy, yy, d, e)
-						&& InPlane(mDx, mDy, s = aS - mS, xx, xy, yy, d, e))) {
+				bool FailAffineMap(ILeaf mS, double e) {
+					ILeaf s;
+					double dxx, dyx, dxy, dyy, d1, d2, xx = SqrAbs(mDx), xy = Dot(mDx, mDy), yy = SqrAbs(mDy), d = xx * yy - xy * xy, ee = Math.Max(xx, yy) * 1e-6; // Gram matrix of the old plot's two basis vectors.
+					
+					if (Math.Abs(ee) <= 1e-16 || !(InPlane(mDx, mDy, dxx = Dot(mDx, ax.d), dxy = Dot(mDy, ax.d), ax.d, xx, xy, yy, d, e *= e)
+						&& InPlane(mDx, mDy, dyx = Dot(mDx, ay.d), dyy = Dot(mDy, ay.d), ay.d, xx, xy, yy, d, e)
+						&& InPlane(mDx, mDy, d1 = Dot(mDx, s = Sub(aS, mS)), d2 = Dot(mDy, s), s, xx, xy, yy, d, e))) {
 						mp = pm = default;
 						return true;
 					} // u = (q|oldDx)*yy-(q|oldDy)*x; v = (q|oldDy)*xx-(q|oldDx)*xy
-					pm = (C(mDx, mDy, s /*= aS - mS*/, xx, xy, yy, d), C(mDx, mDy, ax.d, xx, xy, yy, d), C(mDx, mDy, ay.d, xx, xy, yy, d));
-					(xx, xy, yy) = (+ax.d, ax.d | ay.d, +ay.d);
-					mp = (C(ax.d, ay.d, -s, xx, xy, yy, d = xx * yy - xy * xy), C(ax.d, ay.d, mDx, xx, xy, yy, d), C(ax.d, ay.d, mDy, xx, xy, yy, d));
+					pm = (C(d1, d2 /*= aS - mS*/, xx, xy, yy, d), C(dxx, dxy, xx, xy, yy, d), C(dyx, dyy, xx, xy, yy, d));
+					(xx, xy, yy) = (SqrAbs(ax.d), Dot(ax.d, ay.d), SqrAbs(ay.d));
+					mp = (C(-d1, -d2, xx, xy, yy, d = xx * yy - xy * xy), C(dxx, dyx, xx, xy, yy, d), C(dxy, dyy, xx, xy, yy, d));
 					return false;
 				}
-				static Complex C(T dx, T dy, T q, double xx, double xy, double yy, double det) {
-					double qx = q | dx, qy = q | dy;
-					return new((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
-				}
-				static bool InPlane(T dx, T dy, T q, double xx, double xy, double yy, double det, double tolerance) {
-					double qx = q | dx, qy = q | dy, u = (qx * yy - qy * xy) / det, v = (qy * xx - qx * xy) / det;
-					return +(q - dx * u - dy * v) <= tolerance;
+				static Complex C(double qx, double qy, double xx, double xy, double yy, double det) 
+					=> new((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
+				static bool InPlane(ILeaf dx, ILeaf dy, double qx, double qy, ILeaf q, double xx, double xy, double yy, double det, double tolerance) {
+					double u = (qx * yy - qy * xy) / det, v = (qy * xx - qx * xy) / det;
+					return SqrAbs(Sub(q, Add(Mul(dx, (Real)u), Mul(dy, (Real)v)))) <= tolerance;
 				}
 				Value[] Rows(ref int progress, ref int y, int ye, Action<int, int, int, Value> a, Value args) {
 					int yw;
@@ -232,21 +227,21 @@ public abstract partial class Comparser<T> {
 				void Finish(int x, int y, int yw, Value args) {
 					for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E(x, y, yw, args);
 				} // to the right of the outer bounds
-				bool AxisMatchA(T s, T d, Plot.PlotAxis a) => Math.Max(+(s - a.start), +((d - a.d) * a.length)) <= +a.d * recallTolerance;
+				bool AxisMatchA(ILeaf s, ILeaf d, Plot.PlotAxis a) => Math.Max(SqrAbs(Sub(s, a.start)), SqrAbs(Mul(Sub(d, a.d), (Real)a.length))) <= SqrAbs(a.d) * recallTolerance;
 				void E(int x, int y, int yw, Value args) => _plotXy[x + yw] = Eval(x, y, args);
 				Value Eval(int x, int y, Value args) {
 					var l = args.Values;
-					l[0].Leaf = ax.Sample(x) + ay.Sample(y);
+					l[0].Leaf = Add(ax.Sample(x), ay.Sample(y));
 					//l[2].Leaf = T.MakeR(x);
 					//l[3].Leaf = T.MakeR(y);
 					return exp.Eval(0, args, tasks <= 1);
 				}
 			}
-			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, T memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
+			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
 				Value[] memY = []; changed = true;
 				int memYo = -1, mLx = 0;
-				T mSx = T.zero, mDx = T.zero, yC = ay.Sample(y); // y coordinate
-				var sqrEy = +at.d * recallTolerance;
+				ILeaf mSx = zero, mDx = zero, yC = ay.Sample(y); // y coordinate
+				var sqrEy = SqrAbs(at.d) * recallTolerance;
 				(_plotX, _memX) = (_memX, _plotX); // swap mem
 				if (_plotX.Length != ax.length) _plotX = new Value[ax.length]; // length mismatch: re-alloc
 				// remember this evaluated X axis
@@ -271,16 +266,16 @@ public abstract partial class Comparser<T> {
 					return _plotX;
 				}
 				// no overlap: jut re-eval everything
-				if (refresh || !SettingsPanel.MemX || !(+o.Perp <= o.SqrE) || o.NoOverlap()) return ReEval();
+				if (refresh || !SettingsPanel.MemX || !(SqrAbs(o.Perp) <= o.SqrE) || o.NoOverlap()) return ReEval();
 				// eval 0-iaStart (that isn't in the memory)
 				ReEval(0, o.IaStart);
 				if (AxisMismatch(o, mDx, out var mt)) {
-					var dScale = Math.Max(1, (int)Math.Round(Math.Abs(T.Re(o.A.d / mDx)))); // can do T.Re as they are co-linear
-					if (StepMismatch(o, mDx * dScale, o.IaEnd - o.IaStart))
+					var dScale = Math.Max(1, (int)Math.Round(Math.Abs(Div(o.A.d, mDx).Re()))); // can do T.Re as they are co-linear
+					if (StepMismatch(o, Mul(mDx, (Real)dScale), o.IaEnd - o.IaStart))
 						return ReEval(); // the ratio between asked-memory step sizes is not an integer, the interlacing won't work, so re-eval all
 					int x, phase; // find the phase when the axis maps to memory ( then we will loop: once "take from memory" then (dScale-1) times "re-eval") 
 					for (phase = 0; phase < dScale && o.IaStart < o.IaEnd && !cancel.IsCancellationRequested; _plotX[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
-						if (!DistanceMismatch(o, mt * mDx, o.IaStart))
+						if (!DistanceMismatch(o, Mul((Real)mt, mDx), o.IaStart))
 							break; // stop evaluating once we find the phase match,then we can proceed with the interlacing
 					if (phase == dScale) // failed to find any match that might be repeating every phase, just re-eval all:
 						return ReEval(o.IaStart);
@@ -293,9 +288,9 @@ public abstract partial class Comparser<T> {
 				return ReEval(o.IaEnd);
 
 				void Remember() {
-					if (!(+(at.Sample(frame) - _t1) < sqrEy)) return;
+					if (SqrAbs(Sub(at.Sample(frame), _t1)) >= sqrEy) return;
 					// the time of this frame is within tolerance to the memorized time
-					if (+(_mY1 - yC) <= +sqrEy) {
+					if (SqrAbs(Sub(_mY1, yC)) <= sqrEy) {
 						(memY, memYo, mSx, mDx, mLx) = (_memX, 0, _mSx1, _mDx1, _mLx1); // 1D memory Y match
 						return;
 					}
@@ -304,15 +299,15 @@ public abstract partial class Comparser<T> {
 					// this might be an overkill, as 1D memory is far more likely to be matched
 					// 1D memory didn't match, but the memorized 2D y-axis is still matching the asked one, so maybe there will be a matching X line here?
 					int lo = 0, hi = _mLy2;
-					var mSy = _mSy2 - yC;
+					var mSy = Sub(_mSy2, yC);
 					while (lo < hi) {
-						var mid = lo + hi >> 1;var d = mSy + mid * _mDy2;
-						var nd = +d;
+						var mid = lo + hi >> 1;var d = Add(mSy, Mul((Real)mid, _mDy2));
+						var nd = SqrAbs(d);
 						if (nd <= sqrEy) { // 2D memory Y match
 							(memY, memYo, mSx, mDx) = (_plotXy, mid * (mLx = _mLx2), _mSx2, _mDx2);
 							break;
 						}
-						if (+(d + _mDy2) < nd) lo = mid + 1; // target is closer to d stepped towards hi
+						if (SqrAbs(Add(d, _mDy2)) < nd) lo = mid + 1; // target is closer to d stepped towards hi
 						else hi = mid; // target is closer to d stepped away from hi
 					}
 				}
@@ -324,7 +319,7 @@ public abstract partial class Comparser<T> {
 					return _plotX;
 				}
 				Value Eval(int x) {
-					args.Values[0].Leaf = ax.Sample(x) + yC;
+					args.Values[0].Leaf = Add(ax.Sample(x), yC);
 					//args.Values[2].Leaf = T.MakeR(x);
 					return exp.Eval(0, args, /*tasks <= 1*/SettingsPanel.Tasks <= 1);
 				}
@@ -359,8 +354,8 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 			private static int Round(double x) => (int)Math.Round(x);
 			private static int Floor(double x) => (int)x;
 			private const bool CrossDimensionalMemory = true;
-			private T _mSx1 = T.nan, _mDx1 = T.nan, _mY1 = T.nan, _t1 = T.nan; // 1D memory,  ax.S, ax.d, yC, frame
-			private T _mSx2 = T.nan, _mDx2 = T.nan, _mSy2 = T.nan, _mDy2 = T.zero, _t2 = T.nan; // 2D memory, ax.S, ax.d, ay.x, ay.d, frame
+			private T _mSx1 = nan, _mDx1 = nan, _mY1 = nan, _t1 = nan; // 1D memory,  ax.S, ax.d, yC, frame
+			private T _mSx2 = nan, _mDx2 = nan, _mSy2 = nan, _mDy2 = zero, _t2 = nan; // 2D memory, ax.S, ax.d, ay.x, ay.d, frame
 			private int _mLx1 = 0, _mLx2 = 0, _mLy2 = 0; // 1D: ax.length, 2D: ax.length, ay.length
 			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
 			/// <summary>
@@ -374,7 +369,7 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 			/// <param name="recallTolerance">0=memorized evaluations must be exactly precise, 1=can take memorized pixels that at up to 1 pixel away</param>
 			/// <returns></returns>
 			public unsafe Value[] GetPlotXy(Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, T frame, double recallTolerance = 0.5) {
-				T mSx = T.zero, mDx = T.zero, mSy = T.zero, mDy = T.zero;
+				T mSx = zero, mDx = zero, mSy = zero, mDy = zero;
 				int mLx = 0, mLy = 0, x = 0, y = 0, yw = 0; double u = 0, v = 0;
 				Value[] mem = _plotXy;
 				if (+(frame - _t2) <= +at.d * recallTolerance) // the time of this frame is within tolerance to the memorized time
@@ -384,7 +379,7 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 				(_mLx2, _mLy2, _mSx2, _mSy2, _mDx2, _mDy2) = (ax.length, ay.length, ax.S, ay.S, ax.d, ay.d);
 				if (AxisMatchA(mSx, mDx, ax) && AxisMatchA(mSy, mDy, ay))
 					return _plotXy;
-				Value args = new([new(T.nan, "x"), new(T.nan, "y"), new(_t2 = frame, "t")]);
+				Value args = new([new(nan, "x"), new(nan, "y"), new(_t2 = frame, "t")]);
 				(Complex s, Complex x, Complex y) pm, mp;
 				if (Math.Min(mLx, mLy) == 0 || FailAffineMap(mSx + mSy,ax.S + ay.S, Math.Min(+ax.d, +ay.d)))
 					return Rows(ay.length, Finish);
@@ -453,14 +448,14 @@ return ((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
 			public Value[] GetPlotX(Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, T frame, double recallTolerance = 0.5) {
 				Value[] memY = [];
 				int memYo = -1, mLx = 0;
-				T mSx = T.zero, mDx = T.zero, yC = ay.Sample(y); // y coordinate
+				T mSx = zero, mDx = zero, yC = ay.Sample(y); // y coordinate
 				var sqrEy = +at.d * recallTolerance;
 				(_plotX, _memX) =  (_memX, _plotX);// length mismatch: re-alloc
 				if(_plotX.Length != (_mLx1 = ax.length)) _plotX = new Value[ax.length];// length mismatch: re-alloc
 
 				// remember this evaluated X axis
 				Remember(); // fetch a
-				Value args = new([new(T.nan, "x"), new(_mY1 = yC, "y"), new(_t1 = frame, "t")]);
+				Value args = new([new(nan, "x"), new(_mY1 = yC, "y"), new(_t1 = frame, "t")]);
 				if (memYo < 0) return ReEval();// no memory
 				(_mSx1, _mDx1) = (ax.S, ax.d);
 				// we have some memory Y match

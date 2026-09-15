@@ -1,16 +1,17 @@
 ﻿using Comparser.Comparser.Numbers;
+using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
-public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
+public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, IScalar<ILeaf>*/ {
 	public class GpuVirtualMachine {
 
 		#region Data
 		public class VmValue {
 			public VmValue() { }
-			public VmValue(T leaf) => Leaf = leaf;
+			public VmValue(ILeaf leaf) => Leaf = leaf;
 			public VmValue(VmValue[] values) => Values = values;
 			public VmValue[] Values = [];
-			public T Leaf = T.nan;
-			public int Def = -1; // TODO link this
+			public ILeaf Leaf = nan;
+			public int Def = -1; // ILeafODO link this
 		}
 		public class Op(VmValue input, OpCode myCode) {
 			public readonly OpCode MyCode = myCode;
@@ -84,12 +85,12 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					var l = Collapse(Eval(eval, ref condPtr, depth));
 					while (l.Values.Length > 0)
 						l = l.Values[0];
-					return INumber<T>.IsTrue(l.Leaf);
+					return l.Leaf.IsTrue();
 				}
 			}
 				static bool Match(VmValue self, VmValue a) { // defArguments.Match(callArguments)
-					if (!T.IsNaN(self.Leaf))
-						return T.IsNaN(a.Leaf) || T.AreEqual(self.Leaf, a.Leaf); // callArguments always starts with Values
+					if (!self.Leaf.IsNaN())
+						return a.Leaf.IsNaN() || self.Leaf == a.Leaf; // callArguments always starts with Values
 					if (self.Values.Length == 0) return true;
 					if (self.Values.Length < a.Values.Length) return false;
 					if (self.Values.Length > a.Values.Length) {
@@ -114,7 +115,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					while(nest-- > 0) ReadInt(ref pc);
 					break;
 				}
-				op.MyValue = evaluate ? GetArg(input, ref pc) : new(T.nan);
+				op.MyValue = evaluate ? GetArg(input, ref pc) : new(nan);
 				break;
 
 				VmValue GetArg(VmValue recurse, ref int pc) {
@@ -122,26 +123,26 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					--nest;
 					recurse = Collapse(recurse);
 					if (recurse.Values.Length == 0)
-						return i == 0 && nest == 0 ? Collapse(EvalArg(recurse, input)) : new(T.nan);
+						return i == 0 && nest == 0 ? Collapse(EvalArg(recurse, input)) : new(nan);
 					var fail = recurse.Values.Length <= i;
 					if (nest == 0)
-						return fail ? new(T.nan) : recurse.Values[i];
-					return fail ? new(T.nan) : GetArg(recurse.Values[i], ref pc);
+						return fail ? new(nan) : recurse.Values[i];
+					return fail ? new(nan) : GetArg(recurse.Values[i], ref pc);
 					VmValue EvalArg(VmValue arg, VmValue args) {
-						if (!T.IsNaN(arg.Leaf) || arg.Def < 0)
+						if (!arg.Leaf.IsNaN() || arg.Def < 0)
 							return new(arg.Leaf);
 						var argDef = _definitions[arg.Def][0];
 						var argPtr = argDef.definition;
 						//return depth > _stackOverflow ? new() : Eval(args, ref argPtr, (ushort)(1 + depth));
 						if (depth > _stackOverflow) return new();
-						// TODO check if this correctly caches default args:
+						// ILeafODO check if this correctly caches default args:
 						var evalArg = Eval(args, ref argPtr, (ushort)(1 + depth));
 						arg.Values = [evalArg];
 						return evalArg;
 					}
 			}
 			case OpCode.Leaf:
-				op.MyValue = new(ReadT(ref pc));
+				op.MyValue = new(ReadILeaf(ref pc));
 				break;
 			case OpCode.Vector:
 				var count = ReadInt(ref pc);
@@ -209,7 +210,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					break;
 				op.MyValue = eval.Values.Length == 3 ? Operate3(eval.Values[0], eval.Values[1], eval.Values[2], op.MyCode) : eval;
 				break;*/
-			// TODO substitute Clamp, SoftMaxB, SoftClamp, SoftClampB
+			// ILeafODO substitute Clamp, SoftMaxB, SoftClamp, SoftClampB
 			/*case OpCode.SoftClampB:
 				eval = Eval(input, ref pc);
 				if (!evaluate) 
@@ -226,12 +227,12 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				op.MyValue = new(new VmValue[Math.Abs(from - to) + 1]) { Values = { [0] = eval } };
 				int iterPtr, i = 0;
 				while (from < to) {
-					args.Values[^1] = new(T.MakeR(++from)); 	
+					args.Values[^1] = new((Real)(++from)); 	
 					iterPtr = definitions[0].definition;
 					Iter();
 				}
 				while (from > to) {
-					args.Values[^1] = new(T.MakeR(--from)); 	
+					args.Values[^1] = new((Real)(--from)); 	
 					iterPtr = definitions[0].definition;
 					Iter();
 				}
@@ -244,11 +245,11 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					break;
 				int iterPtr;
 				for (op.MyValue = eval; from < to; Iter()) {
-					args.Values[^1] = new(T.MakeR(++from));
+					args.Values[^1] = new((Real)(++from));
 					iterPtr = definitions[0].definition;
 				}
 				for (op.MyValue = eval; from > to; Iter()) {
-					args.Values[^1] = new(T.MakeR(--from));
+					args.Values[^1] = new((Real)(--from));
 					iterPtr = definitions[0].definition;
 				}
 				void Iter() => op.MyValue = Operate2(op.MyValue, Eval(args, ref iterPtr, depth), OpCode.Add);
@@ -260,11 +261,11 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					break;
 				int iterPtr;
 				for (op.MyValue = eval; from < to; Iter()) {
-					args.Values[^1] = new(T.MakeR(++from));
+					args.Values[^1] = new((Real)(++from));
 					iterPtr = definitions[0].definition;
 				}
 				for (op.MyValue = eval; from > to; Iter()) {
-					args.Values[^1] = new(T.MakeR(--from));
+					args.Values[^1] = new((Real)(--from));
 					iterPtr = definitions[0].definition;
 				}
 				void Iter() => op.MyValue = Operate2(op.MyValue, Eval(args, ref iterPtr, depth), OpCode.Mul);
@@ -294,7 +295,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				}
 			case OpCode.Count:
 				eval = Eval(input, ref pc, depth);
-				op.MyValue = new(T.MakeR(Math.Max(eval.Values.Length, 1)));
+				op.MyValue = new((Real)(Math.Max(eval.Values.Length, 1)));
 				break;
 			}
 			return op.MyValue;
@@ -306,7 +307,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				definitions = [];
 				eval = Collapse(Eval(input, ref pc, depth));
 				if (eval.Values.Length < 3 || !evaluate) {
-					op.MyValue = new(T.nan); // missing range
+					op.MyValue = new(nan); // missing range
 					return true;
 				}
 				args = new(new VmValue[input.Values.Length + 1]);
@@ -314,13 +315,13 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					args.Values[i] = input.Values[i];
 				from = GetI(eval.Values[1]);
 				to = GetI(eval.Values[2]);
-				args.Values[^1] = new(T.MakeR(from));
+				args.Values[^1] = new((Real)(from));
 				definitions = _definitions[p];
 				var iterPtr = definitions[0].definition;
 				eval = Eval(args, ref iterPtr, depth);
 				return false;
 			}
-			int GetI(VmValue a) => (int)Math.Round(T.Re(GetLeaf(a).Leaf));
+			int GetI(VmValue a) => (int)Math.Round(GetLeaf(a).Leaf.Re());
 
 			VmValue OperateValue(VmValue value, OpCode opCode, VmValue data) {
 				int s;
@@ -333,8 +334,8 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					return vals;
 				vals.Values = [OpLeaf(value.Leaf)];
 				return vals;
-				VmValue OpLeaf(T leaf) => opCode switch {
-					OpCode.Index => data.Values.Length > (int)T.Re(leaf) ? data.Values[(int)T.Re(leaf)] : new(),
+				VmValue OpLeaf(ILeaf leaf) => opCode switch {
+					OpCode.Index => data.Values.Length > (int)leaf.Re() ? data.Values[(int)leaf.Re()] : new(),
 					_ => new()
 				};
 			}
@@ -349,17 +350,17 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					return vals;
 				vals.Leaf = OpLeaf(value.Leaf);
 				return vals;
-				T OpLeaf(T l) => opCode switch {
-					OpCode.Neg => -l, OpCode.True => +l < 1 ? T.zero : T.unit,
-					OpCode.Inv => T.Inv(l), OpCode.Exp => T.Exp(l), OpCode.Log => T.Log(l),
-					OpCode.Cosh => T.Cosh(l), OpCode.Sinh => T.Sinh(l), OpCode.Cos => T.Cos(l), OpCode.Sin => T.Sin(l),
-					OpCode.Acosh => T.Acosh(l), OpCode.Asinh => T.Asinh(l), OpCode.Atanh => T.Atanh(l), OpCode.Acoth => T.Acoth(l),
-					OpCode.Acos => T.Acos(l), OpCode.Atan => T.Atan(l), OpCode.Re => T.MakeR(T.Re(l)), OpCode.Im =>T.MakeR(T.Im(l)),
-					OpCode.Trunc => T.Trunc(l), OpCode.Floor => T.Floor(l), OpCode.Round => T.Round(l), OpCode.Absri => T.AbsComp(l),
-					OpCode.SqrAbs => T.MakeR(+l), OpCode.Abs => INumber<T>.T_Abs(l),
-					OpCode.Arg => T.MakeR(T.Arg(l)), OpCode.Conj => INumber<T>.Conj(l),
-					OpCode.Factorial => T.Factorial(l), OpCode.Gamma => T.Gamma(l), OpCode.Zeta => T.Zeta(l),
-					_ => T.nan
+				ILeaf OpLeaf(ILeaf l) => opCode switch {
+					OpCode.Neg => Neg(l), OpCode.True => SqrAbs(l) < 1 ? zero : unit,
+					OpCode.Inv => Inv(l), OpCode.Exp => Exp(l), OpCode.Log => Log(l),
+					OpCode.Cosh => Cosh(l), OpCode.Sinh => Sinh(l), OpCode.Cos => Cos(l), OpCode.Sin => Sin(l),
+					OpCode.Acosh => Acosh(l), OpCode.Asinh => Asinh(l), OpCode.Atanh => Atanh(l), OpCode.Acoth => Acoth(l),
+					OpCode.Acos => Acos(l), OpCode.Atan => Atan(l), OpCode.Re => (Real)T_Re(l), OpCode.Im =>(Real)T_I(l),
+					OpCode.Trunc => Truncate(l), OpCode.Floor => Floor(l), OpCode.Round => Round(l), OpCode.Absri => AbsComp(l),
+					OpCode.SqrAbs => (Real)T_SqrAbs(l), OpCode.Abs => T_Abs(l),
+					OpCode.Arg => (Real)T_Arg(l), OpCode.Conj => Conj(l),
+					OpCode.Factorial => Factorial(l), OpCode.Gamma => Gamma(l), OpCode.Zeta => Zeta(l),
+					_ => nan
 				};
 			}
 			VmValue Operate2(VmValue av, VmValue bv, OpCode opCode) {
@@ -383,12 +384,12 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					return vals;
 				vals.Leaf = OpLeaf(av.Leaf, bv.Leaf);
 				return vals;
-				T OpLeaf(T la, T lb) => opCode switch {
-					OpCode.Less => T.MakeR(T.Re(la) < T.Re(lb) ? 1 : 0), OpCode.LessEqual => T.MakeR(T.Re(la) <= T.Re(lb) ? 1 : 0),
-					OpCode.Equal => T.MakeR(T.Re(la) - T.Re(lb) < 1e-8 ? 1 : 0), OpCode.NotEqual => T.MakeR(T.Re(la) - T.Re(lb) >= 1e-8 ? 1 : 0), 
-					OpCode.Add => la + lb, OpCode.Mod => la % lb, OpCode.CompMod => INumber<T>.CompMod(la, lb), OpCode.Mul => la * lb, OpCode.Pow => la^lb, OpCode.Max => T.Max(la, lb),
-					OpCode.SoftMax => INumber<T>.SoftMax(la, lb), 
-					_ => T.nan
+				ILeaf OpLeaf(ILeaf la, ILeaf lb) => opCode switch {
+					OpCode.Less => la.Re() < lb.Re() ? Real.unit : Real.zero, OpCode.LessEqual => la.Re() <= lb.Re() ? Real.unit : Real.zero,
+					OpCode.Equal => la == lb ? Real.unit : Real.zero, OpCode.NotEqual => la != lb ? Real.unit : Real.zero, 
+					OpCode.Add => Add(la, lb), OpCode.Mod => Mod(la, lb), OpCode.CompMod => CompMod(la, lb), OpCode.Mul => Mul(la, lb), OpCode.Pow => Pow(la,lb), OpCode.Max => Max(la, lb),
+					OpCode.SoftMax => SoftMax(la, lb), 
+					_ => nan
 				};
 			}
 			/*VmValue Operate3(VmValue av, VmValue bv, VmValue cv, OpCode opCode) {
@@ -416,9 +417,9 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					return vals;
 				vals.Leaf = OpLeaf(av.Leaf, bv.Leaf, cv.Leaf);
 				return vals;
-				T OpLeaf(T la, T lb,T lc) => opCode switch {
-					OpCode.Clamp => T.Clamp(la, lb, lc),
-					_ => T.nan
+				ILeaf OpLeaf(ILeaf la, ILeaf lb,ILeaf lc) => opCode switch {
+					OpCode.Clamp => Clamp(la, lb, lc),
+					_ => nan
 				};
 			}*/
 			/*VmValue Operate4(VmValue av, VmValue bv, VmValue cv, VmValue dv, OpCode opCode) {
@@ -447,9 +448,9 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					return vals;
 				vals.Leaf = OpLeaf(av.Leaf, bv.Leaf, cv.Leaf);
 				return vals;
-				T OpLeaf(T la, T lb,T lc) => opCode switch {
-					OpCode.Clamp => T.Clamp(la, lb, lc),
-					_ => T.nan
+				ILeaf OpLeaf(ILeaf la, ILeaf lb,ILeaf lc) => opCode switch {
+					OpCode.Clamp => Clamp(la, lb, lc),
+					_ => nan
 				};
 			}*/
 		}
@@ -472,11 +473,11 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			while(0 != ++c) result = (result << 8) + _code[pc++]; // iterate until byte overflow (c=255 is one byte (no iterations, keep the initial byte), each c decrement adds one extra byte (c=252 is full 4 bytes)
 			return result;
 		}
-		private T ReadT(ref int pc) {
+		private ILeaf ReadILeaf(ref int pc) {
 			var bytes = new byte[_leafSize];
-			for (int i = 0; i < _leafSize; ++i) 
+			for (var i = 0; i < _leafSize; ++i) 
 				bytes[i] = ReadByte(ref pc);
-			return INumber<T>.FromBytes(bytes);
+			return FromBytes(bytes);
 		}
 		#endregion
 	}

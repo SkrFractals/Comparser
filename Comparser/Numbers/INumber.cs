@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using static Comparser.Comparser.Numbers.Static;
 
 namespace Comparser.Comparser.Numbers;
-public interface INumber<T> where T : unmanaged, INumber<T> {
+public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/>, ILeaf/*<double> where double : unmanaged, IScalar<double>*/ {
 	//public bool Is0();
 	//public bool IsNaN();
 	
@@ -11,29 +11,30 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract bool IsNaN(T t);
 
 	#region Export
-	public static abstract string[] epsUnit { get; }
-	public static abstract double[] EpsValues(T r, T e);
+	//public static abstract string[] epsUnit { get; }
+	//public static abstract double[] EpsValues(T r, T e);
 	public string ToString(int d);
-	public static (double h, double s, double v) Log2Hsv(T t) { var s = +t; return (ToHue(t), FallOffLog(s), Math.Log(s) * .5); }
-	public static (double h, double s, double v) Lin2Hsv(T t) { var s = +t; return (ToHue(t), FallOff(s), Math.Sqrt(s)); }
-	public static (double h, double s, double v) Log2HsvC(T t) { var s = +t; return (ToHue(t), FallOffLog(s), Static.Cycle(Math.Log(s) * .5)); }
-	public static (double h, double s, double v) Lin2HsvC(T t) { var s = +t; return (ToHue(t), FallOff(s), Static.Cycle(Math.Sqrt(s))); }
+	public static (double h, double s, double v) Log2Hsv(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOffLog(s), Math.Log(s) * .5); }
+	public static (double h, double s, double v) Lin2Hsv(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOff(s), Math.Sqrt(s)); }
+	public static (double h, double s, double v) Log2HsvC(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOffLog(s), Static.Cycle(Math.Log(s) * .5)); }
+	public static (double h, double s, double v) Lin2HsvC(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOff(s), Static.Cycle(Math.Sqrt(s))); }
 	//public static (double h, double s, double v) Exp2Hsv(T t) => (ToHue(t), 1, FallOff(+t));
 	/*public static (double h, double s, double v) Log2Hsv(T t) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Log(s) * .5); }
 	public static (double h, double s, double v) Lin2Hsv(T t) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Sqrt(s) ); }
 	public static (double h, double s, double v) Exp2Hsv(T t) => (ToHue(t), 1, 1 - Math.Exp(-+t));*/
-	public static double ToHue(T t) => Static.Cycle(T.Arg(t) / Math.Tau);
+	public static double ToHue(T t) => Static.Cycle(/*double.ToDouble*/(T.Arg(t)) / Math.Tau);
 	private static double FallOff(double s) =>  /*.999 - */.999 * Math.Exp(-s); //1 - Math.Exp(-s);// .999 - .999 * Math.Exp(-s);
 	private static double FallOffLog(double s) =>  .999 / (1+Math.Log(1+Math.Sqrt(s))); 
 
 	public static byte[] ToBytes(T str) {
 		var size = Marshal.SizeOf(str);
-		var arr = new byte[size];
+		var arr = new byte[size+1];
+		arr[0] = (byte)str.kind;
 		var ptr = IntPtr.Zero;
 		try {
 			ptr = Marshal.AllocHGlobal(size);
 			Marshal.StructureToPtr(str, ptr, true);
-			Marshal.Copy(ptr, arr, 0, size);
+			Marshal.Copy(ptr, arr, 1, size);
 		} finally {
 			Marshal.FreeHGlobal(ptr);
 		}
@@ -57,12 +58,12 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	#region Constants
 	public static abstract T zero { get; }
 	public static abstract T nan { get; }
-	public static abstract T unit { get; }
+	public static T unit => T.MakeR(1);
 	public static abstract T one { get; }
-	public static abstract T u { get; }
-	public static abstract T minusUnit { get; }
-	public static abstract T minusOne { get; }
-	public static abstract T minusU { get; }
+	public static T u => T.one - unit;
+	public static T minusUnit => -unit;
+	public static T minusOne => -T.one;
+	public static T minusU => -u;
 	#endregion
 
 	#region Helpers
@@ -71,22 +72,22 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T D2(T a, T b, Func<double, double, double> d);
 	public static abstract T D3(T a, T b, T c, Func<double, double, double, double> d);
 
-	public static T ComplexOp(T t, Func<Complex, Complex> func) {
-		var r = func(Abs(t) * Complex.Complex_InvArg(T.Arg(t)));
-		return INumber<Complex>.Abs(r) * T.InvArg(Complex.Arg(r), T.Axis(t));
+	public static T ComplexOp(T t, Func<Complex/*<double>*/, Complex/*<double>*/> func) {
+		var r = func(Abs(t) * Complex/*<double>*/.Complex_InvArg(T.Arg(t)));
+		return INumber<Complex/*<double>,double*/>.Abs(r) * T.InvArg(Complex/*<double>*/.Arg(r), T.Axis(t));
 	}
 	#endregion
 	
 	#region Basics
-	public static bool IsTrue(T t) => +t >= 1;
-	public static bool IsFalse(T t) => +t < 1;
-	public static T True(bool t) => t ? T.unit : T.zero;
-	public static abstract bool AreEqual(T a, T b);
+	public static bool IsTrue(T t) => 1 <= +t;//double.IsTrue(+t);
+	public static bool IsFalse(T t) => 1 > +t; //double.IsFalse(+t);
+	//public static Real True(bool t) => t ? Real.unit : Real.zero;
 	public static abstract T MakeR(double r);
+	//public static T MakeR(double r) => T.MakeR(double.MakeR(r));
 	public static abstract double Re(T t);
 	public static abstract double Im(T t);
 	public static abstract double ImMag(T t);
-	public static T T_I(T t) => T.MakeR(T.ImMag(t));
+	public static Real T_I(T t) => (Real)(T.ImMag(t));
 	public static abstract T operator ~(T t);
 	public static abstract T operator -(T t);
 	public static abstract T operator !(T t);
@@ -95,10 +96,10 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T NegU(T t);
 	public static abstract double operator +(T t);
 	public static abstract T Frac(T t);
-	public static abstract T Trunc(T t);
+	public static abstract T Truncate(T t);
 	public static abstract T Floor(T t);
 	public static abstract T Round(T t);
-	public static abstract T Ceil(T t);
+	public static abstract T Ceiling(T t);
 	public static abstract T Cycle(T t);
 	public static T Clamp01(T t) => T.Clamp(t,T.zero,T.one);
 	public static T SoftClamp01(T t) => SoftClamp(t, T.zero, T.one);
@@ -113,7 +114,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T Cub(T t);
 	public static abstract T Quart(T t);
 	// |x|
-	public static double Abs(T t) => Math.Sqrt(+t);
+	public static double Abs(T t) => double.Sqrt(+t);
 	// x / |x|
 	public static T Sign(T t) => t / Abs(t);
 	public static abstract T AbsComp(T t);
@@ -122,6 +123,11 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T Max(T a, T b);
 	public static abstract T Clamp(T t, T min, T max);
 	#endregion
+	
+	#region Comparisons
+	public static abstract bool operator ==(T a, T b);
+	public static abstract bool operator !=(T a, T b);	
+	#endregion
 
 	#region Additions
 	public static T Add(T a, T b) => a + b;
@@ -129,6 +135,8 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T operator +(T a, T b);
 	public static abstract T operator +(T t, double r);
 	public static abstract T operator +(double r, T t);
+	//public static abstract T operator +(T t, double r); // IScalar
+	//public static abstract T operator +(double r, T t);
 	public static abstract T AddV(T t, double u);
 	public static abstract T AddV(double u, T t);
 	#endregion
@@ -139,6 +147,8 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T operator -(T a, T b);
 	public static abstract T operator -(T t, double r);
 	public static abstract T operator -(double r, T t);
+	//public static abstract T operator -(T t, double r); // IScalar
+	//public static abstract T operator -(double r, T t);
 	public static abstract T SubV(T t, double i);
 	public static abstract T SubV(double i, T t);
 	#endregion
@@ -148,6 +158,8 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T operator *(T a, T b);
 	public static abstract T operator *(T t, double r);
 	public static abstract T operator *(double r, T t);
+	//public static abstract T operator *(T t, double r); // IScalar
+	//public static abstract T operator *(double r, T t);
 	public static abstract double operator |(T a, T b);
 	//public abstract static T MulNV(T t, double i);
 	//public abstract static T MulNV(double i, T t);
@@ -158,12 +170,16 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T operator /(T a, T b);
 	public static abstract T operator /(T t, double r);
 	public static abstract T operator /(double r, T t);
+	//public static abstract T operator /(T t, double r); // IScalar
+	//public static abstract T operator /(double r, T t);
 	public static abstract T LDiv(T a, T b);
 	public static abstract T operator %(T a, T b);
 	//public abstract static T DivNV(T t, double i);
 	//public abstract static T DivNV(double i, T t);
-	public static T NewMod(T a, T b) => a - T.D1(a / b, Math.Truncate) * b;
-	public static T CompMod(T a, T b) => T.D2(a, b, Mod);
+	public static T NewMod(T a, T b) => a - T.D1(a / b, double.Truncate) * b;
+	public static T NewMod(double a, T b) => a - T.D1(a / b, double.Truncate) * b;
+	public static T NewMod(T a, double b) => a - T.D1(a / b, double.Truncate) * b;
+	public static T CompMod(T a, T b) => T.D2(a, b, /*IScalar<double>.*/Mod);
 
 	#endregion
 
@@ -175,6 +191,8 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static abstract T operator ^(T a, T b);
 	public static abstract T operator ^(T t, double r);
 	public static abstract T operator ^(double r, T t);
+	//public static abstract T operator ^(T t, double r); // IScalar
+	//public static abstract T operator ^(double r, T t);
 	public static abstract T PowN1(T t);
 	public static abstract T PowI(T t);
 	#endregion
@@ -219,29 +237,24 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static T Asec(T t) => T.Acos(T.Inv(t));
 	public static T I_Asin(T t) => T.NegU(T.Asinh(!t));
 	public static T Acsc(T t) => T.Asin(T.Inv(t));
-	public static T I_Atan(T t) => T.NegU(T.LogH(T.SubV(1, t) / T.AddV(1, t)));
-	public static T I_Acot(T t) => T.NegU(T.LogH(T.AddV(t, 1) / T.SubV(t, 1)));
+	public static T I_Atan(T t) => T.NegU(T.LogH(T.SubV(IScalar<double>.unit, t) / T.AddV(IScalar<double>.unit, t)));
+	public static T I_Acot(T t) => T.NegU(T.LogH(T.AddV(t, IScalar<double>.unit) / T.SubV(t, IScalar<double>.unit)));
 	#endregion
 
 	#region Exotic Trigonometrics
-	public static T Sinc(T t) => T.Is0(t) ? T.unit : T.Sin(t) / t;
+	public static T Sinc(T t) => T.Is0(t) ? unit : T.Sin(t) / t;
 	public static T Nsinc(T t) => Sinc(Math.PI * t);
 	public static T Sinhc(T t) => T.Sinh(t) / t;
 	public static T Nsinhc(T t) => Sinhc(Math.PI * t);
 	public static T Cosc(T t) => (1 - T.Cos(t)) / t;
 	public static T Ncosc(T t) => Cosc(Math.PI * t);
-	public static T Coshc(T t) => (1 - T.Cosh(t)) / t;
+	public static T Coshc(T t) => (Math.PI - T.Cosh(t)) / t;
 	public static T Ncoshc(T t) => Coshc(Math.PI * t);
 	public static abstract T Sin_P(T t);
 	public static abstract T Sin_2Q(T t);
 	#endregion
 
 	#region Simple Functions and Constants
-	public static T C_E() => T.MakeR(Math.E);
-	public static T C_Pi() => T.MakeR(Math.PI);
-	public static T C_Phi() => T.MakeR(.5 + .5 * Math.Sqrt(5));
-	public static T C_Tau() => T.MakeR(Math.Tau);
-	public static T C_Gamma() => T.MakeR(0.57721566490153286060651209008240243104215933593992); // Euler's constant
 	public static T LogB(T t, T b) => T.Log(t) / T.Log(b);
 	public static T Log10(T t) => T.Log(t) / Ln10;
 	public static T Log2(T t) => T.Log(t) / Ln2;
@@ -258,15 +271,15 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	public static T SoftNegB(T t, T b) => -LogB(1 + ExpB(-t, b), b);
 	public static T SoftClamp(T t, T min, T max) => t + SoftAbs(min - t) + SoftNeg(max - t);
 	public static T SoftClampB(T t, T min, T max, T b) => t + SoftAbsB(min - t, b) + SoftNegB(max - t, b);
-	public static T T_Re(T t) => T.MakeR(T.Re(t));
+	public static Real T_Re(T t) => (Real)(T.Re(t));
 	public static T Neg(T t) => -t;
-	public static T SqrAbs(T t) => T.MakeR(+t);
-	public static T T_Abs(T t) => T.MakeR(Abs(t));
-	public static T T_Arg(T t) => T.MakeR(T.Arg(t));
+	public static Real SqrAbs(T t) => (Real)(+t);
+	public static Real T_Abs(T t) => (Real)(Abs(t));
+	public static Real T_Arg(T t) => (Real)T.Arg(t);
 	public static T Conj(T t) => ~t;
-	public static T Cbrt(T t) => t ^ 1.0 / 3;
+	public static T Cbrt(T t) => t ^ (1.0 / 3);
 	public static T Lerp(T a, T b, T alpha) => b * alpha + a * (1 - alpha);
-	public static T Lerp(T a, T b, double alpha) => b * alpha + a * (1 - alpha);
+	public static T Lerp(T a, T b, double alpha) => b * alpha + a * (IScalar<double>.one - alpha);
 	#endregion
 
 	#region Special Functions
@@ -414,13 +427,13 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	private static T Gamma_Stirling_Positive(T t, int corrections = 4, int shifts = 16) => Factorial_Stirling_Positive(--t, corrections, shifts);
 	// z! reflection: z!(-z)!nsinc(z) = 1 => c! = Inv((-c)!nsinc(-c)) = Inv((-c)!nsinc(c)) 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private static T Factorial_Stirling(T t) => 0 <= T.Re(t) ? Factorial_Stirling_Positive(t) : T.Inv(Factorial_Stirling_Positive(-t) * Nsinc(t));
+	private static T Factorial_Stirling(T t) => 0 <= IScalar<double>.ToDouble(T.Re(t)) ? Factorial_Stirling_Positive(t) : T.Inv(Factorial_Stirling_Positive(-t) * Nsinc(t));
 	// Sin_P reflection: Γ(1-z)Γ(z) = iτ/((-1)^z-(-1)^(-z)) = iτ/Sin_P(z) =>
 	// z -> z+.5: Γ(.5-z)Γ(.5+z) = iτ/Sin_P(z+.5) => Γ(c) = iτ/(Γ(.5+z)Sin_P(z+.5))
 	// z = .5-c => iτ/(Γ(1-c))Sin_P(c)) 
-	public static T I_Gamma(T t) => T.Re(t) > .5 ? Gamma_Stirling_Positive(t) : Math.Tau * T.Inv(Gamma_Stirling_Positive(1 - t) * T.Sin_P(t));
+	public static T I_Gamma(T t) => IScalar<double>.ToDouble(T.Re(t)) > .5 ? Gamma_Stirling_Positive(t) : Math.Tau * T.Inv(Gamma_Stirling_Positive(1 - t) * T.Sin_P(t));
 	public static T I_Factorial(T t) {
-		var re = T.Re(t);
+		var re = IScalar<double>.ToDouble(T.Re(t));
 		var r = (int)Math.Floor(re);
 		// Is it a natural number?
 		if (Math.Abs(r - re) > 1e-8 || r < 0 || !T.Is0(t - T.MakeR(re)))
@@ -439,9 +452,9 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 		// zeta(c) = (c-1)^(-1) * sum[n=0..i]: (n+1)^(-1) * sum[k=0..n]: (-1)^k * Combination(n,k) * (k + 1)^(1 - c)
 		T nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
 		const int maxIterations = 42;
-		T term = T.unit;
+		T term = unit;
 		var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
-		for (int tri, n = p[1] = 1; (tri = n) < maxIterations && +term / Math.Max(1, +ns) > 1e-20; ns += term = nk / (n + 1)) {
+		for (int tri, n = p[1] = 1; (tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20; ns += term = nk / (n + 1)) {
 			while (tri > 1)
 				p[tri] += p[--tri]; // add the non-edge pascal triangle terms
 			int e, o;
@@ -449,7 +462,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 				(e, o) = (n, ++n);
 			else (o, e) = (n, ++n); // even and odd k iterators (so I don't have to (-1)^k)
 			++p[p[n] = 1]; // increment 2nd term in the pascal row, last term (one) in the pascal row is a new one
-			nk = T.unit; // zeroth k term is 1, precount that and loop k = n->1
+			nk = unit; // zeroth k term is 1, precount that and loop k = n->1
 			do nk += p[e] * (e + 1 ^ c1); // even k terms, p[e] = Combinations(n,e)
 			while (1 <= (e -= 2)); // decrement even k iterators down to 1
 			do nk -= p[o] * (o + 1 ^ c1); // odd k terms, p[o] = Combinations(n,o)
@@ -459,7 +472,7 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 	}
 	private static T Zeta_Euler(T t) { // using B2k Bernoulli numbers/factorials
 		int terms = 32, berns = B2F.Length;
-		var s = T.unit;
+		var s = unit;
 		for (byte n = 2; n < terms; ++n)
 			s += n ^ -t;
 		var sum = s + (s = terms ^ -t) * (.5 + terms / (t - 1)) + B2F[0] * (s *= t / terms);
@@ -481,17 +494,17 @@ public interface INumber<T> where T : unmanaged, INumber<T> {
 		// relative to the pole (useful in many places in this algo, including the reflection)
 		var t1 = t - 1;
 		// squared distance from the pole
-		var pole = +t1;
+		var pole = IScalar<double>.ToDouble(+t1);
 		// exactly the pole - return infinity
-		return pole == 0 ? T.MakeR(double.PositiveInfinity)
+		return pole == 0 ? T.MakeR(IScalar<double>.infty)
 			// very near the pole - use Laurent that is excellent when this near, hopefully 5 terms are enough for the Laurent series with the distance from to pole up to e-4
-			: pole < 1e-8 ? T.Inv(t1) + C_Gamma() - t1 * (G1 - t1 * (G2 - t1 * (G3 - t1 * (G4 - t1 * G5))))
+			: pole < 1e-8 ? T.Inv(t1) + Static.Gamma - t1 * (G1 - t1 * (G2 - t1 * (G3 - t1 * (G4 - t1 * G5))))
 			// near the pole - use general Hasse that is decent everywhere
 			: pole < 4 ? Zeta_Hasse(t) * T.Inv(t1)
 			// far from pole - use Euler that is excellent when far from it
-			: T.Re(t) >= .5 ? Zeta_Euler(t)
+			: IScalar<double>.ToDouble(T.Re(t)) >= .5 ? Zeta_Euler(t)
 			// negative and far from the pole - reflect Euler (using the formula derived above)
-			: Zeta_Euler(t) * (C_Tau() ^ t1) * Gamma_Stirling_Positive(1 - t) * T.Sin_2Q(t);
+			: Zeta_Euler(t) * (Math.Tau ^ t1) * Gamma_Stirling_Positive(1 - t) * T.Sin_2Q(t);
 	}
 	#endregion
 

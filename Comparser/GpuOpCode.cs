@@ -1,5 +1,5 @@
 ﻿namespace Comparser.Comparser;
-public abstract partial class Comparser<T> {
+public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T>*/  {
 	public enum OpCode : byte {
 		Nop = 0,
 		NotAvailable = 1,
@@ -66,7 +66,7 @@ public abstract partial class Comparser<T> {
 		//Sec,
 		//Csc,
 		
-		// archyp
+		// arcHyper
 		Acosh,
 		Asinh,
 		Atanh,		// = [A=X];Mul(Log(Mul(Add(1,A),NegAdd(1,Neg(A)))),.5)
@@ -74,7 +74,7 @@ public abstract partial class Comparser<T> {
 		//Asech,
 		//Acsch,
 		
-		//arctrig
+		//arcTrig
 		Acos,
 		//Asin,
 		Atan,		// =  // [A=X];Mul(Neg(U),Mul(Log(Mul(Add(V,A),NegAdd(V,Neg(A)))),.5))
@@ -158,7 +158,7 @@ public abstract partial class Comparser<T> {
 		Csch,		// = Inv(Sinh(X))
 		// trig
 		//Cos,
-		//Sin,		// = Cos(Add(qtau,Neg(X))
+		//Sin,		// = Cos(Add(qTau,Neg(X))
 		Tan,		// = Mul(Ain(X),Inv(Cos(X)))
 		Cot,		// = Mul(Cos(X),Inv(Sin(X)))
 		Sec,		// = Inv(Cos(X))
@@ -172,11 +172,11 @@ public abstract partial class Comparser<T> {
 		Acsch,		// = Asinh(Inv(X))
 		// arctrig
 		//Acos,
-		Asin,		// = Add(qtau,Neg(Acos(X)))
+		Asin,		// = Add(qTau,Neg(Acos(X)))
 		//Atan,		// = Mul(Sgn(x),Acos(Inv(Sqrt(Add(1,Sqr(X))))))
-		Acot,		// = Add(qtau,Neg(Atan(X)))
+		Acot,		// = Add(qTau,Neg(Atan(X)))
 		Asec,		// = Acos(Inv(X))
-		Acsc,		// = Add(qtau,Neg(Acos(Div(X)))
+		Acsc,		// = Add(qTau,Neg(Acos(Div(X)))
 		// components
 		Frac,		// = Sub(X,Trunc(X))
 		Ceil,		// = Neg(Floor(Neg(X)))
@@ -194,15 +194,15 @@ public abstract partial class Comparser<T> {
 		// Special
 		Gauss,      // = Exp(Neg(Sqr(X)))
 		// Colors
-		Rgb2hsv, // TODO implement in some way
-		Hsv2rgb,
-		Log2hsv,
-		Lin2hsv,
-		Log2hsvC,
-		Lin2hsvC,
-		Log2rgb,
-		Lin2rgb,
-		Log2rgbC,
-		Lin2rgbC,
+		Rgb2Hsv, // TODO implement in some way
+		Hsv2Rgb,
+		Log2Hsv,
+		Lin2Hsv,
+		Log2HsvC,
+		Lin2HsvC,
+		Log2Rgb,
+		Lin2Rgb,
+		Log2RgbC,
+		Lin2RgbC,
 	}
 }

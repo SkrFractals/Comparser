@@ -1,21 +1,22 @@
 ﻿using Comparser.Comparser.Numbers;
+using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
-public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
+public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, IScalar<ILeaf>*/{
 	public partial class GpuValue {
-		private static readonly GpuValue Ln2 = new(T.MakeR(Math.Log(2))),
-			Ln10 = new(T.MakeR(Math.Log(10))),
-			Iln2 = new(T.MakeR(1.0/Math.Log(2))),
-			Iln10 = new(T.MakeR(1.0/Math.Log(10))),
-			QTau = new(T.MakeR(Math.PI / 2));
+		private static readonly GpuValue Ln2 = new((Real)(Math.Log(2))),
+			Ln10 = new((Real)Math.Log(10)),
+			Iln2 = new((Real)(1.0/Math.Log(2))),
+			Iln10 = new((Real)(1.0/Math.Log(10))),
+			QTau = new((Real)(Math.PI / 2));
 
-		private class Subs(Comparser<T> context, CancellationToken cancel) {
+		private class Subs(Comparser/*<T>*/ context, CancellationToken cancel) {
 			private static readonly Value 
-				X0 = new([new(T.zero, 0, "x")]), // pattern match x as 0
-				X = new([new(T.nan, 0, "x")]), // passable argument x
-				Xy = new([new(T.nan, 0, "x"), new(T.nan, 0, "y")]), // passable xy
-				Xyz = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "z")]), // passable xyz
-				Xyzw = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "z"), new(T.nan, 0, "w")]); // passable xyzw
-			public readonly Comparser<T> Context = context;
+				X0 = new([new(zero, 0, "x")]), // pattern match x as 0
+				X = new([new(nan, 0, "x")]), // passable argument x
+				Xy = new([new(nan, 0, "x"), new(nan, 0, "y")]), // passable xy
+				Xyz = new([new(nan, 0, "x"), new(nan, 0, "y"), new(nan, 0, "z")]), // passable xyz
+				Xyzw = new([new(nan, 0, "x"), new(nan, 0, "y"), new(nan, 0, "z"), new(nan, 0, "w")]); // passable xyzw
+			public readonly Comparser/*<T>*/ Context = context;
 			public readonly CallCustom Sinc = new([(X0, new(new(context, "1", cancel), out _, None), null), 
 					(X, new(new(context, "sin(x)inv(x)", cancel), out _, X), null)]),
 				// alternative using condition instead of pattern matching: var sinc = new CallCustom([(x, new(context, "sin(x)/x", x), new(context, "x==0", x))]);
@@ -48,7 +49,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				//SftMin = new([(Xy, new(new(context, "neg(log(exp(neg(x))+exp(neg(y))))",  cancel), out _, Xy), null)]),
 				SftClamp = new([(Xyz, new(new(context, "x+log(1+exp(y+neg(x)))+neg(log(1+exp(z+neg(z))))",  cancel), out _, Xyz), null)]),
 				
-				// TODO these could use a precomputed log(b)
+				// ILeafODO these could use a precomputed log(b)
 				SftAbsB = new([(Xy, new(new(context, "log(1+exp(log(y)x))inv(log(y))",  cancel), out _, Xy), null)]),
 				SftNegB = new([(Xy, new(new(context, "neg(log(1+exp(neg(log(y)x))))inv(log(y))",  cancel), out _, Xy), null)]),
 				SftMaxB = new([(Xyz, new(new(context, "log(exp(log(z)x)+exp(log(z)y))inv(log(z))",  cancel), out _, Xyz), null)]),
@@ -59,16 +60,16 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 				ExpB = new([(Xy, new(new(context, "exp(log(y)x)",  cancel), out _, Xy), null)]),
 				LogB = new([(Xy, new(new(context, "log(x)inv(log(y))",  cancel), out _, Xy), null)]),
 				ImMag = new([(X, new(new(context, "abs(x+neg(re(x)))",  cancel), out _,X), null)]),
-				Square = new([(X, new(new(context, "xx", cancel), out _, X), null)]), // TODO maybe later implement it for performance
+				Square = new([(X, new(new(context, "xx", cancel), out _, X), null)]), // ILeafODO maybe later implement it for performance
 				Cub = new([(X, new(new(context, "xxx", cancel), out _, X), null)]),
 				Quart = new([(X, new(new(context, "sqr(sqr(x))",  cancel), out _,X), null)]);
-				// TODO rgb2hsb, hsv2rgb, log2hsv, lin2hsv, exp2hsv, log2rgb, lin2rgb, exp2rgb... or maybe actually implement those...?
+				// ILeafODO rgb2hsb, hsv2rgb, log2hsv, lin2hsv, exp2hsv, log2rgb, lin2rgb, exp2rgb... or maybe actually implement those...?
 		}
 		private static Subs? _subs;
-		public bool ParseByteCode(CancellationToken cancel, Comparser<T> context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {
+		public bool ParseByteCode(CancellationToken cancel, Comparser/*<T>*/ context, out string print, out byte[] code, bool getCode = true, bool getPrint = false) {
 			
 			List<byte> header = []; // header string
-			WriteInt(INumber<T>.ToBytes(T.zero).Length, header); // leaf size -> header
+			WriteInt(ToBytes(zero).Length, header); // leaf size -> header
 			List<List<byte>> funcCodes = [header]; // first slot is reserved for the function counter
 			List<string[]> funcPrints = []; // print function definitions
 			Dictionary<CallCustom, int> calls = []; // found custom function recalls
@@ -127,10 +128,10 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						OpCode.Min => new(OpCode.Neg, new(OpCode.Max, new(OpCode.Neg, v))),
 						OpCode.SoftMin => new(OpCode.Neg, new(OpCode.SoftMax, new(OpCode.Neg, v))), 
 						OpCode.SoftMinB => new(OpCode.Call, v, _subs!.SftMinB),//new(OpCode.Neg, new(OpCode.SoftMaxB, new(OpCode.Neg, v))), 
-						OpCode.SoftAbs => new(OpCode.Call, v, _subs!.SftAbs),//new([new(T.zero), v], OpCode.SoftMax),
-						OpCode.SoftAbsB => new(OpCode.Call, v, _subs!.SftAbsB),//new([new(T.zero), v], OpCode.SoftMaxB),
+						OpCode.SoftAbs => new(OpCode.Call, v, _subs!.SftAbs),//new([new(zero), v], OpCode.SoftMax),
+						OpCode.SoftAbsB => new(OpCode.Call, v, _subs!.SftAbsB),//new([new(zero), v], OpCode.SoftMaxB),
 						OpCode.SoftNeg => new(OpCode.Neg, new(OpCode.SoftAbs, new(OpCode.Neg, v))),//new(OpCode.Call, v, subs!.SftNeg),//
-						OpCode.SoftNegB => new(OpCode.Call, v, _subs!.SftNegB),//new([new(T.zero), v], OpCode.SoftMinB),
+						OpCode.SoftNegB => new(OpCode.Call, v, _subs!.SftNegB),//new([new(zero), v], OpCode.SoftMinB),
 						OpCode.Exp10 => new(OpCode.Exp, new([Ln10, v], OpCode.Mul)),
 						OpCode.Exp2 => new(OpCode.Exp, new([Ln2, v], OpCode.Mul)), 
 						OpCode.Log10 => new([new(OpCode.Log, v), Iln10], OpCode.Mul),
@@ -162,13 +163,13 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 						OpCode.Frac => new(OpCode.Call, v, _subs!.Frac),
 						OpCode.Ceil => new(OpCode.Neg, new(OpCode.Floor, new(OpCode.Neg, v))),
 						OpCode.Cycle => new(OpCode.Call, v, _subs!.Cycle),
-						OpCode.Clamp01 =>new([v, new (T.zero), new(T.unit)],OpCode.Clamp),
+						OpCode.Clamp01 =>new([v, new (zero), new(unit)],OpCode.Clamp),
 						OpCode.SoftClamp01B => new(OpCode.Call, v, _subs!.SoftClamp01B),
-						OpCode.SoftClamp01 => new([v, new (T.zero), new(T.unit)],OpCode.SoftClamp),
+						OpCode.SoftClamp01 => new([v, new(zero), new(unit)],OpCode.SoftClamp),
 						OpCode.Sgn => new(OpCode.Call, v, _subs!.Sgn),
-						OpCode.Sqrt => new([v, new(T.MakeR(.5))], OpCode.Pow),
+						OpCode.Sqrt => new([v, new((Real)(.5))], OpCode.Pow),
 						OpCode.Sqr => new(OpCode.Call, v, _subs!.Square),
-						OpCode.Cbrt => new([v, new(T.MakeR(1.0/3))], OpCode.Pow),
+						OpCode.Cbrt => new([v, new((Real)(1.0/3))], OpCode.Pow),
 						OpCode.Cub => new(OpCode.Call, v, _subs!.Cub),
 						OpCode.Quart => new(OpCode.Call, v, _subs!.Quart),
 						OpCode.Gauss => new(OpCode.Exp, new(OpCode.Neg, new(OpCode.Sqr, v))),
@@ -206,7 +207,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 			void PrintFunctions() {
 				printF = "FUNCTIONS " + funcPrints.Count + "\n";
 				for (int f = 0; f < funcPrints.Count; ++f) {
-					printF += "FUNCTION " + f + ":" + funcPrints[f].Length + " DEFINITIONS" + "\n"; // FUNCTION<index>: definitions count
+					printF += "FUNCTION " + f + ":" + funcPrints[f].Length + " DEFINITIONS" + "\n"; // FUNCILeafION<index>: definitions count
 					foreach (var s in funcPrints[f])
 						printF += s; // print all the pre-parsed definitions
 				}
@@ -278,7 +279,7 @@ public abstract partial class Comparser<T> where T : unmanaged, INumber<T> {
 					case 0: // Leaf/Argument
 						if (v._arg.Length == 0) {
 							b.Add((byte)OpCode.Leaf); // OpCode LEAF
-							foreach (var i in INumber<T>.ToBytes(v._leaf))
+							foreach (var i in ToBytes(v._leaf))
 								b.Add(i); // leaf bytes (expectation set at the very first byte of the bytecode, before the function definitions)
 							return;
 						}

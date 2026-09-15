@@ -62,9 +62,10 @@ partial class SettingsPanel {
         algebraBox.Items.AddRange(new object[] { "REAL", "COMPLEX", "QUATERNION" });
         algebraBox.Location = new Point(163, 3);
         algebraBox.Name = "algebraBox";
+        algebraBox.Text = "QUATERNION";
         algebraBox.Size = new Size(154, 23);
+        algebraBox.Enabled = false;
         algebraBox.TabIndex = 1;
-        algebraBox.SelectedIndexChanged += AlgebraBox_SelectedIndexChanged;
         // 
         // decLabel
         // 

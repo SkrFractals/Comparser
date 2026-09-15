@@ -1,5 +1,6 @@
 ﻿using Comparser.Comparser.Numbers;
 using System.Text.RegularExpressions;
+using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
 public interface IComparser {
 	public object MakeArgs(string[] args);
@@ -26,9 +27,9 @@ public interface IComparser {
 	public List<(Color color, string log)> ReadCode(string text, CancellationToken cancel, out (int position, Color color)[] colors);
 }
 
-public abstract partial class Comparser<T> : IComparser where T : unmanaged, INumber<T> {
+public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unmanaged, IScalar<T>*/ {
 
-	protected Comparser(
+	public Comparser(
 		bool caseInsensitive = true, 
 		bool operatorLess = true,
 		ushort stackOverflowLimit = 499, 
@@ -50,22 +51,15 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		_operatorLessDef = operatorLess;
 		_operatorLess = operatorLess;
 		Plotter = new(this);
-			/*, [
-			new(false, T.zero, T.unit), 
-			new(false, T.zero, T.one - T.unit)
-		], [new(
-			new(false, T.zero, T.unit),
-			new(new CancellationTokenSource().Token, this, "z"),
-			Plot.PlotOutput.ColorMode.Hsv, new(this, None), new(this, None))]);*/
 	}
 
 	private Reader? _currentReader;
 
 	#region Interface
-	public object MakeArgs((string alias, object value)[] pairs) => new Value([.. pairs.Select(p => new Value((T)p.value, 0, p.alias))]);
-	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(T.nan, 0, p)).ToArray());
+	public object MakeArgs((string alias, object value)[] pairs) => new Value([.. pairs.Select(p => new Value((ILeaf)p.value, 0, p.alias))]);
+	public object MakeArgs(string[] names) => new Value(names.Select(p => new Value(Real.nan, 0, p)).ToArray());
 	private static Value AsValue(object? e) => e as Value ?? new();
-	public double AsDouble(object? e) =>  e switch { Value v => T.Re(v.GetLeaf()), double d => d, int i => i, _ => 0 };
+	public double AsDouble(object? e) =>  e switch { Value v => v.Re(), double d => d, int i => i, _ => 0 };
 	public object Parse(CancellationToken cancel, string text, int from, out (int position, Color color)[] colors, object? args = null) {
 		var read = new Reader(this, text, cancel, from);
 		var e = new Expression(read, out _, AsValue(args), from);
@@ -242,26 +236,26 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 							EndLoop(true, false);
 							break;
 						case Actions.StackOverflow:
-							_stackOverflow = (ushort)T.Re(eval.GetLeaf());
+							_stackOverflow = (ushort)(eval.Re());
 							break;
 						case Actions.IterOverflow:
-							_iterOverflow = (ushort)T.Re(eval.GetLeaf());
+							_iterOverflow = (ushort)(eval.Re());
 							break;
 						case Actions.WhileOverflow:
-							_loopOverflow = (ushort)T.Re(eval.GetLeaf());
+							_loopOverflow = (ushort)(eval.Re());
 							break;
 						case Actions.DoOverflow:
-							_doOverflow = (ushort)T.Re(eval.GetLeaf());
+							_doOverflow = (ushort)(eval.Re());
 							break;
 						case Actions.Operator:
-							_operatorLess = INumber<T>.IsTrue(eval.GetLeaf());
+							_operatorLess = eval.GetLeaf().IsTrue();
 							break;
 						default:
 							action = false;
 							break;
 
 							void EndLoop(bool onlyLoops = true, bool dontContinue = true) {
-								for (var loops = (int)T.Re(eval.GetLeaf()); loops > 0;) {
+								for (var loops = (int)(eval.Re()); loops > 0;) {
 									if (cancel.IsCancellationRequested)
 										return;
 									int startSkip = read.From;
@@ -355,8 +349,8 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 								case 2: // cache
 									if ("" != (e = FailEvalClose(out eval) ? "Failed to parse CACHE size."
 										: eval.Values.Length != 1 ? "Multiple values in the CACHE size expression: " + eval
-										: T.IsNaN(eval.Values[0].Leaf) ? "CACHE size evaluated as NaN." : "")) { return e; }
-									cache = (int)Math.Round(T.Re(eval.Values[0].Leaf));
+										: eval.Values[0].Leaf.IsNaN() ? "CACHE size evaluated as NaN." : "")) { return e; }
+									cache = (int)Math.Round(eval.Values[0].Leaf.Re());
 									break;
 								default:
 									return "unexpected third parenthesis after cache size.";
@@ -373,7 +367,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 					}
 					void IsFailed(Expression expression) {
 						var v = CollapseScalar(expression.V);
-						if (v.Values.Length != 0 || v.Term != null || !T.IsNaN(v.Leaf))
+						if (v.Values.Length != 0 || v.Term != null || !v.Leaf.IsNaN())
 							return;
 						read.AddC(beforeI, read.From, ParseDictionary.Type.Error);
 						failFunc = FailReason.BadExpression;
@@ -422,7 +416,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 						return;
 						string If() {
 							while (true) {
-								var failCond = INumber<T>.IsFalse(eval.Leaf);
+								var failCond = eval.Leaf.IsFalse();
 								if (read.GotoFirstFailed(['{'], 1, out _, out _))
 									return "Failed to find a START BRACKET.";
 								if (!failCond)
@@ -562,7 +556,7 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 					foreach (var iv in v)
 						fail |= iv.Values.Length > 0
 							? FailArgValues(iv.Values)
-							: T.IsNaN(iv.Leaf) && (iv.String == "" || !IsAlphaNumeric(iv.String));
+							: iv.Leaf.IsNaN() && (iv.String == "" || !IsAlphaNumeric(iv.String));
 					return fail;
 				}
 			}
@@ -741,26 +735,30 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	private bool _operatorLess;
 	public static readonly Value None = new();
 	private static readonly Value StackOverflow = new(FailReason.StackOverflow);
-	private static readonly Cf OpFact = new(T.Factorial, OpCode.Factorial);
-	private static readonly Cf OpSqr = new(T.Sqr, OpCode.Sqr);
-	private static readonly Cf OpConj = new(INumber<T>.Conj, OpCode.Conj);
+	private static readonly Cf OpFact = new(Factorial, OpCode.Factorial);
+	private static readonly Cf OpSqr = new(ILeaf.Sqr, OpCode.Sqr);
+	private static readonly Cf OpConj = new(ILeaf.Conj, OpCode.Conj);
 	private static readonly Ce OpCount = new(typeof(FuncCount), 0);
 	private static readonly Ce OpCatCount = new(typeof(FuncCatCount), 0);
-	private static readonly Cf OpAbs = new(INumber<T>.T_Abs, OpCode.Abs);
-	private static readonly Cf OpSqrAbs = new(INumber<T>.SqrAbs, OpCode.SqrAbs);
-	private static readonly Cf OpCompAbs = new(T.AbsComp, OpCode.Absri);
-	private static readonly Cf OpSign = new(INumber<T>.Sign, OpCode.Sgn);
-	protected abstract Value GenericConstants();
+	private static readonly Cf OpAbs = new(T_Abs, OpCode.Abs);
+	private static readonly Cf OpSqrAbs = new(T_SqrAbs, OpCode.SqrAbs);
+	private static readonly Cf OpCompAbs = new(AbsComp, OpCode.Absri);
+	private static readonly Cf OpSign = new(Sign, OpCode.Sgn);
+	//protected Value GenericConstants();
 	protected readonly ParseDictionary Context = new();
 	public readonly Dictionary<string, CallFunction> UserFunctions = [];
 	public readonly Dictionary<string, CallFunction> DefaultFunctions = [];
 	#endregion
 	
 	#region Helpers
-	public class Reader(Comparser<T> context, string text, CancellationToken cancel, int from = 0) {
+	private static Real/*<T>*/ nan => Real/*<T>*/.nan;
+	private static Real/*<T>*/ unit => Real/*<T>*/.unit;
+	private static Real/*<T>*/ zero => Real/*<T>*/.zero;
+	private static Real/*<T>*/ one => Real/*<T>*/.one;
+	public class Reader(Comparser/*<T>*/ context, string text, CancellationToken cancel, int from = 0) {
 		public char nextChar => From < Text.Length ? Text[From] : ';';
 		public string remainingString => From < Text.Length ? Text[From..] : "";
-		public readonly Comparser<T> Context = context;
+		public readonly Comparser/*<T>*/ Context = context;
 		public int From = from, Line = 1;
 		public readonly CancellationToken Cancel = cancel;
 		public readonly string Text = context._caseInsensitive ? text.ToLower() : text;
@@ -1039,23 +1037,27 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 	#endregion
 
 	private void FillDefault() {
-		C(["π", "pi", "Pi", "PI"], INumber<T>.C_Pi()); // half rotation
-		C(["τ", "tau", "Tau", "TAU"], INumber<T>.C_Tau()); // full rotation
-		C(["e", "E"], INumber<T>.C_E()); // euler number
-		C(["φ", "phi", "Phi", "PHI"], INumber<T>.C_Phi()); // golden ratio
-		C(["γ", "gamma", "Gamma", "GAMMA"], INumber<T>.C_Gamma()); // euler constant
-		C(["one", "One", "ONE"], T.one); // all components one
-		C(["unit", "Unit", "UNIT"], T.unit); // all components one
-		C(["ln2", "LN2", "Ln2"], T.MakeR(Math.Log(2))); // ln(2)
-		C(["ln10", "LN10", "Ln10"], T.MakeR(Math.Log(10))); // ln(10)
-		C(["sqrt2", "SQRT2", "Sqrt2", "√2"], T.MakeR(Math.Sqrt(2))); // sqrt(2)
-		C(["sqrt3", "SQRT3", "Sqrt3", "√3"], T.MakeR(Math.Sqrt(3))); // sqrt(3)
-		C(["sqrt5", "SQRT5", "Sqrt5", "√5"], T.MakeR(Math.Sqrt(5))); // sqrt(5)
-		C(["apery", "APERY", "Apery", "ζ3"], T.MakeR(1.202056903159594285399738161511449990764986292)); // Apery's constant
-		C(["δ", "feigenbaum", "Feigenbaum", "FEIGENBAUM"], T.MakeR(4.669201609102990671853203820466)); // Feigenbaum constant
-		C(["g", "G", "catalan", "Catalan", "CATALAN"], T.MakeR(0.915965594177219015054603514932384110774)); // Catalan's constant
-		foreach(var d in GenericConstants().Values)
-			C([d.String], d.Leaf);
+		
+		C(["i", "I"], Complex.i); // complex imaginary unit
+		C(["j", "J"], Quaternion.j); // quaternionic imaginary unit
+		C(["k", "K"], Quaternion.k); // quaternionic imaginary unit
+		
+		
+		C(["∞", "infty", "Infty", "INFTY", "infinity", "Infinity", "INFINITY"], (Real)double.PositiveInfinity); // infinity
+		C(["π", "pi", "Pi", "PI"], (Real)Math.PI); // half rotation
+		C(["τ", "tau", "Tau", "TAU"], (Real)Math.Tau); // full rotation
+		C(["e", "E"], (Real)Math.E); // euler number
+		C(["φ", "phi", "Phi", "PHI"],(Real)Static.Phi); // golden ratio
+		C(["γ", "gamma", "Gamma", "GAMMA"], (Real)Static.Gamma); // euler constant
+		C(["ln2", "LN2", "Ln2"],(Real)Static.Ln2); // ln(2)
+		C(["ln10", "LN10", "Ln10"],(Real)Static.Ln10); // ln(10)
+		C(["sqrt2", "SQRT2", "Sqrt2", "√2"], (Real)Static.Sqrt2); // sqrt(2)
+		C(["sqrt3", "SQRT3", "Sqrt3", "√3"], (Real)Static.Sqrt3); // sqrt(3)
+		C(["sqrt5", "SQRT5", "Sqrt5", "√5"], (Real)Static.Sqrt5); // sqrt(5)
+		C(["apery", "APERY", "Apery", "ζ3"],(Real)Static.Apery); // Apery's constant
+		C(["δ", "feigenbaum", "Feigenbaum", "FEIGENBAUM"],(Real)Static.Feigenbaum); // Feigenbaum constant
+		C(["g", "G", "catalan", "Catalan", "CATALAN"], (Real)Static.Catalan); // Catalan's constant
+		//foreach(var d in GenericConstants().Values) C([d.String], d.Leaf);
 		
 		//CallFunction min, max, mul, sum, prod, vec, ln, nsinhc, nsinc, re, im, neg, inv, compMod, cub, trunc, sinhc, ceil;
 		// meta
@@ -1065,136 +1067,136 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		A(["cat", "Cat", "concat", "Concat", "concatenate", "Concatenate"], new Ce(typeof(FuncCat), 0)); // Un-nests the vectors: concat((1,2),3,((4,5),6)) = (1,2,3,4,5,6)
 
 		// double arguments:
-		A(["min", "Min", "minimum", "Minimum"], new Cf2(T.Min, OpCode.Min)); // component-wise minimum
-		A(["max", "Max", "maximum", "Maximum"], new Cf2(T.Max, OpCode.Max)); // component-wise maximum
-		A(["softmax", "SoftMax", "Softmax", "sftmax", "SftMax", "Sftmax"], new Cf2(INumber<T>.SoftMax, OpCode.SoftMax));
-		A(["softmin", "SoftMin", "Softmin", "sftmin", "SftMin", "Sftmin"], new Cf2(INumber<T>.SoftMin, OpCode.SoftMin));
-		A(["add","Add"], new Cf2(INumber<T>.Add, OpCode.Add)); // adds all the top layer elements of the input vector
-		A(["mul", "Mul", "multiply", "Multiply"], new Cf2(INumber<T>.Mul, OpCode.Mul)); // multiplies all the top layer elements of the input vector
-		A(["icoef", "Icoef", "ICoef", "imagcoef", "ImagCoef", "Imagcoef"], new Cf2((x, y) => -x * y, OpCode.ImCoef)); // = re(-a*b), imaginary coefficient icoef(a+bi,i)=b, icoef(r+ai+bj+ck,j)=b, icoef(a+bi,1)=-a
-		A(["compmod", "CompMod", "Compmod", "cmod", "CMod", "Cmod"], new Cf2(INumber<T>.CompMod, OpCode.CompMod)); // component-wise remainder, returns 0 when dividing by zero
-		A(["expb", "ExpB", "Expb"], new Cf2(INumber<T>.ExpB, OpCode.ExpB)); // b^x
-		A(["logb", "LogB", "Logb"], new Cf2(INumber<T>.LogB, OpCode.LogB)); // log_b(x)
-		A(["softabsb", "SoftAbsb", "Softabsb", "sftabsb", "SftAbsb", "Sftabsb", "softplusb", "SoftPlusb", "Softplusb", "sftplusb", "SftPlusb", "Sftplusb"], new Cf2(INumber<T>.SoftAbsB, OpCode.SoftAbsB)); // = e^(1+ln(z))
-		A(["softnegb", "SoftNegb", "Softnegb", "sftnegb", "SftNegb", "Sftnegb", "softminusb", "SoftMinusb", "Softminusb", "sftminusb", "SftMinusb", "Sftminusb"], new Cf2(INumber<T>.SoftNegB, OpCode.SoftNegB)); // = e^(1+ln(z))
-		A(["softclamp01b", "SoftClamp01B", "softclampbnorm", "SoftClampBNorm", "Softclampbnorm"], new Cf2(INumber<T>.SoftClamp01B, OpCode.SoftClamp01B)); // component-wise clamp
+		A(["min", "Min", "minimum", "Minimum"], new Cf2(Min, OpCode.Min)); // component-wise minimum
+		A(["max", "Max", "maximum", "Maximum"], new Cf2(Max, OpCode.Max)); // component-wise maximum
+		A(["softmax", "SoftMax", "Softmax", "sftmax", "SftMax", "Sftmax"], new Cf2(SoftMax, OpCode.SoftMax));
+		A(["softmin", "SoftMin", "Softmin", "sftmin", "SftMin", "Sftmin"], new Cf2(SoftMin, OpCode.SoftMin));
+		A(["add","Add"], new Cf2(ILeaf.Add, OpCode.Add)); // adds all the top layer elements of the input vector
+		A(["mul", "Mul", "multiply", "Multiply"], new Cf2(ILeaf.Mul, OpCode.Mul)); // multiplies all the top layer elements of the input vector
+		A(["icoef", "Icoef", "ICoef", "imagcoef", "ImagCoef", "Imagcoef"], new Cf2((x, y) => Mul(Neg(x), y), OpCode.ImCoef)); // = re(-a*b), imaginary coefficient icoef(a+bi,i)=b, icoef(r+ai+bj+ck,j)=b, icoef(a+bi,1)=-a
+		A(["compmod", "CompMod", "Compmod", "cmod", "CMod", "Cmod"], new Cf2(CompMod, OpCode.CompMod)); // component-wise remainder, returns 0 when dividing by zero
+		A(["expb", "ExpB", "Expb"], new Cf2(ExpB, OpCode.ExpB)); // b^x
+		A(["logb", "LogB", "Logb"], new Cf2(LogB, OpCode.LogB)); // log_b(x)
+		A(["softabsb", "SoftAbsb", "Softabsb", "sftabsb", "SftAbsb", "Sftabsb", "softplusb", "SoftPlusb", "Softplusb", "sftplusb", "SftPlusb", "Sftplusb"], new Cf2(SoftAbsB, OpCode.SoftAbsB)); // = e^(1+ln(z))
+		A(["softnegb", "SoftNegb", "Softnegb", "sftnegb", "SftNegb", "Sftnegb", "softminusb", "SoftMinusb", "Softminusb", "sftminusb", "SftMinusb", "Sftminusb"], new Cf2(SoftNegB, OpCode.SoftNegB)); // = e^(1+ln(z))
+		A(["softclamp01b", "SoftClamp01B", "softclampbnorm", "SoftClampBNorm", "Softclampbnorm"], new Cf2(SoftClamp01B, OpCode.SoftClamp01B)); // component-wise clamp
 
 		// triple arguments
-		A(["clamp", "Clamp"], new Cf3(T.Clamp, OpCode.Clamp)); // component-wise clamp
-		A(["softclamp", "SoftClamp", "Softclamp","sftclamp", "SftClamp", "Sftclamp" ], new Cf3(INumber<T>.SoftClamp, OpCode.SoftClamp)); // natural soft clamp
-		A(["softmaxb", "SoftMaxB", "Softmaxb", "sftmaxb", "SftMaxB", "Sftmaxb"], new Cf3(INumber<T>.SoftMaxB, OpCode.SoftMaxB));
-		A(["softminb", "SoftMinB", "Softminb", "sftminb", "SftMinB", "Sftminb"], new Cf3(INumber<T>.SoftMinB, OpCode.SoftMinB));
+		A(["clamp", "Clamp"], new Cf3(/*T*/Clamp, OpCode.Clamp)); // component-wise clamp
+		A(["softclamp", "SoftClamp", "Softclamp","sftclamp", "SftClamp", "Sftclamp" ], new Cf3(SoftClamp, OpCode.SoftClamp)); // natural soft clamp
+		A(["softmaxb", "SoftMaxB", "Softmaxb", "sftmaxb", "SftMaxB", "Sftmaxb"], new Cf3(SoftMaxB, OpCode.SoftMaxB));
+		A(["softminb", "SoftMinB", "Softminb", "sftminb", "SftMinB", "Sftminb"], new Cf3(SoftMinB, OpCode.SoftMinB));
 		
 		// quadruple arguments
 		A(["product", "Product", "prod", "Prod", "Π"], new Ce(typeof(Product), 0)); // iterative product
 		A(["sum", "Sum", "Σ"], new Ce(typeof(Sum), 0)); // iterative sum
 		A(["vector", "Vector", "vec", "Vec"], new Ce(typeof(Vector), 0)); // iterative vector builder
-		A(["softclampb", "SoftClampB", "Softclampb", "sftclampb", "SftClampB", "Sftclampb"], new Cf4(INumber<T>.SoftClampB, OpCode.SoftClampB)); // soft clamp with a custom base
+		A(["softclampb", "SoftClampB", "Softclampb", "sftclampb", "SftClampB", "Sftclampb"], new Cf4(SoftClampB, OpCode.SoftClampB)); // soft clamp with a custom base
 		
 		// exp/log
-		A(["exp10", "Exp10", "expdec", "ExpDec", "Expdec"], new Cf(INumber<T>.Exp10, OpCode.Exp10)); // 10^x
-		A(["exp2", "Exp2", "expbin", "ExpBin", "Expbin"], new Cf(INumber<T>.Exp2, OpCode.Exp2)); // 2^x
-		A(["exp", "Exp", "exponential", "Exponential"], new Cf(T.Exp, OpCode.Exp)); // e^x
-		A(["log10", "Log10", "logdec", "LogDec", "Logdec"], new Cf(INumber<T>.Log10, OpCode.Log10)); // log_10(x)
-		A(["log2", "Log2", "logbin", "LogBin", "Logbin"], new Cf(INumber<T>.Log2, OpCode.Log2)); // log_2(x)
-		A(["ln", "log", "Ln", "Log", "logarithm", "Logarithm"], new Cf(T.Log, OpCode.Log)); // ln(x)
+		A(["exp10", "Exp10", "expdec", "ExpDec", "Expdec"], new Cf(Exp10, OpCode.Exp10)); // 10^x
+		A(["exp2", "Exp2", "expbin", "ExpBin", "Expbin"], new Cf(Exp2, OpCode.Exp2)); // 2^x
+		A(["exp", "Exp", "exponential", "Exponential"], new Cf(/*T*/Exp, OpCode.Exp)); // e^x
+		A(["log10", "Log10", "logdec", "LogDec", "Logdec"], new Cf(Log10, OpCode.Log10)); // log_10(x)
+		A(["log2", "Log2", "logbin", "LogBin", "Logbin"], new Cf(Log2, OpCode.Log2)); // log_2(x)
+		A(["ln", "log", "Ln", "Log", "logarithm", "Logarithm"], new Cf(/*T*/Log, OpCode.Log)); // ln(x)
 
 		// sincs
-		A(["sinhc", "sinhc", "Sinch", "Sinch"], new Cf(INumber<T>.Sinhc, OpCode.Sinhc));
-		A(["nsinhc", "Nsinhc", "nsinch", "Nsinch", "sinchpi", "SinchPi", "Sinchpi", "sinhcpi", "SinhcPi", "Sinhcpi"], new Cf(INumber<T>.Nsinhc, OpCode.Nsinhc));
-		A(["sinc", "Sinc"], new Cf(INumber<T>.Sinc, OpCode.Sinc));
-		A(["nsinc", "Nsinc", "sincpi", "SincPi", "Sincpi"], new Cf(INumber<T>.Nsinc, OpCode.Nsinc));
+		A(["sinhc", "sinhc", "Sinch", "Sinch"], new Cf(Sinhc, OpCode.Sinhc));
+		A(["nsinhc", "Nsinhc", "nsinch", "Nsinch", "sinchpi", "SinchPi", "Sinchpi", "sinhcpi", "SinhcPi", "Sinhcpi"], new Cf(Nsinhc, OpCode.Nsinhc));
+		A(["sinc", "Sinc"], new Cf(Sinc, OpCode.Sinc));
+		A(["nsinc", "Nsinc", "sincpi", "SincPi", "Sincpi"], new Cf(Nsinc, OpCode.Nsinc));
 
 		// coscs
-		A(["coshc", "coshc", "Cosch", "Cosch"], new Cf(INumber<T>.Coshc, OpCode.Coshc));
-		A(["ncoshc", "Ncoshc", "ncosch", "Ncosch", "coschpi", "CoschPi", "Coschpi", "coshcpi", "CoshcPi", "Coscpi"], new Cf(INumber<T>.Ncoshc, OpCode.Ncoshc));
-		A(["cosc", "Cosc"], new Cf(INumber<T>.Cosc, OpCode.Cosc));
-		A(["ncosc", "Ncosc", "coscpi", "CoscPi", "Coscpi"], new Cf(INumber<T>.Ncosc, OpCode.Ncosc));
+		A(["coshc", "coshc", "Cosch", "Cosch"], new Cf(Coshc, OpCode.Coshc));
+		A(["ncoshc", "Ncoshc", "ncosch", "Ncosch", "coschpi", "CoschPi", "Coschpi", "coshcpi", "CoshcPi", "Coscpi"], new Cf(Ncoshc, OpCode.Ncoshc));
+		A(["cosc", "Cosc"], new Cf(Cosc, OpCode.Cosc));
+		A(["ncosc", "Ncosc", "coscpi", "CoscPi", "Coscpi"], new Cf(Ncosc, OpCode.Ncosc));
 
 		// arc hyperbolics
-		A(["acosh", "Acosh", "arccosh", "ArcCosh", "Arccosh"], new Cf(T.Acosh, OpCode.Acosh));
-		A(["asinh", "Asinh", "arcsinh", "ArcSinh", "Arcsinh"], new Cf(T.Asinh, OpCode.Asinh));
-		A(["atanh", "Atanh", "arctanh", "ArcTanh", "Arctanh"], new Cf(T.Atanh, OpCode.Atanh));
-		A(["asech", "Asech", "arcsech", "ArcSech", "Arcsech"], new Cf(INumber<T>.Asech, OpCode.Asech));
-		A(["acsch", "Acsch", "arccsch", "ArcCsch", "Arccsch"], new Cf(INumber<T>.Acsch, OpCode.Acsch));
-		A(["acoth", "Acoth", "arccoth", "ArcCoth", "Arccoth"], new Cf(T.Acoth, OpCode.Acoth));
+		A(["acosh", "Acosh", "arccosh", "ArcCosh", "Arccosh"], new Cf(/*T*/Acosh, OpCode.Acosh));
+		A(["asinh", "Asinh", "arcsinh", "ArcSinh", "Arcsinh"], new Cf(/*T*/Asinh, OpCode.Asinh));
+		A(["atanh", "Atanh", "arctanh", "ArcTanh", "Arctanh"], new Cf(/*T*/Atanh, OpCode.Atanh));
+		A(["asech", "Asech", "arcsech", "ArcSech", "Arcsech"], new Cf(Asech, OpCode.Asech));
+		A(["acsch", "Acsch", "arccsch", "ArcCsch", "Arccsch"], new Cf(Acsch, OpCode.Acsch));
+		A(["acoth", "Acoth", "arccoth", "ArcCoth", "Arccoth"], new Cf(/*T*/Acoth, OpCode.Acoth));
 
 		// hyperbolics
-		A(["cosh", "Cosh"], new Cf(T.Cosh, OpCode.Cosh));
-		A(["sinh", "Sinh"], new Cf(T.Sinh, OpCode.Sinh));
-		A(["tanh", "Tanh"], new Cf(T.Tanh, OpCode.Tanh));
-		A(["sech", "Sech"], new Cf(INumber<T>.Sech, OpCode.Sech));
-		A(["csch", "Csch"], new Cf(INumber<T>.Csch, OpCode.Csch));
-		A(["coth", "Coth"], new Cf(T.Coth, OpCode.Coth));
+		A(["cosh", "Cosh"], new Cf(/*T*/Cosh, OpCode.Cosh));
+		A(["sinh", "Sinh"], new Cf(/*T*/Sinh, OpCode.Sinh));
+		A(["tanh", "Tanh"], new Cf(/*T*/Tanh, OpCode.Tanh));
+		A(["sech", "Sech"], new Cf(Sech, OpCode.Sech));
+		A(["csch", "Csch"], new Cf(Csch, OpCode.Csch));
+		A(["coth", "Coth"], new Cf(/*T*/Coth, OpCode.Coth));
 
 		// arc trigs
-		A(["acos", "Acos", "arccos", "ArcCos", "Arccos"], new Cf(T.Acos, OpCode.Acos));
-		A(["asin", "Asin", "arcsin", "ArcSin", "Arcsin"], new Cf(T.Asin, OpCode.Asin));
-		A(["atan", "Atan", "arctan", "ArcTan", "Arctan"], new Cf(T.Atan, OpCode.Atan));
-		A(["asec", "Asec", "arcsec", "ArcSec", "Arcsec"], new Cf(INumber<T>.Asec, OpCode.Asec));
-		A(["acsc", "Acsc", "arccsc", "ArcCsc", "Arccsc"], new Cf(INumber<T>.Acsc, OpCode.Acsc));
-		A(["acot", "Acot", "arccot", "ArcCot", "Arccot"], new Cf(T.Acot, OpCode.Acot));
+		A(["acos", "Acos", "arccos", "ArcCos", "Arccos"], new Cf(/*T*/Acos, OpCode.Acos));
+		A(["asin", "Asin", "arcsin", "ArcSin", "Arcsin"], new Cf(/*T*/Asin, OpCode.Asin));
+		A(["atan", "Atan", "arctan", "ArcTan", "Arctan"], new Cf(/*T*/Atan, OpCode.Atan));
+		A(["asec", "Asec", "arcsec", "ArcSec", "Arcsec"], new Cf(Asec, OpCode.Asec));
+		A(["acsc", "Acsc", "arccsc", "ArcCsc", "Arccsc"], new Cf(Acsc, OpCode.Acsc));
+		A(["acot", "Acot", "arccot", "ArcCot", "Arccot"], new Cf(/*T*/Acot, OpCode.Acot));
 
 		// trigs
-		A(["cos", "Cos"], new Cf(T.Cos, OpCode.Cos));
-		A(["sin", "Sin"], new Cf(T.Sin, OpCode.Sin));
-		A(["tan", "Tan"], new Cf(T.Tan, OpCode.Tan));
-		A(["sec", "Sec"], new Cf(INumber<T>.Sec, OpCode.Sec));
-		A(["csc", "Csc"], new Cf(INumber<T>.Csc, OpCode.Csc));
-		A(["cot", "Cot"], new Cf(T.Cot, OpCode.Cot));
+		A(["cos", "Cos"], new Cf(/*T*/Cos, OpCode.Cos));
+		A(["sin", "Sin"], new Cf(/*T*/Sin, OpCode.Sin));
+		A(["tan", "Tan"], new Cf(/*T*/Tan, OpCode.Tan));
+		A(["sec", "Sec"], new Cf(Sec, OpCode.Sec));
+		A(["csc", "Csc"], new Cf(Csc, OpCode.Csc));
+		A(["cot", "Cot"], new Cf(/*T*/Cot, OpCode.Cot));
 
 		// unary
-		A(["true", "True"], new Cf((x) => T.MakeR(T.Re(INumber<T>.SqrAbs(x)) >= 1 ? 1 : 0), OpCode.True)); // = size >= 1
-		A(["false", "False"], new Cf((x) => T.MakeR(T.Re(INumber<T>.SqrAbs(x)) < 1 ? 1 : 0), OpCode.False)); // = size < 1
-		A(["real", "Real", "re", "Real"], new Cf(INumber<T>.T_Re, OpCode.Re)); // real part: re(a+bi) = a
-		A(["imag", "Imag", "im", "Im"], new Cf(INumber<T>.T_I, OpCode.Im)); // imaginary sum: im(r+ai+bj+ck) = a+b+c
-		A(["immg", "Immg", "ImMg", "immag", "ImMag", "Immag"], new Cf((x) => T.MakeR(T.ImMag(x)), OpCode.ImMag)); // imaginary magnitude immg(r+ai+bj+ck) = sqrt(a^2+b^2+c^2)
-		A(["frac", "Frac"], new Cf(T.Frac, OpCode.Frac)); // = fractional part
-		A(["trunc", "Trunc", "truncate", "Truncate"], new Cf(T.Trunc, OpCode.Trunc)); // = whole part
-		A(["floor", "Floor"], new Cf(T.Floor, OpCode.Floor)); // = round down
-		A(["round", "Round", "rnd", "Rnd"], new Cf(T.Round, OpCode.Round)); // = round
-		A(["ceiling", "Ceiling", "ceil", "Ceil"], new Cf(T.Ceil, OpCode.Ceil)); // = round up
-		A(["cyc", "Cyc", "cycle", "Cycle", "lmod", "Lmod", "pfrac", "Pfrac"], new Cf(T.Cycle, OpCode.Cycle)); // = positive frac cycle. cyc(1.25)=0.25, cyc(-.75)=0.25. Also equals x-floor(x)
-		A(["clamp01", "Clamp01", "clampnorm", "ClampNorm", "Clampnorm"], new Cf(INumber<T>.Clamp01, OpCode.Clamp01)); // component-wise clamp
-		A(["softclamp01", "SoftClamp01", "softclampnorm", "SoftClampNorm", "Softclampnorm"], new Cf(INumber<T>.Clamp01, OpCode.Clamp01)); // component-wise clamp
+		A(["true", "True"], new Cf((x) => /*T*/(Real)(SqrAbs(x) >= 1 ? 1 : 0), OpCode.True)); // = size >= 1
+		A(["false", "False"], new Cf((x) => /*T*/(Real)(SqrAbs(x) < 1 ? 1 : 0), OpCode.False)); // = size < 1
+		A(["real", "Real", "re", "Real"], new Cf(T_Re, OpCode.Re)); // real part: re(a+bi) = a
+		A(["imag", "Imag", "im", "Im"], new Cf(T_I, OpCode.Im)); // imaginary sum: im(r+ai+bj+ck) = a+b+c
+		A(["immg", "Immg", "ImMg", "immag", "ImMag", "Immag"], new Cf(ImMag, OpCode.ImMag)); // imaginary magnitude immg(r+ai+bj+ck) = sqrt(a^2+b^2+c^2)
+		A(["frac", "Frac"], new Cf(/*T*/Frac, OpCode.Frac)); // = fractional part
+		A(["trunc", "Trunc", "truncate", "Truncate"], new Cf(/*T*/Truncate, OpCode.Trunc)); // = whole part
+		A(["floor", "Floor"], new Cf(/*T*/Floor, OpCode.Floor)); // = round down
+		A(["round", "Round", "rnd", "Rnd"], new Cf(/*T*/Round, OpCode.Round)); // = round
+		A(["ceiling", "Ceiling", "ceil", "Ceil"], new Cf(/*T*/Ceiling, OpCode.Ceil)); // = round up
+		A(["cyc", "Cyc", "cycle", "Cycle", "lmod", "Lmod", "pfrac", "Pfrac"], new Cf(/*T*/Cycle, OpCode.Cycle)); // = positive frac cycle. cyc(1.25)=0.25, cyc(-.75)=0.25. Also equals x-floor(x)
+		A(["clamp01", "Clamp01", "clampnorm", "ClampNorm", "Clampnorm"], new Cf(Clamp01, OpCode.Clamp01)); // component-wise clamp
+		A(["softclamp01", "SoftClamp01", "softclampnorm", "SoftClampNorm", "Softclampnorm"], new Cf(SoftClamp01, OpCode.Clamp01)); // component-wise clamp
 		A(["sign", "Sign", "sgn", "Sgn"],OpSign); // = z/|z|
-		A(["neg", "Neg", "negative", "Negative"], new Cf(INumber<T>.Neg, OpCode.Neg)); // = -z
-		A(["inv","Inv", "inverse", "Inverse"], new Cf(T.Inv, OpCode.Inv)); // = 1/z
+		A(["neg", "Neg", "negative", "Negative"], new Cf(Neg, OpCode.Neg)); // = -z
+		A(["inv","Inv", "inverse", "Inverse"], new Cf(/*T*/Inv, OpCode.Inv)); // = 1/z
 		A(["compabs", "CompAbs", "Compabs", "cabs", "CAbs", "Cabs"], OpCompAbs); // component-abs: absri(a+bi) = |a|+|b|i
 		A(["sqrabs", "SqrAbs", "Sqrabs", "sqrnorm", "SqrNorm", "Sqrnorm"], OpSqrAbs); // = |z|^2; sqrabs(a+bi) = a^2+b^2
 		A(["abs", "Abs", "absolute", "Absolute", "norm", "Norm"], OpAbs); // = |z|
-		A(["arg", "Arg", "argument", "Argument", "phase", "Phase", "angle", "Angle"], new Cf(INumber<T>.T_Arg, OpCode.Arg)); // argument, the angle from (0,0). arg(-1)=pi
+		A(["arg", "Arg", "argument", "Argument", "phase", "Phase", "angle", "Angle"], new Cf(T_Arg, OpCode.Arg)); // argument, the angle from (0,0). arg(-1)=pi
 		A(["conj","Conj","conjugate","Conjugate"],OpConj);// conjugate: negates all imaginary units, conj(r+ai+bj+dk) = r-ai-bj-bk
-		A(["softabs", "SoftAbs", "Softabs", "sftabs", "SftAbs", "Sftabs", "softplus", "SoftPlus", "Softplus", "sftplus", "SftPlus", "Sftplus"], new Cf(INumber<T>.SoftAbs, OpCode.SoftAbs)); // = e^(1+ln(z))
-		A(["softneg", "SoftNeg", "Softneg", "sftneg", "SftNeg", "Sftneg", "softminus", "SoftMinus", "Softminus", "sftminus", "SftMinus", "Sftminus"], new Cf(INumber<T>.SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
+		A(["softabs", "SoftAbs", "Softabs", "sftabs", "SftAbs", "Sftabs", "softplus", "SoftPlus", "Softplus", "sftplus", "SftPlus", "Sftplus"], new Cf(SoftAbs, OpCode.SoftAbs)); // = e^(1+ln(z))
+		A(["softneg", "SoftNeg", "Softneg", "sftneg", "SftNeg", "Sftneg", "softminus", "SoftMinus", "Softminus", "sftminus", "SftMinus", "Sftminus"], new Cf(SoftNeg, OpCode.SoftNeg)); // = e^(1+ln(z))
 
 		// powers
-		A(["√", "sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(T.Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
+		A(["√", "sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(/*T*/Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
 		A(["sqr", "Sqr", "square", "Square"], OpSqr); // square = z^2
-		A(["cbrt", "Cbrt", "cuberoot", "CubeRoot", "Cuberoot"], new Cf(INumber<T>.Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
-		A(["cube", "Cube"], new Cf(T.Cub, OpCode.Cub)); // cube = z^3
-		A(["quart", "hypercube", "HyperCube", "Hypercube", "tesseract", "Tesseract"], new Cf(T.Quart, OpCode.Quart)); // z^4
+		A(["cbrt", "Cbrt", "cuberoot", "CubeRoot", "Cuberoot"], new Cf(Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
+		A(["cube", "Cube"], new Cf(/*T*/Cub, OpCode.Cub)); // cube = z^3
+		A(["quart", "hypercube", "HyperCube", "Hypercube", "tesseract", "Tesseract"], new Cf(/*T*/Quart, OpCode.Quart)); // z^4
 
 		// colors
-		A(["rgb2hsv", "Rgb2hsv", "Rgb2Hsv", "rgbtohsv", "RgbToHsv", "Rgbtohsv"], new Ce(typeof(FuncRgb2hsv)));
-		A(["hsv2rgb", "Hsv2rgb", "Hsv2Rgb", "hsvtorgb", "HsvToRgb", "Hsvtorgb"], new Ce(typeof(FuncHsv2rgb)));
-		A(["log2hsv", "Log2hsv", "Log2Hsv", "logtohsv", "LogToHsv", "Logtohsv"], new Ce(typeof(FuncLog2hsv)));
-		A(["lin2hsv", "Lin2hsv", "Lin2Hsv", "lintohsv", "LinToHsv", "Lintohsv"], new Ce(typeof(FuncLin2hsv)));
-		A(["log2hsvc", "Log2hsv", "Log2HsvC", "logtohsvc", "LogToHsvC", "Logtohsvc"], new Ce(typeof(FuncLog2hsvC)));
-		A(["lin2hsvc", "Lin2hsv", "Lin2HsvC", "lintohsvc", "LinToHsvC", "Lintohsvc"], new Ce(typeof(FuncLin2hsvC)));
-		A(["log2rgb", "Log2rgb", "Log2Rgb", "logtorgb", "LogToRgb", "Logtorgb"], new Ce(typeof(FuncLog2rgb)));
-		A(["lin2rgb", "Lin2rgb", "Lin2Rgb", "lintorgb", "LinToRgb", "Lintorgb"], new Ce(typeof(FuncLin2rgb)));
-		A(["log2rgbc", "Log2rgbc", "Log2RgbC", "logtorgbc", "LogToRgbC", "Logtorgbc"], new Ce(typeof(FuncLog2rgbC)));
-		A(["lin2rgbc", "Lin2rgbc", "Lin2RgbC", "lintorgbc", "LinToRgbC", "Lintorgbc"], new Ce(typeof(FuncLin2rgbC)));
+		A(["rgb2hsv", "Rgb2hsv", "Rgb2Hsv", "rgbtohsv", "RgbToHsv", "Rgbtohsv"], new Ce(typeof(FuncRgb2Hsv)));
+		A(["hsv2rgb", "Hsv2rgb", "Hsv2Rgb", "hsvtorgb", "HsvToRgb", "Hsvtorgb"], new Ce(typeof(FuncHsv2Rgb)));
+		A(["log2hsv", "Log2hsv", "Log2Hsv", "logtohsv", "LogToHsv", "Logtohsv"], new Ce(typeof(FuncLog2Hsv)));
+		A(["lin2hsv", "Lin2hsv", "Lin2Hsv", "lintohsv", "LinToHsv", "Lintohsv"], new Ce(typeof(FuncLin2Hsv)));
+		A(["log2hsvc", "Log2hsv", "Log2HsvC", "logtohsvc", "LogToHsvC", "Logtohsvc"], new Ce(typeof(FuncLog2HsvC)));
+		A(["lin2hsvc", "Lin2hsv", "Lin2HsvC", "lintohsvc", "LinToHsvC", "Lintohsvc"], new Ce(typeof(FuncLin2HsvC)));
+		A(["log2rgb", "Log2rgb", "Log2Rgb", "logtorgb", "LogToRgb", "Logtorgb"], new Ce(typeof(FuncLog2Rgb)));
+		A(["lin2rgb", "Lin2rgb", "Lin2Rgb", "lintorgb", "LinToRgb", "Lintorgb"], new Ce(typeof(FuncLin2Rgb)));
+		A(["log2rgbc", "Log2rgbc", "Log2RgbC", "logtorgbc", "LogToRgbC", "Logtorgbc"], new Ce(typeof(FuncLog2RgbC)));
+		A(["lin2rgbc", "Lin2rgbc", "Lin2RgbC", "lintorgbc", "LinToRgbC", "Lintorgbc"], new Ce(typeof(FuncLin2RgbC)));
 
 		// specials
 		A(["fact", "Fact", "factorial", "Factorial"], OpFact); // factorial
-		A(["gauss", "Gauss"], new Cf(T.Gauss, OpCode.Gauss)); // gauss e^(-z^2)
-		A(["Γ", "gamma", "Gamma"], new Cf(T.Gamma, OpCode.Gamma)); // gamma function = (xz1)!
-		A(["gamma"], new Cf(T.Gamma, OpCode.Gamma)); // gamma function = (xz1)!
-		A(["ζ", "zeta", "Zeta", "riemannzeta","RiemannZeta", "Riemannzeta"], new Cf(T.Zeta, OpCode.Zeta)); // riemann zeta function
+		A(["gauss", "Gauss"], new Cf(Gauss, OpCode.Gauss)); // gauss e^(-z^2)
+		A(["Γ", "gamma", "Gamma"], new Cf(Gamma, OpCode.Gamma)); // gamma function = (xz1)!
+		A(["gamma"], new Cf(Gamma, OpCode.Gamma)); // gamma function = (xz1)!
+		A(["ζ", "zeta", "Zeta", "riemannzeta","RiemannZeta", "Riemannzeta"], new Cf(/*T*/Zeta, OpCode.Zeta)); // riemann zeta function
 		return;
-		void C(string[] name, T v) {
+		void C(string[] name, ILeaf/*<T>*/ v) {
 			foreach (var n in name)if(!_caseInsensitive || n.Equals(n, StringComparison.CurrentCultureIgnoreCase))
 				Context.Insert(new(new Value(v, 0, n), ParseDictionary.Type.DefaultC), n);
 		}
@@ -1204,6 +1206,6 @@ public abstract partial class Comparser<T> : IComparser where T : unmanaged, INu
 		}
 	}
 }
-public class ComparserR : Comparser<Real> { override protected Value GenericConstants() => None; }
+/*public class ComparserR : Comparser<Real> { override protected Value GenericConstants() => None; }
 public class ComparserC : Comparser<Complex> { override protected Value GenericConstants() => new([new(Complex.i, 0, "i")]); }
-public class ComparserQ : Comparser<Quaternion> { override protected Value GenericConstants() => new([new(Quaternion.i, 0, "i"), new(Quaternion.j, 0, "j"), new(Quaternion.k, 0, "k")]); }
+public class ComparserQ : Comparser<Quaternion> { override protected Value GenericConstants() => new([new(Quaternion.i, 0, "i"), new(Quaternion.j, 0, "j"), new(Quaternion.k, 0, "k")]); }*/

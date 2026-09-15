@@ -122,11 +122,11 @@ public partial class ExpressionPanel : UserControl, IPanel {
 		if (!Visible)
 			return;
 		var row = _expressionRows[index];
-		object? v, args = SettingsPanel.Algebra switch {
+		object? v, args = new Comparser.Comparser.Value([new(new Real(index), 0, "x")]);/*SettingsPanel.Algebra switch {
 			1 => new Comparser<Complex>.Value([new(Complex.MakeR(index), 0, "x")]),
 			2 => new Comparser<Quaternion>.Value([new(Quaternion.MakeR(index), 0, "x")]),
 			_ => new Comparser<Real>.Value([new(Real.MakeR(index), 0, "x")])
-		};
+		};*/
 		if((v = IPanel.Eval(this, row.Field, cachedParse, args)) != null)
 			row.Result.Text = SettingsPanel.Context?.ToString(v, SettingsPanel.Decimals);
 	}

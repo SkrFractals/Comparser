@@ -1,7 +1,7 @@
 ﻿using Comparser.Comparser.Numbers;
-using System.DirectoryServices.ActiveDirectory;
+using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
-public abstract partial class Comparser<T> {
+public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T>*/  {
 	public class Expression {
 		
 		
@@ -10,9 +10,9 @@ public abstract partial class Comparser<T> {
 		
 		#region Content
 		// Contains user-defined custom function
-		protected readonly Comparser<T> Context;
+		protected readonly Comparser/*<T>*/ Context;
 		// Parsed and evaluated data
-		public Value V;
+		public readonly Value V;
 		// Cache for remembering recently evaluated arguments
 		private readonly CallFunction.EvalCache _cache;
 		//public readonly List<(int start, ParseDictionary.Type color)> Colors = [];
@@ -24,9 +24,9 @@ public abstract partial class Comparser<T> {
 		/// </summary>
 		/// <param name="depth">depth of stack</param>
 		/// <param name="args">arguments</param>
-		/// <param name="allowCache">should be disable when multitasking as it is not thread safe</param>
+		/// <param name="allowCache">should be disabled when multitasking as it is not thread safe</param>
 		/// <returns>Evaluated value of this expression</returns>
-		public virtual Value Eval(ushort depth, Value args, bool allowCache) {
+		public virtual Value Eval(ushort depth, Value args, bool allowCache = true) {
 			if (allowCache && _cache.GetEval(args)) return _cache.Result?.Eval!;
 			Value result = new(new Value[V.Values.Length]);
 			var error = FailReason.Success;
@@ -70,7 +70,7 @@ public abstract partial class Comparser<T> {
 			}
 		}
 		private Value EvalArg(ushort depth, Value arg, Value args, bool allowCache) => depth > Context._stackOverflow ? StackOverflow 
-			: T.IsNaN(arg.Leaf) && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args, allowCache) ?? arg : arg;
+			: arg.Leaf.IsNaN() && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args, allowCache) ?? arg : arg;
 		
 		#endregion
 		
@@ -119,13 +119,13 @@ public abstract partial class Comparser<T> {
 			ParseDictionary pArgs = new();
 			Nest();
 			read.TrimStart();
-			var o = nextOp = new();
+			Operator o; nextOp = new();
 			do { // Read vector loop:
 				startR = read.From;
 				// Init read
 				expr.Add(r = new() {
 					Op = { Negative = Char('-') },
-					Leaf = T.nan
+					Leaf = nan
 				});
 				nextOp = new();
 				_ = End(false) // unexpected ')', or no op, and return back successful
@@ -153,8 +153,8 @@ public abstract partial class Comparser<T> {
 			#region Read Terms and Operators
 			bool ReadTermReturned() {
 				if (o.Order != 0) {
-					// we had an unary operator (the only one I have to far is the unary inverse, so do that)
-					r.Term = new(Context, new(T.unit)); // unary inverse (pretend we have just successfully read "1/")
+					// we had a unary operator (the only one I have to far is the unary inverse, so do that)
+					r.Term = new(Context, new(unit)); // unary inverse (pretend we have just successfully read "1/")
 					read.TrimStart(1); // trim white space
 					return true; // then return and go read a second operand
 				}
@@ -204,15 +204,15 @@ public abstract partial class Comparser<T> {
 					'=' => new Equal(), '<' => new Less(read.CharAtRel('=', 1)), '>' => new More(read.CharAtRel('=', 1)),
 					'[' => new Index(), '!' => new Exclamation(), '&' => new Sqr(), '~' => new Conj(), '#' => new Count(true), '@' => new Abs(true), '|' => new AbsRi(true), _ => new Mul(false)
 				}).GetType() switch {
-					var x when x == typeof(Sqr) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpSqr, T.Sqr, OpCode.Sqr, expr[^1])), // sqr
-					var x when x == typeof(Conj) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpConj, INumber<T>.Conj, OpCode.Conj, expr[^1])), // conjugate
-					var x when x == typeof(Exclamation) => SecondOpCharMissing('=', new Exclamation(OpOrder.Compare)) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpFact, T.Factorial, OpCode.Factorial, expr[^1])), // factorial
+					var x when x == typeof(Sqr) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpSqr, ILeaf.Sqr, OpCode.Sqr, expr[^1])), // sqr
+					var x when x == typeof(Conj) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpConj, ILeaf.Conj, OpCode.Conj, expr[^1])), // conjugate
+					var x when x == typeof(Exclamation) => SecondOpCharMissing('=', new Exclamation(OpOrder.Compare)) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpFact, Factorial, OpCode.Factorial, expr[^1])), // factorial
 					var x when x == typeof(Index) => ExtractTerms(), // index
 					var x when x == typeof(Div) => read.IsComment(), // comment
 					var x when x == typeof(Count) => SecondOpCharMissing('#', new Count()) && ++read.From > 0 && Encapsulate(new FuncCount(Context, OpCount, expr[^1]))
 						|| (read.From += 2) > 0 && Encapsulate(new FuncCatCount(Context, OpCatCount, expr[^1])), // count / catCount
-					var x when x == typeof(Abs) => DuO('@', new Abs(), OpAbs, INumber<T>.T_Abs, OpCode.Abs, OpSqrAbs, INumber<T>.SqrAbs, OpCode.SqrAbs), // abs / sqrAbs
-					var x when x == typeof(AbsRi) => DuO('|', new AbsRi(), OpCompAbs, T.AbsComp, OpCode.Absri, OpSign, INumber<T>.Sign, OpCode.Sgn), // count / catCount
+					var x when x == typeof(Abs) => DuO('@', new Abs(), OpAbs, T_Abs, OpCode.Abs, OpSqrAbs, T_SqrAbs, OpCode.SqrAbs), // abs / sqrAbs
+					var x when x == typeof(AbsRi) => DuO('|', new AbsRi(), OpCompAbs, AbsComp, OpCode.Absri, OpSign, Sign, OpCode.Sgn), // count / catCount
 					_ => false
 				}) {
 					read.TrimStart();
@@ -243,7 +243,7 @@ public abstract partial class Comparser<T> {
 				}
 				return false;
 			}
-			bool DuO(char c, Operator newOp, CallFunction parent1, Func<T, T> del1, OpCode op1, CallFunction parent2, Func<T, T> del2, OpCode op2)
+			bool DuO(char c, Operator newOp, CallFunction parent1, Func<ILeaf, ILeaf> del1, OpCode op1, CallFunction parent2, Func<ILeaf, ILeaf> del2, OpCode op2)
 				=> SecondOpCharMissing(c, newOp) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, parent1, del1, op1, expr[^1]))
 					|| (read.From += 2) > 0 && Encapsulate(new FuncOperator(Context, parent2, del2, op2, expr[^1]));
 			bool SecondOpCharMissing(char c, Operator newOp) {
@@ -264,7 +264,7 @@ public abstract partial class Comparser<T> {
 				// TEST I just moved the unary minus out of encapsulation, test if that's ok every time
 				var n = r.Op.Negative;
 				r.Op.Negative = false;
-				expr[^1] = r = new(T.nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
+				expr[^1] = r = new(nan, new(), null, p, null, false, read.Uncomment(startR, read.From));
 				r.Op.Negative = n;
 				CollapseTerm(ref p);
 				return true;
@@ -305,12 +305,12 @@ public abstract partial class Comparser<T> {
 				var startFrom = read.From;
 				if (Char('_')) {
 					read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
-					number = new(T.nan); // '_' is NaN
+					number = new(nan); // '_' is NaN
 					return true;
 				}
 				if (RealNumber(out var real)) {
 					read.AddC(startFrom, read.From, ParseDictionary.Type.Number);
-					number = new(T.MakeR(real), 0, read.Uncomment(startR, read.From));
+					number = new((Real)(real), 0, read.Uncomment(startR, read.From));
 					return true;
 				}
 				number = None;
@@ -470,7 +470,7 @@ public abstract partial class Comparser<T> {
 			}
 			bool Fail(Value test) => test.Term == null && (test.Values.Length == 0 || test.Values is [{ Term: null }]);
 			bool F() {
-				(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(), T.nan, [], null, null);
+				(r.Op, r.Leaf, r.Values, r.Term, r.Operand) = (new(), nan, [], null, null);
 				int e, end = read.Text.Length, prevF = read.From;
 				char[] ends = [')', ',', '{', '}', ';', '\n', '?', ':', ']', '/'];
 				if (read.From < read.Text.Length)
@@ -520,7 +520,7 @@ public abstract partial class Comparser<T> {
 			}
             bool CollapseValue(Value v) => !Context.PreEvaluate || (v.Values.Length > 0
                     ? (v.HasArgs |= CollapseValues(v.Values))
-                    : (v.Arg.Length > 0 || v.Term != null && (v.Term.V.HasArgs || v.Operand != null && v.Operand.V.HasArgs)) && (v.HasArgs = true));
+                    : (v.Arg.Length > 0 || v.Term != null && (v.Term.V.HasArgs || v.Operand is { V.HasArgs: true })) && (v.HasArgs = true));
             bool CollapseValues(Value[] vals) {
                 var has = false;
                 foreach (var val in vals)
@@ -528,8 +528,8 @@ public abstract partial class Comparser<T> {
                 return has;
             }
             bool Char(char c, byte offset = 0) {
-				var o = read.From + offset;
-				var test = read.Text.Length > o && read.Text[o] == c;
+				var off = read.From + offset;
+				var test = read.Text.Length > off && read.Text[off] == c;
 				if (!test)
 					return test;
 				read.From += offset + 1;
@@ -553,13 +553,13 @@ public abstract partial class Comparser<T> {
 			}
 		}
 		// encapsulate a value
-		public Expression(Comparser<T> context, Value t, int cache = 0) {
+		public Expression(Comparser/*<T>*/ context, Value t, int cache = 0) {
 			_cache = new(cache);
 			Context = context;
 			V = new(t.Values.Length > 0 ? t.Values : [new(t.Leaf, t.Op, t.Arg, t.Term, t.Operand, t.Op.Negative, t.String)], t.Error, t.Text);
 		}
 		// copy
-		private Expression(Comparser<T> context, Value t, CallFunction.EvalCache cache) {
+		private Expression(Comparser/*<T>*/ context, Value t, CallFunction.EvalCache cache) {
 			_cache = cache;
 			Context = context;
 			V = t.Copy();

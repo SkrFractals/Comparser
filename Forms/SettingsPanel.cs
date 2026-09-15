@@ -18,11 +18,11 @@ public partial class SettingsPanel : UserControl, IPanel {
 	//private SettingsLayout _s = new();
 	public static bool MemX, MemXy;
 	public static int Decimals = 3;
-	public static int Algebra = 1;
+	//public static int Algebra = 1;
 	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
 	public static int Tasks =  Environment.ProcessorCount - (Environment.ProcessorCount >> 3); 
-	private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
-	public static IComparser? Context;
+	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
+	public static IComparser Context = new Comparser.Comparser();
 	private bool _darkMode = true, _preEvaluate = true;
 	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000;
 	public static Reporting ReportingMode = Reporting.Report;
@@ -34,8 +34,9 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public SettingsPanel() => InitializeComponent();
 	public SettingsPanel(MenuPanel root, ParentForm parent) : this() {
 		InitVar(ref _var, this, root, parent, "Comparser - App Settings");
-		algebraBox.SelectedIndex = 1;//AlgebraBox_SelectedIndexChanged(algebraBox, EventArgs.Empty);
-		Context = _algebras[Algebra];
+		algebraBox.Enabled = false;
+		//algebraBox.SelectedIndex = 1;//AlgebraBox_SelectedIndexChanged(algebraBox, EventArgs.Empty);
+		//Context = _algebras[Algebra];
 		DecimalBox_TextChanged(decimalBox, EventArgs.Empty);
 		_var.Root.Code?.CodeChanged = true;
 		parent.SetMinSize();
@@ -64,12 +65,12 @@ public partial class SettingsPanel : UserControl, IPanel {
 		if (old != Decimals)
 			_var.Root.Code?.CodeChanged = true; // re-parse so the prints and expressions update
 	}
-	private void AlgebraBox_SelectedIndexChanged(object? sender, EventArgs e) {
+	/*private void AlgebraBox_SelectedIndexChanged(object? sender, EventArgs e) {
 		Algebra = algebraBox.SelectedIndex;
 		_var.Root.Code?.CodeChanged = true; // reparse
 		Context = _algebras[Algebra];
 		_var.Root.Plot?.SetContext();
-	}
+	}*/
 
 	private void darkButton_Click(object sender, EventArgs e) {
 		_darkMode = !_darkMode;

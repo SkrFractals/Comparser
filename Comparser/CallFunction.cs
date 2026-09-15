@@ -1,7 +1,6 @@
 ﻿using Comparser.Comparser.Numbers;
-using System.Drawing.Text;
 namespace Comparser.Comparser;
-public abstract partial class Comparser<T> {
+public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T>*/ {
 	#region Call Functions
 	// abstract parent
 	public abstract class CallFunction(int cacheSize = 0) {
@@ -52,16 +51,16 @@ public abstract partial class Comparser<T> {
 		public override Expression Call(Reader read, Value args) => (FunctionExpression)Activator.CreateInstance(type, read, this, args)!; //from = (int)a[3]; // ref int from
 	}
 	// Single/Double/Triple argument delegated functions
-	public class Cf(Func<T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
+	public class Cf(Func<ILeaf/*<T>*/, ILeaf/*<T>*/> del, OpCode op, int cache = 1) : CallFunction(cache) {
 		public override Expression Call(Reader read, Value args) => new FuncOperator(read, this, del, op, args);
 	}
-	public class Cf2(Func<T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
+	public class Cf2(Func<ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/> del, OpCode op, int cache = 1) : CallFunction(cache) {
 		public override Expression Call(Reader read, Value args) => new FuncOperator2(read, this, del, op, args);
 	}
-	public class Cf3(Func<T, T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
+	public class Cf3(Func<ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/> del, OpCode op, int cache = 1) : CallFunction(cache) {
 		public override Expression Call(Reader read, Value args) => new FuncOperator3(read, this, del, op, args);
 	}
-	public class Cf4(Func<T, T, T, T, T> del, OpCode op, int cache = 1) : CallFunction(cache) {
+	public class Cf4(Func<ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/, ILeaf/*<T>*/> del, OpCode op, int cache = 1) : CallFunction(cache) {
 		public override Expression Call(Reader read, Value args) => new FuncOperator4(read, this, del, op, args);
 	}
 	#endregion
@@ -72,7 +71,7 @@ public abstract partial class Comparser<T> {
 		protected readonly OpCode OpCode;
 		protected FunctionExpression(Reader read, CallFunction parent, OpCode op, Value args) 
 			: base(read, out _, args) => (_parent, OpCode) = (parent, op);
-		protected FunctionExpression(Comparser<T> context, CallFunction parent, OpCode op, Value input) 
+		protected FunctionExpression(Comparser/*<T>*/ context, CallFunction parent, OpCode op, Value input) 
 			: base(context, input) => (_parent, OpCode) = (parent, op);
 		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true) {
 			var v = base.Eval(depth, args/*, text*/, allowCache);
@@ -80,7 +79,7 @@ public abstract partial class Comparser<T> {
 		}
 		protected abstract Value EvalF(ushort depth, Value v, Value args, bool allowCache);
 		public override GpuValue GpuParse(ushort depth) => new(OpCode, base.GpuParse(depth));
-		protected static Value Triple((double a, double b, double c) v) => new([new(T.MakeR(v.a)), new(T.MakeR(v.b)), new(T.MakeR(v.c))]);
+		static protected Value Triple((double a, double b, double c) v) => new([new((Real)v.a), new((Real)(v.b)), new((Real)(v.c))]);
 	}
 	private class FuncTextOperator(Reader read, CallFunction parent, Func<ushort, string, Value> del, Value args)
 		: FunctionExpression(read, parent, OpCode.NotAvailable, args) {
@@ -89,12 +88,12 @@ public abstract partial class Comparser<T> {
 	private class FuncEval(Reader read, CallFunction parent, Value args, int cache = 0) : FuncTextOperator(read, parent, 
 			(d, x) => d > read.Context._stackOverflow ? StackOverflow : new Expression(new(read.Context, x, read.Cancel), out _, args, cache).Eval((ushort)(1 + d), args, false), args) { }
 	private class FuncOperator : FunctionExpression {
-		private readonly Func<T, T> _del;
-		public FuncOperator(Reader read, CallFunction parent, Func<T, T> del, OpCode op, Value args) : base(read, parent, op, args) => _del = del;
-		public FuncOperator(Comparser<T> context, CallFunction parent, Func<T, T> del, OpCode op, Value input) : base(context, parent, op, input) => _del = del;
+		private readonly Func<ILeaf, ILeaf> _del;
+		public FuncOperator(Reader read, CallFunction parent, Func<ILeaf, ILeaf> del, OpCode op, Value args) : base(read, parent, op, args) => _del = del;
+		public FuncOperator(Comparser/*<T>*/ context, CallFunction parent, Func<ILeaf, ILeaf> del, OpCode op, Value input) : base(context, parent, op, input) => _del = del;
 		override protected Value EvalF(ushort _, Value v, Value args, bool allowCache) => Value.Operate(v, _del);
 	}
-	private class FuncOperator2(Reader read, CallFunction parent, Func<T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
+	private class FuncOperator2(Reader read, CallFunction parent, Func<ILeaf, ILeaf, ILeaf> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) {
 			switch (v.Values.Length) {
 			case 0: return v;
@@ -107,10 +106,10 @@ public abstract partial class Comparser<T> {
 			}
 		}
 	}
-	private class FuncOperator3(Reader read, CallFunction parent, Func<T, T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
+	private class FuncOperator3(Reader read, CallFunction parent, Func<ILeaf, ILeaf, ILeaf, ILeaf> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort _, Value v, Value args, bool allowCache) => v.Values.Length == 3 ? Value.Operate3(v.Values[0], v.Values[1], v.Values[2], comp) : new();
 	}
-	private class FuncOperator4(Reader read, CallFunction parent, Func<T, T, T, T, T> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
+	private class FuncOperator4(Reader read, CallFunction parent, Func<ILeaf, ILeaf, ILeaf, ILeaf, ILeaf> comp, OpCode op, Value args) : FunctionExpression(read, parent, op, args) {
 		override protected Value EvalF(ushort _, Value v, Value args, bool allowCache) => v.Values.Length == 4 ? Value.Operate4(v.Values[0], v.Values[1], v.Values[2], v.Values[3], comp) : new();
 	}
 	#endregion
@@ -119,42 +118,42 @@ public abstract partial class Comparser<T> {
 	private class FuncColorSpace(Reader read, CallFunction parent, Value args, OpCode oc, Func<(double, double, double), (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => (v = CollapseScalar(v)).Values.Length switch {
 			0 => None,
-			3 => Triple(del((T.Re(v.Values[0].GetLeaf()), T.Re(v.Values[1].GetLeaf()), T.Re(v.Values[2].GetLeaf())))),
+			3 => Triple(del((v.Values[0].Re(), v.Values[1].Re(), v.Values[2].Re()))),
 			_ => new(v.Values[0].GetLeaf()),
 		};
 	}
-	private class FuncRgb2hsv(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Rgb2hsv, Static.Rgb2hsv) { }
-	private class FuncHsv2rgb(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Hsv2rgb, Static.Hsv2rgb) { }
-	private class FuncHsv(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
+	private class FuncRgb2Hsv(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Rgb2Hsv, Static.Rgb2Hsv) { }
+	private class FuncHsv2Rgb(Reader read, CallFunction parent, Value args) : FuncColorSpace(read, parent, args, OpCode.Hsv2Rgb, Static.Hsv2Rgb) { }
+	private class FuncHsv(Reader read, CallFunction parent, Value args, OpCode oc, Func<ILeaf/*<T>*/, (double, double, double)> del) : FunctionExpression(read, parent, oc, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => Value.OperateValue(v, To, null);
-		protected virtual Value To(Value val, object? _) => Triple(del(val.GetLeaf()/*, 1*/));
+		virtual protected Value To(Value val, object? _) => Triple(del(val.GetLeaf()/*, 1*/));
 	}
-	private class FuncRgb(Reader read, CallFunction parent, Value args, OpCode oc, Func<T, (double, double, double)> del) : FuncHsv(read, parent, args, oc, (_)=>(0,0,0)) {
-		protected override Value To(Value val, object? _) => Triple(Static.Hsv2rgb(del(val.GetLeaf()/*, 1*/)));
+	private class FuncRgb(Reader read, CallFunction parent, Value args, OpCode oc, Func<ILeaf/*<T>*/, (double, double, double)> del) : FuncHsv(read, parent, args, oc, (_)=>(0,0,0)) {
+		override protected Value To(Value val, object? _) => Triple(Static.Hsv2Rgb(del(val.GetLeaf()/*, 1*/)));
 	}
-	private class FuncLog2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2hsv, INumber<T>.Log2Hsv) { }
-	private class FuncLog2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2rgb, INumber<T>.Log2Hsv) { }
-	private class FuncLin2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2hsv, INumber<T>.Lin2Hsv) { }
-	private class FuncLin2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2rgb, INumber<T>.Lin2Hsv) { }
-	private class FuncLog2hsvC(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2hsvC, INumber<T>.Log2HsvC) { }
-	private class FuncLog2rgbC(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2rgbC, INumber<T>.Log2HsvC) { }
-	private class FuncLin2hsvC(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2hsvC, INumber<T>.Lin2HsvC) { }
-	private class FuncLin2rgbC(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2rgbC, INumber<T>.Lin2HsvC) { }
-	//private class FuncExp2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Exp2hsv, INumber<T>.Exp2Hsv) { }
-	//private class FuncExp2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Exp2rgb, INumber<T>.Exp2Hsv) { }
+	private class FuncLog2Hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2Hsv, ILeaf/*<T>*/.Log2Hsv) { }
+	private class FuncLog2Rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2Rgb, ILeaf/*<T>*/.Log2Hsv) { }
+	private class FuncLin2Hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2Hsv, ILeaf/*<T>*/.Lin2Hsv) { }
+	private class FuncLin2Rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2Rgb, ILeaf/*<T>*/.Lin2Hsv) { }
+	private class FuncLog2HsvC(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Log2HsvC, ILeaf/*<T>*/.Log2HsvC) { }
+	private class FuncLog2RgbC(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Log2RgbC, ILeaf/*<T>*/.Log2HsvC) { }
+	private class FuncLin2HsvC(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Lin2HsvC, ILeaf/*<T>*/.Lin2HsvC) { }
+	private class FuncLin2RgbC(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Lin2RgbC, ILeaf/*<T>*/.Lin2HsvC) { }
+	//private class FuncExp2hsv(Reader read, CallFunction parent, Value args) : FuncHsv(read, parent, args, OpCode.Exp2Hsv, INumber<T>.Exp2Hsv) { }
+	//private class FuncExp2rgb(Reader read, CallFunction parent, Value args) : FuncRgb(read, parent, args, OpCode.Exp2Rgb, INumber<T>.Exp2Hsv) { }
 
 	#endregion
 
 	#region Function Expressions - Vectors
 	// extracts terms from a vector using indices in: [expression]. Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] = (30d,31e),2c,(5,1,(30d,31e))
-	private class FuncIndex(Comparser<T> context, Value input, Value indices) : Expression(context, input) {
+	private class FuncIndex(Comparser/*<T>*/ context, Value input, Value indices) : Expression(context, input) {
 		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true) 
 			=> depth > Context._stackOverflow ? StackOverflow : Value.OperateValue(EvalValue((ushort)(1 + depth), CollapseScalar(indices), args, allowCache), Take, base.Eval(depth, args/*, text*/, allowCache));
 		private Value Take(Value from, object? i) {
 			if (i is not Value v)
 				return from;
 			v = CollapseScalar(v);
-			var index = T.Re(CollapseScalar(from).Leaf);
+			var index = CollapseScalar(from).Leaf.Re();
 			int integer;
 			return double.IsNaN(index) || (integer = (int)Math.Round(index)) < 0 || integer >= v.Values.Length ? None : v.Values[integer];
 		}
@@ -178,13 +177,13 @@ public abstract partial class Comparser<T> {
 	// counts the elements in a vector
 	private class FuncCount : FunctionExpression {
 		private FuncCount(Reader read, CallFunction parent, Value args) : base(read, parent, OpCode.Count, args) { }
-		public FuncCount(Comparser<T> context, CallFunction parent, Value args) : base(context, parent, OpCode.Count, args) { }
-		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => new(T.MakeR(Math.Max(1, CollapseScalar(v).Values.Length)));
+		public FuncCount(Comparser/*<T>*/ context, CallFunction parent, Value args) : base(context, parent, OpCode.Count, args) { }
+		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => new((Real)(Math.Max(1, CollapseScalar(v).Values.Length)));
 	}
 	private class FuncCatCount : FunctionExpression {
 		private FuncCatCount(Reader read, CallFunction parent, Value args) : base(read, parent, OpCode.Count, args) { }
-		public FuncCatCount(Comparser<T> context, CallFunction parent, Value args) : base(context, parent, OpCode.Count, args) { }
-		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => new(T.MakeR(Operate(v)));
+		public FuncCatCount(Comparser/*<T>*/ context, CallFunction parent, Value args) : base(context, parent, OpCode.Count, args) { }
+		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => new((Real)(Operate(v)));
 		private static int Operate(Value v) {
 			var vV = v.Values;
 			int c = 0, s = vV.Length;
@@ -205,26 +204,26 @@ public abstract partial class Comparser<T> {
 			}
 			_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.nan, 0, V.Values[0].String);
+			_args.Values[iteratorIndex] = new(nan, 0, V.Values[0].String);
 			_expr =  new(new(read.Context, V.Values.Length == 4 ? V.Values[3].String : "", read.Cancel), out _, _args);
 		}
 		private readonly Expression _expr;
 		private readonly Value _args;
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) {
 			if (v.Values.Length != 4)
-				return new(T.nan);
-			int from = (int)Math.Round(T.Re(v.Values[1].Leaf)),
-				to = (int)Math.Round(T.Re(v.Values[2].Leaf));
+				return new(nan);
+			int from = (int)Math.Round(v.Values[1].Leaf.Re()),
+				to = (int)Math.Round(v.Values[2].Leaf.Re());
 			if (Math.Abs(from - to) > Context._iterOverflow)
-				return new(T.nan); // iteration range over limit, perhaps accidental huge/infinity value in the range?
+				return new(nan); // iteration range over limit, perhaps accidental huge/infinity value in the range?
 			var iteratorIndex = args.Values.Length;
 			//_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(T.nan, v.Error, v.Values[0].String);
+			_args.Values[iteratorIndex] = new(nan, v.Error, v.Values[0].String);
 			//var exp = new Expression(Context, v.Values[3].Text, ni);
 			return Result(EvalK, from, to, allowCache);
 			Value EvalK(int f) {
-				_args.Values[iteratorIndex].Leaf = T.MakeR(f);
+				_args.Values[iteratorIndex].Leaf = (Real)f;
 				return depth < Context._stackOverflow ? _expr.Eval((ushort)(1 + depth), _args, allowCache) : None;
 			}
 		}
@@ -241,7 +240,7 @@ public abstract partial class Comparser<T> {
 				return a;
 			foreach (var i in a.Values)
 				NaN(i);
-			a.Leaf = T.nan;
+			a.Leaf = nan;
 			return a;
 		}
 	}
@@ -260,12 +259,12 @@ public abstract partial class Comparser<T> {
 	// return a vector of sums of iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (x,2x); sum(0,1,3,exp(k0)) => (1+2+3,2+4+6) => (6,12); // 6 is the sum of x term, evaluated with k0=1..3, 12 is the sum of 2x term, evaluated with k0=1..3
 	private class Sum(Reader read, CallFunction parent, Value args) : CollapseIterator(read, parent, OpCode.Sum, args) { 
-		override protected void Op(ref Value result, Value iteration, bool allowCache) => result = Value.Operate2(result, iteration, INumber<T>.Add, (x, y) => x + y, 0, Context, None, allowCache);
+		override protected void Op(ref Value result, Value iteration, bool allowCache) => result = Value.Operate2(result, iteration, ILeaf/*<T>*/.Add, (x, y) => x + y, 0, Context, None, allowCache);
 	}
 	// return a vector of products of iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (x,2x); prod(0,1,3,exp(k0)) => (1*2*3,2*4*6) => (6,48); // 6 is the product of x term, evaluated with k0=1..3, 48 is the product of 2x term, evaluated with k0=1..3
 	private class Product(Reader read, CallFunction parent, Value args) : CollapseIterator(read, parent, OpCode.Prod, args) {
-		override protected void Op(ref Value result, Value iteration, bool allowCache) => result = Value.Operate2(result, iteration, INumber<T>.Mul, (x, _) => x, 0, Context, None, allowCache);
+		override protected void Op(ref Value result, Value iteration, bool allowCache) => result = Value.Operate2(result, iteration, ILeaf/*<T>*/.Mul, (x, _) => x, 0, Context, None, allowCache);
 	}
 	// returns a vector of first elements of evaluated iterated expressions with the extra argument i as the iteration value
 	// example: exp(x) = (3x,2x,4x); vector(0,1,3,exp(k0)) => (3*1,3*2,3*3) => (3,6,9); // only took the first 3x term, evaluated with k0=1..3
@@ -305,7 +304,7 @@ public abstract partial class Comparser<T> {
 			var l = e.Eval(depth, v, allowCache);
 			while (l.Values.Length > 0)
 				l = l.Values[0];
-			return INumber<T>.IsTrue(l.Leaf);
+			return l.Leaf.IsTrue();
 		}
 		public override GpuValue GpuParse(ushort depth) => depth > Context._stackOverflow ? new() : new(OpCode.Call, base.GpuParse((ushort)(1 + depth)), parent);
 	}

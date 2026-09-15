@@ -1,16 +1,17 @@
-﻿namespace Comparser.Comparser;
-public abstract partial class Comparser<T> {
-	public partial class PlotEval {
-		private Expression? _exp;
+﻿using Comparser.Comparser.Numbers;
+using static Comparser.Comparser.Numbers.ILeaf;
+namespace Comparser.Comparser;
+public /*abstract*/  partial class Comparser/*<T>*/ {
+	public partial class PlotEval(object? exp) {
+		private readonly Expression? _exp = exp as Expression;
 		//private string _text;
-		private T _mSt = T.nan;
-		private T _mDt = T.nan;
+		private ILeaf _mSt = nan;
+		private ILeaf _mDt = nan;
 		private int _mLt;
-		//private readonly Comparser<T> _context;
+		//private readonly Comparser/*<T>*/ _context;
 		public CancellationToken Cancel;
 		//private static readonly Value Xyt = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "t")]);
-		public PlotEval(object? exp) => _exp = exp as Expression;
-		//public PlotEval(CancellationToken cancel, Comparser<T> context, string text) => _exp = new(new(_context = context, exp = text, cancel), out _, Xyt);
+		//public PlotEval(CancellationToken cancel, Comparser/*<T>*/ context, string text) => _exp = new(new(_context = context, exp = text, cancel), out _, Xyt);
 		/*public void ReParse(CancellationToken cancel, string text) {
 			if (_text == (_text = text)) return;
 			_exp = new(new(_context, text, cancel), out _, Xyt);
@@ -18,7 +19,7 @@ public abstract partial class Comparser<T> {
 		private PlotFrame[] _plot = [];
 		public bool Null() => _exp == null;
 
-		public int GetPercent() => _current?.Progress ?? 0;
+		public int GetPercent() => _current?.progressRows ?? 0;
 		private PlotFrame? _current;
 
 		// Axis is a Complex base range struct, the plot coord bases are each a complex/quat number, generic T.
@@ -33,7 +34,7 @@ public abstract partial class Comparser<T> {
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
-			return (_current = _plot[frame]).GetPlotX(out changed, _exp, new(ax), new(ay),  new(at), y, frame, _mSt + frame * _mDt, recallTolerance, Cancel);
+			return (_current = _plot[frame]).GetPlotX(out changed, _exp, new(ax), new(ay),  new(at), y, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
 		}
 		public Value[] GetPlotXy(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
 			if (_exp is null) throw new("No expression");
@@ -41,31 +42,31 @@ public abstract partial class Comparser<T> {
 			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
 			_mSt = at.start;
 			_mDt = at.d;
-			return (_current = _plot[frame]).GetPlotXy(out changed, _exp, new(ax), new(ay), new(at), frame, _mSt + frame * _mDt, recallTolerance, Cancel);
+			return (_current = _plot[frame]).GetPlotXy(out changed, _exp, new(ax), new(ay), new(at), frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
 		}
 		public class AxisOverlap {
-			public static bool New(Plot.PlotAxis a, T mSa, T mDa, int mLa, /*int memoryLength,*/ double recallTolerance, out AxisOverlap o)
+			public static bool New(Plot.PlotAxis a, ILeaf mSa, ILeaf mDa, int mLa, /*int memoryLength,*/ double recallTolerance, out AxisOverlap o)
 				=> (o = new(a, mSa, mDa, mLa, recallTolerance/*, memoryLength*/)).Dmm < 0;
 
-			private AxisOverlap(Plot.PlotAxis a, T mSa, T mDa, int mLa, double recallTolerance/*, int memoryLength*/) {
+			private AxisOverlap(Plot.PlotAxis a, ILeaf mSa, ILeaf mDa, int mLa, double recallTolerance/*, int memoryLength*/) {
 				//_memL = memoryLength;
-				Dm = (_me = (Ms = mSa) + (_mLa = mLa) * mDa) - Ms; // Ms = start of memory line, _me = end of memory line
-				_ae = a.start + (Da = (A = a).size);  // _ae = end of asked axis line, Da = size of the asked line (directional vector)
-				var ds = a.start - Ms;
-				var de = _ae - _me; // dm = memory vector, da = axis vector, ds,de = memory -> axis (between starts and ends)
-				if (+ds <= (SqrE = +a.d * recallTolerance) && mLa == a.length && +de <= SqrE) // |t.step| is the pixel size, as long as the difference is smaller that than, I'll accept it
+				Dm = Sub(_me = Add(Ms = mSa, Mul((Real)(_mLa = mLa), mDa)), Ms); // Ms = start of memory line, _me = end of memory line
+				_ae = Add(a.start, Da = (A = a).size);  // _ae = end of asked axis line, Da = size of the asked line (directional vector)
+				var ds = Sub(a.start, Ms);
+				var de = Sub(_ae, _me); // dm = memory vector, da = axis vector, ds,de = memory -> axis (between starts and ends)
+				if (SqrAbs(ds) <= (SqrE = SqrAbs(a.d) * recallTolerance) && mLa == a.length && SqrAbs(de) <= SqrE) // |t.step| is the pixel size, as long as the difference is smaller that than, I'll accept it
 					return; // axis almost identical to memory, no need to change anything
-				Dmm = +Dm;
-				Daa = +Da;
-				Dma = T.Dot(Dm, Da);
-				Dms = T.Dot(Dm, ds);
-				Das = T.Dot(Da, ds);
+				Dmm = SqrAbs(Dm);
+				Daa = SqrAbs(Da);
+				Dma = Dot(Dm, Da);
+				Dms = Dot(Dm, ds);
+				Das = Dot(Da, ds);
 				var t0 = Dms / Dmm;
-				Perp = ds - Dm * t0;
+				Perp = Sub(ds, Mul(Dm, (Real)t0));
 			}
 			public bool NoOverlap() {
-				double mStart = Dms / Dmm, mEnd = T.Dot(_ae - Ms, Dm) / Dmm, // mStart-mEnd should be the inverse lerp of the overlap in memory's reference frame
-					aStart = -Dms / Daa, aEnd = T.Dot(_me - A.start, Da) / Daa; // aStart-aEnd should be the inverse lerp of the overlap in asked axis's reference frame
+				double mStart = Dms / Dmm, mEnd = Dot(Sub(_ae, Ms), Dm) / Dmm, // mStart-mEnd should be the inverse lerp of the overlap in memory's reference frame
+					aStart = -Dms / Daa, aEnd = Dot(Sub(_me, A.start), Da) / Daa; // aStart-aEnd should be the inverse lerp of the overlap in asked axis's reference frame
 				if (aStart > aEnd) (aStart, aEnd, mStart, mEnd) = (aEnd, aStart, mEnd, mStart); // make sure I can iterate forward. Assuming they already had matching starts and ends, I also flip the memory interval
 				_mapA = (mEnd - mStart) / (aEnd - aStart);
 				_mapB = mStart - _mapA * aStart;
@@ -92,8 +93,8 @@ public abstract partial class Comparser<T> {
 			public int Map(int iat) => (int)Math.Round(_mapA * iat + _mapB);
 			public readonly double SqrE, Dmm = -1, Daa, Dma, Dms, Das;
 			private double _mapA, _mapB;
-			private readonly T _me, _ae;
-			public readonly T Ms, Dm, Da, Perp;
+			private readonly ILeaf _me, _ae;
+			public readonly ILeaf Ms, Dm, Da, Perp = nan;
 			private readonly int _mLa;
 			public int IaStart, IaEnd;
 			//public object[] mem;
@@ -102,7 +103,7 @@ public abstract partial class Comparser<T> {
 		private void TransferOverlap(Plot.PlotAxis t, double recallTolerance) {
 			if (AxisOverlap.New(t, _mSt, _mDt, _mLt, /*_plot.Length,*/ recallTolerance, out var o))
 				return; // identical axis up to the tolerance
-			if (+o.Perp <= o.SqrE) {
+			if (SqrAbs(o.Perp) <= o.SqrE) {
 				// aSt lies on A's line
 				var mem = _plot;
 				if (_plot.Length != o.A.length)
@@ -111,11 +112,11 @@ public abstract partial class Comparser<T> {
 					return; // no overlap
 				// now that we hopefully have the actual overlap bound for both, and the mapping between them, go through the overlap on the new axis level, and check if the corresponding overlap points in memory are usable.
 				if (AxisMismatch(o, _mDt, out var mt)) {
-					if (!DistanceMismatch(o, mt * _mDt, o.IaStart))
+					if (!DistanceMismatch(o, Mul((Real)mt, _mDt), o.IaStart))
 						_plot[o.IaStart] = mem[mt]; // we already calculated the first mt in the condition, so use that for the first step
 					for (var iat = ++o.IaStart; iat < o.IaEnd; ++iat) 
 						// the memory-asked steps or phases don't match, so we should compare every frame distance
-						if(!DistanceMismatch(o,(mt = o.Map(iat)) * _mDt, iat))
+						if(!DistanceMismatch(o,Mul((Real)(mt = o.Map(iat)), _mDt), iat))
 							_plot[iat] = mem[mt]; // the closest time frame in the memory overlap is close enough in time to this time frame on the new axis - transfer it.
 					return;
 				}
@@ -127,12 +128,12 @@ public abstract partial class Comparser<T> {
 			double den = o.Dma * o.Dma - o.Dmm * o.Daa,
 				cm = (o.Dma * o.Das - o.Daa * o.Dms) / den,
 				ca = (o.Dmm * o.Das - o.Dma * o.Dms) / den;
-			T pm = o.Ms + o.Dm * cm, pa = o.A.start + o.Da * ca;
-			if (+(pm - pa) <= +o.A.d) {
+			ILeaf pm = Add(o.Ms, Mul(o.Dm, (Real)cm)), pa = Add(o.A.start, Mul(o.Da, (Real)ca));
+			if (SqrAbs(Sub(pm, pa)) <= SqrAbs(o.A.d)) {
 				// Memory and asked axis times intersect, im = inverse lerp on memory, ia = inverse lerp on axis
 				int imt = (int)Math.Round(cm * _mLt), iat = (int)Math.Round(ca * o.A.length);
 				// are both indices with the range of the array? And are the closest rounded points actually close to each other in frame space?
-				if (imt >= 0 && imt < _mLt && iat >= 0 && iat < o.A.length && !DistanceMismatch(o, imt * _mDt, iat)) {
+				if (imt >= 0 && imt < _mLt && iat >= 0 && iat < o.A.length && !DistanceMismatch(o, Mul((Real)imt, _mDt), iat)) {
 					var recover = _plot[imt]; // take that single frame that memory and new axis share
 					New()[iat] = recover; // put it into out new timeline
 					return;
@@ -147,13 +148,13 @@ public abstract partial class Comparser<T> {
 				return _plot;
 			}
 		}
-		public static bool AxisMismatch(AxisOverlap o, T mD, out int mt) 
-			=> DistanceMismatch(o, (mt = o.Map(o.IaStart)) * mD, o.IaStart) || StepMismatch(o, mD);
+		public static bool AxisMismatch(AxisOverlap o, ILeaf mD, out int mt) 
+			=> DistanceMismatch(o, Mul((Real)(mt = o.Map(o.IaStart)), mD), o.IaStart) || StepMismatch(o, mD);
 		// test if the steps are equal or opposite to each other, so that the affine map could remain in lockstep for the whole range
-		public static bool StepMismatch(AxisOverlap o, T step, int range = int.MaxValue)
-			=> Math.Min(+((step - o.A.d) * (range = Math.Min(range, o.A.length))), +((step + o.A.d) * range)) > o.SqrE;
+		public static bool StepMismatch(AxisOverlap o, ILeaf step, int range = int.MaxValue)
+			=> Math.Min(SqrAbs(Mul(Sub(step, o.A.d), (Real)(range = Math.Min(range, o.A.length)))), SqrAbs(Mul(Add(step, o.A.d), (Real)range))) > o.SqrE;
 		// test if the Overlap memory point offset in sample space maps to the same pixel as iAth sample of the axis
-		public static bool DistanceMismatch(AxisOverlap o, T offset, int iA) => +(o.Ms + offset - o.A.Sample(iA)) > o.SqrE;
+		public static bool DistanceMismatch(AxisOverlap o, ILeaf offset, int iA) => SqrAbs(Sub(Add(o.Ms, offset), o.A.Sample(iA))) > o.SqrE;
 	}
 }
 //return (_plot[frame]/* ?? (_plot[frame] = new())*/).GetPlot(xa, ya, y, _mSt + frame*_mStepT);
