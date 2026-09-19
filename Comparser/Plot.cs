@@ -370,7 +370,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 								 // prepare axis lines and plot values if they are dirty
 			if (InputX.DirtyL)
 				Lines(InputX, _linesX);
-			int tasks = SettingsPanel.Tasks, chunks = tasks <= 1 ? 1 : 8;
+			int tasks = SettingsPanel.DrawTasks, chunks = tasks <= 1 ? 1 : SettingsPanel.DrawChunks;
 			if (percent.Length != tasks) percent = new int[tasks];
 			else
 				for (int task = 0; task < tasks; ++task)

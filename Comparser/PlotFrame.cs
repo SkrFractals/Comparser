@@ -381,7 +381,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 				}
 			}
 			void Multi(int taskIndex, int d, Plot.PlotAxis a, TaskData taskData, Action<int,int,int,int> plot) {
-				int tasks = taskData[taskIndex].taskCount, chunks = tasks > 1 ? 8 : 1;
+				int tasks = taskData[taskIndex].taskCount, chunks = tasks > 1 ? SettingsPanel.Chunks : 1;
 				float subChunkLength = (float)a.length / (chunks * tasks), chunkDistance = tasks * subChunkLength, yf = taskData[taskIndex].taskIndex * subChunkLength;
 				for (var c = 0; c < chunks; ++c) {
 					var chd = yf + c * chunkDistance;
@@ -396,10 +396,6 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 				for (var i = 0; i < taskData.Length; ++i) // prepare "t" input value
 					_args[i].Values[1].Leaf = t = memFrame;
 				// run tasks
-				/*if (SettingsPanel.Tasks <= 1) {
-					T(0); // single task will not start any tasks
-					return;
-				}*/
 				for (var i = 0; i < SettingsPanel.Tasks; ++i) {
 					var ic = i; // must make a new local variable, otherwise the task could start with a wrong one
 					_taskArr[i] = Task.Run(() => T(ic), cancel);

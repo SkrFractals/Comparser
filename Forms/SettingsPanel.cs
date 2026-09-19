@@ -47,7 +47,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		UpdateAuto();
 		UpdateReport();
 		preEvalBox.Checked = true;
-		taskBox.Text = MaxTasks.ToString();
+		//taskBox.Text = MaxTasks.ToString();
 		plotLabel.Text = "Auto Plot";
 		autoLabel.Text = "Auto Build:";
 		decLabel.Text = "Decimals:";
