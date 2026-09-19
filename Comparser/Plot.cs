@@ -1,7 +1,10 @@
 ﻿using Comparser.Comparser.Numbers;
 using Comparser.Forms;
 using System.Drawing.Imaging;
+using System.Security.Policy;
+using System.Threading.Tasks;
 using static Comparser.Comparser.Numbers.ILeaf;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.StartPanel;
 namespace Comparser.Comparser;
 public enum PlotMode : byte {
 	XFill, // X -> Fill Y
@@ -18,7 +21,7 @@ public interface IPlot {
 	public void ZoomContinuous(int x, int y, double size);
 	public void ZoomBinary(int x, int y, bool zoomIn) => ZoomContinuous(x, y, zoomIn ? .5 : 2);
 	public void Shift(int dx, int dy);
-	public Bitmap Update(int w, int h, int l, CancellationToken cancel);
+	public Bitmap Update(out int div, int w, int h, int l, bool noPreview, CancellationToken cancel);
 	public IPlotAxis[] GetAxis();
 	public void DelOutput(int output);
 	public void AddOutput(string name, object? newRgb, object? newCode);
@@ -42,6 +45,12 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		public void SetLockRes(bool l) => LockedRes = l;
 		//public void SetDirty() => _dirtyX = _dirtyXy = _dirtyRgb = true;
 
+		public class Values {
+			public Value[][] V = [];
+			public int Done = 0;
+			//public int Total = 0;
+		}
+
 		public class PlotOutput(string name, PlotEval? newEval, /*PlotOutput.ColorMode mode,*/ Expression? newRgb/*, Expression? newHsv*/) {
 			// TODO TextField?
 			/*public class ChannelProperties {
@@ -59,7 +68,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			//public Expression? ColorCodeHsv = newHsv; // default=hsv(value)
 			//public PlotAxis A = newA; // axis
 			public PlotEval? Eval = newEval; // evaluator (code, default=z)
-			public Value[] Values = []; // evaluated value buffer
+			public Values Values = new(); // evaluated value buffer
 										//public ChannelProperties R = new(), G = new(), B = new(), H = new(), S = new(), V = new();
 			private Value[] _args = [];
 			public void PrepareArgs(int w, int h, int l,int tasks) {
@@ -74,15 +83,15 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						new(nan, FailReason.Success, "x"),
 						new(nan, FailReason.Success, "y"),
 						new(nan, FailReason.Success, "f"),
-						new((Real)(w), FailReason.Success, "w"),
-						new((Real)(h), FailReason.Success, "h"),
-						new((Real)(l), FailReason.Success, "l")
+						new((Real)w, FailReason.Success, "w"),
+						new((Real)h, FailReason.Success, "h"),
+						new((Real)l, FailReason.Success, "l")
 					]);
 			}
 			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, ILeaf z, ILeaf t, double x, double y, double f, int taskIndex) {
 				var args = _args[taskIndex];
 				args.Values[0].Values = [value ?? new()];
-				args.Values[1].Values = [new((Real)(c.r)), new((Real)(c.g)), new((Real)(c.b))];
+				args.Values[1].Values = [new((Real)c.r), new((Real)c.g), new((Real)c.b)];
 				args.Values[2].Leaf = z;
 				args.Values[3].Leaf = t;
 				args.Values[4].Leaf = (Real)x;
@@ -135,7 +144,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		private readonly IPlotAxis[] _axis;
 		public Plot(Comparser/*<T>*/ context) {
 			_axis = [InputX = new(context, zero, unit, 1),
-				InputY = new(context, zero, one - unit, 1),
+				InputY = new(context, zero, Complex.one - (Complex)1, 1),
 				InputT = new(context, zero, unit, 1),
 				OutputY = new(context, zero, unit, 1)];
 			OutputR = [];
@@ -270,10 +279,34 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			public Bitmap?[] Bitmaps = []; // [frames]
             public Bitmap?[] WorkMaps = [];
             private int _w, _h;
-			public bool GetBitmap(out Bitmap bmp, out Bitmap workMap, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false) {
+			public int previewBitmap, div = 0, previews = -1;
+			//private bool preview = true;
+			private Bitmap?[] pBmp = [];
+			private Bitmap?[] pwBmp = [];
+			public bool GetBitmap(int drawn, bool animate, out Bitmap bmp, out Bitmap workMap, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false) {
+				w = Math.Max(1, w); h = Math.Max(1, h);
+
+
 				if (Match() && w == _w && h == _h && length == _length && mode == _mode && !dirty) {
-					var b = Bitmaps[frame];
-					var wb = WorkMaps[frame];
+					Bitmap? b, wb;
+					previewBitmap = Math.Min(drawn, previews);
+					if (previewBitmap < previews) {
+
+						b = pBmp[previewBitmap];
+						wb = pwBmp[previewBitmap];
+						div = previews - previewBitmap;
+						if (b == null || wb == null) {
+							bmp = pBmp[previewBitmap] = new Bitmap(w >> div, h >> div);
+							workMap = pwBmp[previewBitmap] = new Bitmap(w >> div, h >> div);
+							return false;
+						}
+						bmp = b;
+						workMap = wb;
+						return false;
+					}
+					div = 0;
+					b = Bitmaps[frame];// = pBmp[previews-1];
+					wb = WorkMaps[frame];//= pwBmp[previews-1];
 					if (b == null || wb == null) {
 						bmp = Bitmaps[frame] = new(w, h);
 						workMap = WorkMaps[frame] = new(w, h);
@@ -283,9 +316,27 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					workMap = wb;
 					return true;
 				}
-				_mode = mode;
-                workMap = (WorkMaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
-                bmp = (Bitmaps = new Bitmap[_length = length])[frame] = new Bitmap(Math.Max(1, _w = w), Math.Max(1, _h = h));
+				_mode = mode; _w = w;_h = h;
+				_length = length;
+				previewBitmap = 0;
+				previews = animate ? 0 : Math.Max(0,(int)Math.Log2(Math.Min(w, h)) - 4);
+				pBmp = new Bitmap[previews];
+				pwBmp = new Bitmap[previews];
+				for (int i = 0; i < previews; ++i) {
+					div = previews - i;
+					pwBmp[i] = new Bitmap(w >> div, h >> div);
+					pBmp[i] = new Bitmap(w >> div, h >> div);
+				}
+				WorkMaps = new Bitmap[length];
+				Bitmaps = new Bitmap[length];
+				if (previews > 0) {
+					workMap = pwBmp[0]!;
+					bmp = pBmp[0]!;
+				} else {
+					workMap = WorkMaps[frame] = new(w,h);
+					bmp = Bitmaps[frame] = new(w,h);
+				}
+				div = previews;
 				return false;
 				bool Match() {
 					var match = true;
@@ -307,10 +358,13 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				}
 			}
 		}
+		private Bitmap prevBmp = new(1,1);
 		private readonly Task[] _taskArr = [];
 		private bool _dirty;
 		private readonly Renders _r = new();
-		public Bitmap Update(int w, int h, int l, CancellationToken cancel) {
+		private int _drawn; // how many preview frames have already been drawn?
+		private int _done; // how many preview frames are ready to draw?
+		public Bitmap Update(out int div, int w, int h, int l, bool noPreview, CancellationToken cancel) {
 			Resize(w, h, l); _dirty |= InputX.DirtyL; // if size changed, it will resize everything and mark things dirty
 								 //var dirty = InputX.DirtyL;
 								 // prepare axis lines and plot values if they are dirty
@@ -337,8 +391,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						o.Eval.Cancel = cancel;
-						o.Values = o.Eval.GetPlotX(out var d, InputX, InputY, FixedY, InputT, Frame);
-						_dirty |= d; // Refresh 1D (X,FixedY) output values
+						/*o.Values = */o.Eval.GetPlotX(noPreview, o.Values, out var d, InputX, InputY, FixedY, InputT, Frame);
+						if (d) {
+							_dirty = true; _drawn = _done = 0;
+						} // Refresh 1D (X,FixedY) output values
 					}
 					break;
 				default: // XY mode:
@@ -353,8 +409,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						o.Eval.Cancel = cancel;
-						o.Values = o.Eval.GetPlotXy(out var d, InputX, InputY, InputT, Frame);
-						_dirty |= d; // Refresh 2D (X,Y) output values
+						o.Eval.GetPlotXy(noPreview, o.Values, out var d, InputX, InputY, InputT, Frame);
+						if (d) {
+							_dirty = true; _drawn = _done = 0;
+						}
 					}
 					break;
 			}
@@ -365,14 +423,30 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				for (var i = 0; i < axis.Length; ++i) // combine axis lines
 					axis[i] = Max(axis[i], a.lines[i]);
 			}
-			if (_r.GetBitmap(out var bmp, out var work, w, h, l, Frame, Mode, OutputR, _dirty)) // nothing has changed, no need to redraw the screen
-				return bmp;
+			if (Static.TaskRunning(_taskArr)) {
+				div = _r.div;
+				return prevBmp;
+			}
+			var dirt = _dirty;
 			_dirty = false;
+			if (_r.GetBitmap(_drawn, noPreview, out var bmp, out var work, w, h, l, Frame, Mode, OutputR, dirt)) { // nothing has changed, no need to redraw the screen
+				div = _r.div;
+				return prevBmp;
+			}
+			div = _r.div;
+			++_done;
+			foreach (var o in OutputR)
+				if (o.Values.Done < _done)
+					_done = o.Values.Done;
+			if (_drawn >= _done)
+				return prevBmp;
+			
+			//var divx = div;
 			unsafe {
 				//var nbmp = new Bitmap(bw), bh);
 				int bw = bmp.Width, bh = bmp.Height;
-				if (bw != _linesX.Length || bh != _linesY.Length)
-					return bmp;
+				if (0 == _linesX.Length || 0 == _linesY.Length)
+					return prevBmp;
 				var lb = work.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				var ptr = (byte*)(void*)lb.Scan0;
 				var t = InputT.Sample(Frame);
@@ -380,14 +454,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				switch (Mode) {
 					case PlotMode.XContour:
 					case PlotMode.XFill:
-						
-					
-						foreach (var o in OutputR)
-							o.PrepareArgs(InputX.length, OutputY.length, InputT.length, tasks);
 						var yz = OutputY.Sample(FixedY);
-						if(tasks <= 1) MultiX(0,bh, 0); else Static.TaskManager(_taskArr, tasks, chunks, bh, cancel, MultiX);
+						SplitTasks(MultiX);
 						break;
-						void MultiX(float yf, float subChunkLength, int taskIndex) => Multi(yf,subChunkLength, taskIndex, TaskDrawX);
+						void MultiX(float yf, float subChunkLength, int taskIndex) => Static.Multi(yf,subChunkLength, taskIndex, TaskDrawX, tasks, chunks);
 						void TaskDrawX(int ys, int ye, int taskIndex) {
 							for (var y = ys; y < ye; ++y) {
 								if (cancel.IsCancellationRequested)
@@ -405,7 +475,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 									if (Mode == PlotMode.XContour)
 										foreach (var o in OutputR) {
 											if (o.Eval?.Null() ?? true) continue;
-											Value[] prev = o.Values[x].GetValues(), next = o.Values[Math.Min(x + 1, o.Values.Length - 1)].GetValues();
+											Value[] prev = o.Values.V[_drawn][x].GetValues(), next = o.Values.V[_drawn][Math.Min(x + 1, o.Values.V[_drawn].Length - 1)].GetValues();
 											for (int i = 0; i < prev.Length; ++i)
 												if (C(OutputY.ValueToScreen(prev[i].GetLeaf()), OutputY.ValueToScreen(next[i].GetLeaf())))
 													c = o.ProcessColor(prev[i], c, z, t, x, y, Frame, taskIndex);
@@ -413,7 +483,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 									else
 										foreach (var o in OutputR)
 											if (!(o.Eval?.Null() ?? true))
-												foreach (var prevV in o.Values[intPtr].GetValues())
+												foreach (var prevV in o.Values.V[_drawn][intPtr].GetValues())
 													if ((y < OutputY.ValueToScreen(zero)) == (OutputY.ValueToScreen(prevV.GetLeaf()) < y))
 														c = o.ProcessColor(prevV, c, z, t, x, y, Frame, taskIndex);
 									(p[2], p[1], p[0]) = GetRgb(c);
@@ -425,11 +495,9 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						}
 
 					default:
-						foreach (var o in OutputR)
-							o.PrepareArgs(InputX.length, InputY.length, InputT.length, tasks);
-						if(tasks <= 1) MultiXy(0,bh, 0); else Static.TaskManager(_taskArr, tasks, chunks, bh, cancel, MultiXy);
+						SplitTasks(MultiXy);
 						break;
-						void MultiXy(float yf, float subChunkLength, int taskIndex) => Multi(yf, subChunkLength, taskIndex, TaskDrawXy);
+						void MultiXy(float yf, float subChunkLength, int taskIndex) => Static.Multi(yf, subChunkLength, taskIndex, TaskDrawXy, tasks, chunks);
 						void TaskDrawXy(int ys, int ye, int taskIndex) {
 							var intPtr = ys * bw;
 							for (var y = ys; y < ye; ++y) {
@@ -449,7 +517,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 									foreach (var o in OutputR)
 										if (!(o.Eval?.Null() ?? true))
 											//foreach (var prevV in o.Values[intPtr].GetValues())
-											c = o.ProcessColor(o.Values[intPtr], c, z, t, x, y, Frame, taskIndex);
+											c = o.ProcessColor(o.Values.V[_drawn][intPtr], c, z, t, x, y, Frame, taskIndex);
 									(p[2], p[1], p[0]) = GetRgb(c);
 								}
 								++percent[taskIndex];
@@ -458,22 +526,20 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				}
                 work.UnlockBits(lb);
                 (_r.Bitmaps[Frame], _r.WorkMaps[Frame]) = (_r.WorkMaps[Frame], _r.Bitmaps[Frame]);
-
-                void Multi(float yf, float subChunkLength, int taskIndex, Action<int, int, int> taskDraw) {
-					//var args = (Value)argsO;
-
-
-					float chunkDistance = tasks * subChunkLength;
-					for (var c = 0; c < chunks; ++c) {
-						float chd;
-						int y = (int)Math.Round(chd = yf + c * chunkDistance);
-						taskDraw(y, (int)Math.Round(chd + subChunkLength), taskIndex);
-					}
+                
+				void SplitTasks(Action<float,float,int> del) {
+					foreach (var o in OutputR)
+						o.PrepareArgs(bw, bh, InputT.length, tasks);
+					Static.TaskManager(_taskArr, tasks, chunks, bh, cancel, del);
 				}
 				(byte, byte, byte) GetRgb((double r, double g, double b) c) => ((byte)Math.Clamp(c.r * 255, 0, 255), (byte)Math.Clamp(c.g * 255, 0, 255),(byte)Math.Clamp(c.b * 255, 0, 255));
               
             }
-			return work;
+			if (cancel.IsCancellationRequested/* || _r.previewBitmap < _r.previews*/)
+				_dirty = true;
+			++_drawn;
+			return prevBmp = work;
+				
 			Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
 		}
 		public static int ValueToScreenLin(ILeaf value, ILeaf start, ILeaf d) => (int)Div(Sub(value, start), d).Re();//length * ILeaf.D2(value - start, end - start, Static.Div);

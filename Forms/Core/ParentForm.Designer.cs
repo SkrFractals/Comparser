@@ -20,39 +20,45 @@ partial class ParentForm {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
-		innerPanel = new System.Windows.Forms.Panel();
-		outerPanel = new System.Windows.Forms.Panel();
+		innerPanel = new Panel();
+		outerPanel = new Panel();
+		openFileDialog1 = new OpenFileDialog();
+		saveFileDialog1 = new SaveFileDialog();
 		outerPanel.SuspendLayout();
 		SuspendLayout();
 		// 
 		// innerPanel
 		// 
-		innerPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
-		innerPanel.BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
-		innerPanel.Location = new System.Drawing.Point(3, 3);
+		innerPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+		innerPanel.BackColor = Color.FromArgb(64, 64, 64);
+		innerPanel.Location = new Point(3, 3);
 		innerPanel.Name = "innerPanel";
-		innerPanel.Size = new System.Drawing.Size(320, 320);
+		innerPanel.Size = new Size(320, 320);
 		innerPanel.TabIndex = 2;
 		// 
 		// outerPanel
 		// 
-		outerPanel.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right));
+		outerPanel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 		outerPanel.AutoScroll = true;
-		outerPanel.BackColor = System.Drawing.Color.White;
+		outerPanel.BackColor = Color.White;
 		outerPanel.Controls.Add(innerPanel);
-		outerPanel.Location = new System.Drawing.Point(12, 12);
+		outerPanel.Location = new Point(12, 12);
 		outerPanel.Name = "outerPanel";
-		outerPanel.Size = new System.Drawing.Size(326, 326);
+		outerPanel.Size = new Size(326, 326);
 		outerPanel.TabIndex = 3;
+		// 
+		// openFileDialog1
+		// 
+		openFileDialog1.FileName = "openFileDialog1";
 		// 
 		// ParentForm
 		// 
 		AutoScaleMode = AutoScaleMode.None;
-		BackColor = System.Drawing.Color.FromArgb(((int)((byte)64)), ((int)((byte)64)), ((int)((byte)64)));
-		ClientSize = new System.Drawing.Size(350, 350);
-		MinimumSize = new System.Drawing.Size(120, 120);
-		AutoSize = false;
+		BackColor = Color.FromArgb(64, 64, 64);
+		ClientSize = new Size(350, 350);
 		Controls.Add(outerPanel);
+		MinimumSize = new Size(120, 120);
+		Name = "ParentForm";
 		Text = "Comparser - Complex Computer Parser";
 		FormClosing += ParentForm_FormClosing;
 		outerPanel.ResumeLayout(false);
@@ -62,4 +68,6 @@ partial class ParentForm {
 
 	private System.Windows.Forms.Panel innerPanel;
 	private System.Windows.Forms.Panel outerPanel;
+	private OpenFileDialog openFileDialog1;
+	private SaveFileDialog saveFileDialog1;
 }

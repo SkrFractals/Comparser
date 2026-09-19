@@ -2,7 +2,9 @@
 using Comparser.Forms;
 using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
-public /*abstract*/  partial class Comparser/*<T>*/ {
+
+using TaskData = (int targetDivStart, int targetDivEnd, int taskIndex, int taskCount)[];
+public /*abstract*/ partial class Comparser/*<T>*/ {
 	
 	public partial class PlotEval {
 		public class PlotFrame(bool centerPixels = true) {
@@ -24,61 +26,67 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 			private readonly unsafe delegate*<double, int> _rnd = centerPixels ? &Static.Floor : &Static.Round;
 			private ILeaf _mSx2 = nan, _mDx2 = nan, _mSy2 = nan, _mDy2 = nan, _t2 = nan; // ax.S, ax.d, ay.x, ay.d, frame
 			private ILeaf _mSx1 = nan, _mDx1 = nan, _mY1 = nan, _t1 = nan; // ax.S, ax.d, yC, frame
-			private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
-			private Value[] _plotX = [], _plotXy = [], _memX = [], _memXy = [];
-			private readonly Task[] _taskArr = [];
-			private static void MakeArgs(int tasks, ref Value[] taskArr, ref int[] taskProgress) {
-				if (taskArr.Length < tasks) taskArr = new Value[tasks];
-                if (taskProgress.Length < tasks) taskProgress = new int[tasks];
-				for (int i = 0; i < tasks; taskProgress[i++] = 0)
-					taskArr[i] = new([new(nan, 0, "z"), new(nan, 0, "t")]);
-			}
-			public unsafe Value[] GetPlotXy(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
-				ILeaf aS = Add(ax.start, ay.start), mSx, mSy, mDx, mDy = mDx = mSy = mSx = zero;
-				int mLx = 0, mLy = 0; /*yw = 0;*/
-				if (SqrAbs(Sub(at.Sample(frame), _t2)) <= SqrAbs(at.d) * recallTolerance) // the time of this frame is within tolerance to the memorized time
-					(mSx, mDx, mLx, mSy, mDy, mLy) = (_mSx2, _mDx2, _mLx2, _mSy2, _mDy2, _mLy2);
-				(_plotXy, _memXy) = (_memXy, _plotXy); // swap mem
-				if (_plotXy.Length != (_mLx2 = ax.length) * (_mLy2 = ay.length))
-					_plotXy = new Value[ax.length * ay.length]; // length mismatch: re-alloc
-				(_mLx2, _mLy2, _mSx2, _mSy2, _mDx2, _mDy2) = (ax.length, ay.length, ax.start, ay.start, ax.d, ay.d);
-				if (AxisMatchA(mSx, mDx, ax) && AxisMatchA(mSy, mDy, ay)) {
+			//private int _mLx1, _mLx2, _mLy2; // X length of 1D, X length of 2D, Y length od 2D
+			private Value[] _memX = [], _memXy = [];
+			private Task?[] _taskArr = [];
+			private bool _xyCancelled = true, _xCancelled = true;
+			private readonly List<Value[]> _plotsX = [[]], _plotsXy = [[]];
+			public bool TaskRunning() => Static.TaskRunning(_taskArr);
+			public unsafe void GetPlotXy(Plot.Values values, int divMax, out bool changed, Expression exp, Plot.PlotAxis axF, Plot.PlotAxis ayF, Plot.PlotAxis at, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
+				ILeaf aS = Add(axF.start, ayF.start), mSx, mSy, mDx, mDy = mDx = mSy = mSx = zero;
+				int mLx = 0, mLy = 0;
+				if (SqrAbs(Sub(at.Sample(frame), _t2)) <= SqrAbs(at.d) * recallTolerance && !_xyCancelled) // the time of this frame is within tolerance to the memorized time, and teh memorized frame is valid (not cancelled)
+					(mSx, mDx, mLx, mSy, mDy, mLy) = (_mSx2, _mDx2, axF.length, _mSy2, _mDy2, ayF.length);
+				(_plotsXy[0], _memXy) = (_memXy, _plotsXy[0]); // swap mem
+
+				if (AxisMatchA(mSx, mDx, axF) && AxisMatchA(mSy, mDy, ayF)) {
+					// plotting the same exact axes - just return back the previous result
 					changed = false;
-					(_plotXy, _memXy) = (_memXy, _plotXy);
-					return _plotXy;
+					(_plotsXy[0], _memXy) = (_memXy, _plotsXy[0]);
+					//values.V = [_plotsXy[0]];
+					//values.Done = 1;
+					//values.Total = 1;
+					return; // _plotXy;
 				}
-				changed = true;
+				changed = true; // not the same axes, so the image will be changed
+				// remember what axes are we going to plot:
+				(/*_mLx2, _mLy2,*/ _mSx2, _mSy2, _mDx2, _mDy2) = (/*axF.length, ayF.length,*/ axF.start, ayF.start, axF.d, ayF.d);
+				// prepare the div axes:
+				var axy = new (Plot.PlotAxis ax, Plot.PlotAxis ay)[1 + divMax];
+				for (var i = 0; i <= divMax; ++i)
+					axy[i] = (new(axF, i), new(ayF, i));
+				// prepare the arrays for results:
+				values.Done = 0;
+				values.V = new Value[divMax + 1][];
+				for (var d = 0; d <= divMax; ++d) { // prepare preview arrays
+					var dl = axy[d].ax.length * axy[d].ay.length; // preview resolution size
+					if (_plotsXy.Count <= d) _plotsXy.Add(new Value[dl]); // missing array: alloc
+					else if (_plotsXy[d].Length != dl) _plotsXy[d] = new Value[dl]; // length mismatch: re-alloc
+				}
+				// prepare task data:
+				var reEvalMaster = !SettingsPanel.UseMem || refresh || Math.Min(mLx, mLy) == 0; // should we try to reach to the memory?
+				var taskData = PrepareTasks(divMax);
+				SetupTasks(taskData, memFrame, ref _t2, MultiTask, cancel);
+				return;
 
-				double dXs = SqrAbs(ax.d), dYs = SqrAbs(ay.d);
-				(Complex s, Complex x, Complex y) pm = new(), mp = new();
-				var reEval = !SettingsPanel.MemXy || refresh || Math.Min(mLx, mLy) == 0 || FailAffineMap(Add(mSx, mSy), Math.Min(dXs, dYs));
-				const int chunks = 8;
-				int task = 0, tasks = SettingsPanel.Tasks;
-				Action<int, int, int> reEvalAction = reEval ? PlotXr : PlotX;
-				MakeArgs(tasks, ref _args, ref _taskProgress);
-				// (z,t,x,y,f,w,h,l)
-				for (var i = 0; i < tasks; ++i)
-					_args[i].Values[1].Leaf = _t2 = memFrame; // t
-				
-				if (tasks <= 1) // single threaded
-					return Rows(ref _taskProgress[0], ref task, ay.length, Finish, _args[0]);
-				Static.TaskManager(_taskArr, tasks, chunks, ay.length, cancel, MultiPlotX);
-				return _plotXy;
+				bool AxisMatchA(ILeaf s, ILeaf d, Plot.PlotAxis a) 
+					=> Math.Max(SqrAbs(Sub(s, a.start)), SqrAbs(Mul(Sub(d, a.d), (Real)a.length))) <= SqrAbs(a.d) * recallTolerance;
+				void MultiTask(int taskIndex, int d) => Multi(taskIndex, d, axy[d].ay, taskData, PlotD);
 
-				void MultiPlotX(float yf, float subChunkLength, int taskIndex) {
-					var chunkDistance = tasks * subChunkLength;
-					for (var c = 0; c < chunks; ++c) {
-						var chd = yf + c * chunkDistance;
-						var y = (int)Math.Round(chd);
-						reEvalAction(y, (int)Math.Round(chd + subChunkLength), taskIndex);
+				void PlotD(int y, int ye, int taskIndex, int div) {
+					Plot.PlotAxis ax = axy[div].ax, ay = axy[div].ay;
+					Value[] plot = values.V[divMax - div] = _plotsXy[div];
+					double dXs = SqrAbs(ax.d), dYs = SqrAbs(ay.d);
+					(Complex s, Complex x, Complex y) pm = new(), mp = new();
+					var reEval = reEvalMaster || FailAffineMap(Add(mSx, mSy), Math.Min(dXs, dYs));
+					var args = _args[taskIndex];
+					int  yw = 0, x = 0, progress = _taskProgress[taskIndex];
+					if (reEval) {
+						Rows(ye, Finish);
+						Et();
+						return;
 					}
-				}
-				void PlotXr(int y, int ye, int taskIndex) => Rows(ref _taskProgress[taskIndex], ref y, ye, Finish, _args[taskIndex]);
-				void PlotX(int y, int ye, int taskIndex) => PlotXret(ref y, ye, taskIndex);
-				Value[] PlotXret(ref int y, int ye, int taskIndex, int yw = 0) {
-                    var args = _args[taskIndex];
-					var progress = _taskProgress[taskIndex];
-                    Complex cul = _map(mp, 0, 0), cur = _map(mp, mLx, 0), cdl = _map(mp, 0, mLy), cdr = _map(mp, mLx, mLy);
+					Complex cul = _map(mp, 0, 0), cur = _map(mp, mLx, 0), cdl = _map(mp, 0, mLy), cdr = _map(mp, mLx, mLy);
 					(Complex l, Complex h)
 						i1 = cul.I < cdr.I ? (cul, cdr) : (cdr, cul),
 						i2 = cur.I < cdl.I ? (cur, cdl) : (cdl, cur),
@@ -91,9 +99,12 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 						left = r1.l.R < r2.l.R ? r1.l : r2.l,
 						right = r1.h.R >= r2.h.R ? r1.h : r2.h;
 					var (midLeft, midRight) = mid.l.R < mid.h.R ? (mid.l, mid.h) : (mid.h, mid.l);
-					if (top.I >= ye || bottom.I < 0 || left.R >= ax.length || right.R < 0)
-						return Rows(ref progress, ref y, ye, Finish, args); // parallelogram is out of image bounds, just re-eval everything early
-					Rows(ref progress, ref y, Math.Min(ye, (int)top.I), Finish, args);
+					if (top.I >= ye || bottom.I < 0 || left.R >= ax.length || right.R < 0) {
+						Rows(/*ref progress, ref y, ye, Finish, args*/ ye, Finish); // parallelogram is out of image bounds, just re-eval everything early
+						Et();
+						return;
+					}
+					Rows(/*ref progress, ref y, */Math.Min(ye, (int)top.I), Finish/*, args*/);
 					// is the accumulated error in non-collinear axis over the bounding parallelogram exceeding 1 pixel in that other axis?
 					bool dCol = Static.Sqr(mp.y.R / mp.x.R) * +(cur - cul) < dYs && Static.Sqr(mp.x.I / mp.y.I) * +(cdl - cul) < dXs,
 						sCol = Static.Sqr(mp.y.I / mp.x.I) * +(cur - cul) < dYs && Static.Sqr(mp.x.R / mp.y.R) * +(cdl - cul) < dXs;
@@ -108,31 +119,32 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 							modX = mp.y.I;
 							modY = mp.x.R;
 						} else (modX, modY) = (mp.x.R, mp.y.I);
-						int x = 0;
-						Action<int> xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
-						Action<int, int, int, Value> ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
-						void NoX(int y) {
-							for (Begin(out x, y, args); x < ex && !cancel.IsCancellationRequested; ++x)
-								_plotXy[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
+						
+						Action xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
+						Action ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
+						void NoX() {
+							for (Begin(); x < ex && !cancel.IsCancellationRequested; ++x)
+								plot[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
 						}
-						void YesX(int y) {
-							for (Begin(out x, y, args); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
-								_plotXy[x + yw] = (pX % modX < 1) ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval(x, y, args);
+						void YesX() {
+							for (Begin(); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
+								plot[x + yw] = pX % modX < 1 ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval();
 						}
-						Rows(ref progress, ref y, Math.Min(ye, (int)bottom.I), ytest, args);
-						void YesY(int _, int y, int yww, Value aArgs) {
+						Rows(Math.Min(ye, (int)bottom.I), ytest);
+						void YesY() {
 							pX = phaseX;
 							py = _rnd(_mapClV(pm, y));
-							if (phaseY % modY < 1) xtest(y);
-							Finish(x, y, yww, aArgs);
+							if (phaseY % modY < 1) xtest();
+							Finish();
 							++phaseY;
 						}
-						void NoY(int _, int y, int yww, Value aArgs) {
+						void NoY() {
 							py = _rnd(_mapClV(pm, y));
-							xtest(y);
-							Finish(x, y, yww, aArgs);
+							xtest();
+							Finish();
 						}
-					} else {
+					} 
+					else {
 						// parallelogram bounds incrementing rows, determine if the left/right bvertex is the higher one, and set up the ordering of the phases:
 						top = new(top.R, top.I + 1);
 						bottom = new(bottom.R, bottom.I - 1);
@@ -160,7 +172,7 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 						Complex dBounds, uv;
 						for (var p = 0; p < 4;) {
 							if (i[++p].I < 0) continue;
-							for (; p < 4; Rows(ref progress, ref y, (int)i[p].I, PgRow, args), ++p) { // iterate rows until each next vertex
+							for (; p < 4; Rows((int)i[p].I, PgRow), ++p) { // iterate rows until each next vertex
 								var p1 = p - 1;
 								dBounds = d[p1]; // how much will each bounds value be incremented each row?
 								bounds = INumber<Complex>.Lerp(bK[p1], bK[p], (y - i[p1].I) / (i[p].I - i[p1].I)) // take the initial bounds for this interval (lerp out location between keyframes)
@@ -169,16 +181,16 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 									+ new Complex(1, -1); // make one initial step if it is inwards, to avoid sampling outside the memory, better have 1px on the edge re-eval than to ask for bounds for every pixel
 								if (i[p].I < ye)
 									continue;
-								Rows(ref progress, ref y, ye, PgRow, args); // the vertex is below the bottom, co just continue all the way to the bottom, and then break
+								Rows(ye, PgRow); // the vertex is below the bottom, co just continue all the way to the bottom, and then break
 								break;
 							}
 							break;
 						}
-						void PgRow(int _, int iy, int yww, Value aArgs) {
-							Begin(out var ix, iy, aArgs);
-							for (int e = Math.Min(ax.length, (int)bounds.I); ix < e && !cancel.IsCancellationRequested; _plotXy[ix + yww] = Fracs(out var p) ? _memXy[p] : Eval(ix, iy, aArgs), ++ix)
-								uv = _map(pm, ix, iy);
-							Finish(ix, iy, yww, aArgs);
+						void PgRow() {
+							Begin();
+							for (int e = Math.Min(ax.length, (int)bounds.I); x < e && !cancel.IsCancellationRequested; plot[x + yw] = Fracs(out var p) ? _memXy[p] : Eval(), ++x)
+								uv = _map(pm, x, y);
+							Finish();
 							// ReSharper disable AccessToModifiedClosure
 							bounds += dBounds;
 							// ReSharper restore AccessToModifiedClosure
@@ -190,139 +202,245 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 							return Test(inv00 * du + inv01 * dv) && Test(inv10 * du + inv11 * dv);
 						}
 					}
-					return Rows(ref progress, ref y, ye, Finish, args);
+					Rows(ye, Finish);
+					Et();
+					return;
 
+					void Et() {
+						if (!(_xyCancelled = cancel.IsCancellationRequested))
+							values.Done = Math.Max(values.Done, divMax - div + 1);
+						_taskArr[taskIndex] = null;
+					}
 					bool Test(double t) => t is < .5 and >= -.5;
-					void Begin(out int x, int y, Value argsV) {
+					void Begin() {
 						var e = Math.Min(ax.length, (int)bounds.R);
-						for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E(x, y, yw, argsV);
+						for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E();
 					} // to the left of the outer bounds
-				}
-				bool FailAffineMap(ILeaf mS, double e) {
-					ILeaf s;
-					double dxx, dyx, dxy, dyy, d1, d2, xx = SqrAbs(mDx), xy = Dot(mDx, mDy), yy = SqrAbs(mDy), d = xx * yy - xy * xy, ee = Math.Max(xx, yy) * 1e-6; // Gram matrix of the old plot's two basis vectors.
-					
-					if (Math.Abs(ee) <= 1e-16 || !(InPlane(mDx, mDy, dxx = Dot(mDx, ax.d), dxy = Dot(mDy, ax.d), ax.d, xx, xy, yy, d, e *= e)
-						&& InPlane(mDx, mDy, dyx = Dot(mDx, ay.d), dyy = Dot(mDy, ay.d), ay.d, xx, xy, yy, d, e)
-						&& InPlane(mDx, mDy, d1 = Dot(mDx, s = Sub(aS, mS)), d2 = Dot(mDy, s), s, xx, xy, yy, d, e))) {
-						mp = pm = default;
-						return true;
-					} // u = (q|oldDx)*yy-(q|oldDy)*x; v = (q|oldDy)*xx-(q|oldDx)*xy
-					pm = (C(d1, d2 /*= aS - mS*/, xx, xy, yy, d), C(dxx, dxy, xx, xy, yy, d), C(dyx, dyy, xx, xy, yy, d));
-					(xx, xy, yy) = (SqrAbs(ax.d), Dot(ax.d, ay.d), SqrAbs(ay.d));
-					mp = (C(-d1, -d2, xx, xy, yy, d = xx * yy - xy * xy), C(dxx, dyx, xx, xy, yy, d), C(dxy, dyy, xx, xy, yy, d));
-					return false;
-				}
-				static Complex C(double qx, double qy, double xx, double xy, double yy, double det) 
-					=> new((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
-				static bool InPlane(ILeaf dx, ILeaf dy, double qx, double qy, ILeaf q, double xx, double xy, double yy, double det, double tolerance) {
-					double u = (qx * yy - qy * xy) / det, v = (qy * xx - qx * xy) / det;
-					return SqrAbs(Sub(q, Add(Mul(dx, (Real)u), Mul(dy, (Real)v)))) <= tolerance;
-				}
-				Value[] Rows(ref int progress, ref int y, int ye, Action<int, int, int, Value> a, Value args) {
-					int yw;
-					for (int x; y < ye && !cancel.IsCancellationRequested; a(x, y, yw, args), ++y) (x, yw, progress) = (0, y * ax.length, progress + 1);
-					return _plotXy;
-				}
-				void Finish(int x, int y, int yw, Value args) {
-					for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E(x, y, yw, args);
-				} // to the right of the outer bounds
-				bool AxisMatchA(ILeaf s, ILeaf d, Plot.PlotAxis a) => Math.Max(SqrAbs(Sub(s, a.start)), SqrAbs(Mul(Sub(d, a.d), (Real)a.length))) <= SqrAbs(a.d) * recallTolerance;
-				void E(int x, int y, int yw, Value args) => _plotXy[x + yw] = Eval(x, y, args);
-				Value Eval(int x, int y, Value args) {
-					var l = args.Values;
-					l[0].Leaf = Add(ax.Sample(x), ay.Sample(y));
-					//l[2].Leaf = T.MakeR(x);
-					//l[3].Leaf = T.MakeR(y);
-					return exp.Eval(0, args, tasks <= 1);
+					bool FailAffineMap(ILeaf mS, double e) {
+						ILeaf s;
+						double dxx, dyx, dxy, dyy, d1, d2, xx = SqrAbs(mDx), xy = Dot(mDx, mDy), yy = SqrAbs(mDy), d = xx * yy - xy * xy, ee = Math.Max(xx, yy) * 1e-6; // Gram matrix of the old plot's two basis vectors.
+
+						if (Math.Abs(ee) <= 1e-16 || !(InPlane(mDx, mDy, dxx = Dot(mDx, ax.d), dxy = Dot(mDy, ax.d), ax.d, xx, xy, yy, d, e *= e)
+							&& InPlane(mDx, mDy, dyx = Dot(mDx, ay.d), dyy = Dot(mDy, ay.d), ay.d, xx, xy, yy, d, e)
+							&& InPlane(mDx, mDy, d1 = Dot(mDx, s = Sub(aS, mS)), d2 = Dot(mDy, s), s, xx, xy, yy, d, e))) {
+							mp = pm = default;
+							return true;
+						} // u = (q|oldDx)*yy-(q|oldDy)*x; v = (q|oldDy)*xx-(q|oldDx)*xy
+						pm = (C(d1, d2 /*= aS - mS*/, xx, xy, yy, d), C(dxx, dxy, xx, xy, yy, d), C(dyx, dyy, xx, xy, yy, d));
+						(xx, xy, yy) = (SqrAbs(ax.d), Dot(ax.d, ay.d), SqrAbs(ay.d));
+						mp = (C(-d1, -d2, xx, xy, yy, d = xx * yy - xy * xy), C(dxx, dyx, xx, xy, yy, d), C(dxy, dyy, xx, xy, yy, d));
+						return false;
+					}
+					static Complex C(double qx, double qy, double xx, double xy, double yy, double det)
+						=> new((qx * yy - qy * xy) / det, (qy * xx - qx * xy) / det);
+					static bool InPlane(ILeaf dx, ILeaf dy, double qx, double qy, ILeaf q, double xx, double xy, double yy, double det, double tolerance) {
+						double u = (qx * yy - qy * xy) / det, v = (qy * xx - qx * xy) / det;
+						return SqrAbs(Sub(q, Add(Mul(dx, (Real)u), Mul(dy, (Real)v)))) <= tolerance;
+					}
+					void Rows(int yEnd, Action a) {
+						for (; y < yEnd && !cancel.IsCancellationRequested; a(), ++y) (x, yw, progress) = (0, y * ax.length, progress + 1);
+					}
+					void Finish() {
+						for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E();
+					} // to the right of the outer bounds
+					void E() => plot[x + yw] = Eval();
+					Value Eval() {
+						var l = args.Values;
+						l[0].Leaf = Add(ax.Sample(x), ay.Sample(y));
+						//l[2].Leaf = T.MakeR(x);
+						//l[3].Leaf = T.MakeR(y);
+						return exp.Eval(0, args, false/*SettingsPanel.Tasks <= 1*/);
+					}
 				}
 			}
-			public Value[] GetPlotX(out bool changed, Expression exp, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, double y, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
-				Value[] memY = []; changed = true;
+			public void GetPlotX(Plot.Values values, int divMax, out bool changed, Expression exp, Plot.PlotAxis axF, Plot.PlotAxis ayF, Plot.PlotAxis atF, double y, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
+				Value[] memY = []; 
 				int memYo = -1, mLx = 0;
-				ILeaf mSx = zero, mDx = zero, yC = ay.Sample(y); // y coordinate
-				var sqrEy = SqrAbs(at.d) * recallTolerance;
-				(_plotX, _memX) = (_memX, _plotX); // swap mem
-				if (_plotX.Length != ax.length) _plotX = new Value[ax.length]; // length mismatch: re-alloc
+				ILeaf mSx = zero, mDx = zero, yC = ayF.Sample(y); // y coordinate
+				var sqrEy = SqrAbs(atF.d) * recallTolerance;
+				(_plotsX[0], _memX) = (_memX, _plotsX[0]); // swap mem
+				if (_plotsX[0].Length != axF.length) _plotsX[0] = new Value[axF.length]; // length mismatch: re-alloc
 				// remember this evaluated X axis
-				Remember(); // fetch a 
-				_mY1 = yC;
-				_mLx1 = ax.length;
-				//int task = 0, chunks = 1, tasks = SettingsPanel.Tasks;
-				MakeArgs(1, ref _args, ref _taskProgress);
-				// (z,t,x,y,f,w,h,l)
-				var args = _args[0];
-				args.Values[1].Leaf = _t1 = memFrame; // t
-			
-				if (memYo < 0) return ReEval(); // no memory
-				(_mSx1, _mDx1) = (ax.start, ax.d);
+				Remember(); // fetch a memory
+				
 				// we have some memory Y match
-				if (AxisOverlap.New(ax, mSx, mDx, mLx, recallTolerance, out var o)) {
-					if (memY != _plotX) // x-axis is not identical to the memory	
-						for (var x = 0; x < _plotX.Length && !cancel.IsCancellationRequested; _plotX[x] = memY[x++ + memYo]) { } // the identical memory is the 2D plot, not already our 1D one
+				if (AxisOverlap.New(axF, mSx, mDx, mLx, recallTolerance, out var o)/* && 0 <= memYo*/) {
+					//if (memY != _plotX) // x-axis is not identical to the memory	
+					//	for (var x = 0; x < _plotX.Length && !cancel.IsCancellationRequested; _plotX[x] = memY[x++ + memYo]) { } // the identical memory is the 2D plot, not already our 1D one
 					// transfer the whole Y slice form the 2d memory (tolerance is < pixel, so the array lengths should match)
-					(_plotX, _memX) = (_memX, _plotX); // switch back
+					(_plotsX[0], _memX) = (_memX, _plotsX[0]); // switch back
 					changed = false;
-					return _plotX;
+					return;
 				}
-				// no overlap: jut re-eval everything
-				if (refresh || !SettingsPanel.MemX || !(SqrAbs(o.Perp) <= o.SqrE) || o.NoOverlap()) return ReEval();
-				// eval 0-iaStart (that isn't in the memory)
-				ReEval(0, o.IaStart);
-				if (AxisMismatch(o, mDx, out var mt)) {
-					var dScale = Math.Max(1, (int)Math.Round(Math.Abs(Div(o.A.d, mDx).Re()))); // can do T.Re as they are co-linear
-					if (StepMismatch(o, Mul(mDx, (Real)dScale), o.IaEnd - o.IaStart))
-						return ReEval(); // the ratio between asked-memory step sizes is not an integer, the interlacing won't work, so re-eval all
-					int x, phase; // find the phase when the axis maps to memory ( then we will loop: once "take from memory" then (dScale-1) times "re-eval") 
-					for (phase = 0; phase < dScale && o.IaStart < o.IaEnd && !cancel.IsCancellationRequested; _plotX[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
-						if (!DistanceMismatch(o, Mul((Real)mt, mDx), o.IaStart))
-							break; // stop evaluating once we find the phase match,then we can proceed with the interlacing
-					if (phase == dScale) // failed to find any match that might be repeating every phase, just re-eval all:
-						return ReEval(o.IaStart);
-					for (phase = 0, x = o.IaStart; x < o.IaEnd && !cancel.IsCancellationRequested; ++x) // do the interlacing
-						_plotX[x] = phase++ % dScale == 0 ? memY[o.Map(x) + memYo] : Eval(x); // phase 0 % dScale = transfer, otherwise eval
-				} else
-					for (var x = o.IaStart; x < o.IaEnd; ++x) // the memory-asked axis bases match, so the transfer can be much simpler:
-						_plotX[x] = memY[o.Map(x) + memYo];
-				// eval the rest: iaEnd-length (that isn't in the memory)
-				return ReEval(o.IaEnd);
+				changed = true;
+				(_mSx1, _mDx1, _mY1) = (axF.start, axF.d, yC);
+				// prepare the div axes:
+				var axs = new Plot.PlotAxis[1 + divMax];
+				for (var i = 0; i <= divMax; ++i)
+					axs[i] = new(axF, i);
+				// prepare the arrays for results:
+				values.Done = 0;
+				values.V = new Value[divMax + 1][];
+				for (var d = 0; d <= divMax; ++d) { // prepare preview arrays
+					var dl = axs[d].length; // preview resolution size
+					if (_plotsXy.Count <= d) _plotsXy.Add(new Value[dl]); // missing array: alloc
+					else if (_plotsXy[d].Length != dl) _plotsXy[d] = new Value[dl]; // length mismatch: re-alloc
+				}
 
+				// prepare task data:
+				var reEvalMaster = !SettingsPanel.UseMem || refresh || memYo < 0 || axF.length == 0 || !(SqrAbs(o.Perp) <= o.SqrE) || o.NoOverlap(); // should we try to reach to the memory?
+				var taskData = PrepareTasks(divMax);
+				SetupTasks(taskData, memFrame, ref _t1, MultiTask, cancel);
+				return;
+				
 				void Remember() {
-					if (SqrAbs(Sub(at.Sample(frame), _t1)) >= sqrEy) return;
+					if (SqrAbs(Sub(atF.Sample(frame), _t1)) >= sqrEy) return;
 					// the time of this frame is within tolerance to the memorized time
-					if (SqrAbs(Sub(_mY1, yC)) <= sqrEy) {
-						(memY, memYo, mSx, mDx, mLx) = (_memX, 0, _mSx1, _mDx1, _mLx1); // 1D memory Y match
+					if (SqrAbs(Sub(_mY1, yC)) <= sqrEy || _xCancelled) {
+						(memY, memYo, mSx, mDx) = (_memX, 0, _mSx1, _mDx1); // 1D memory Y match
 						return;
 					}
+					
+					
 					//if (!CrossDimensionalMemory)
 					//	return;
 					// this might be an overkill, as 1D memory is far more likely to be matched
 					// 1D memory didn't match, but the memorized 2D y-axis is still matching the asked one, so maybe there will be a matching X line here?
-					int lo = 0, hi = _mLy2;
+
+					if (_xyCancelled)
+						return;
+					int lo = 0, hi = _plotsXy[0].Length;//_mLy2;
 					var mSy = Sub(_mSy2, yC);
 					while (lo < hi) {
 						var mid = lo + hi >> 1;var d = Add(mSy, Mul((Real)mid, _mDy2));
 						var nd = SqrAbs(d);
 						if (nd <= sqrEy) { // 2D memory Y match
-							(memY, memYo, mSx, mDx) = (_plotXy, mid * (mLx = _mLx2), _mSx2, _mDx2);
+							(memY, memYo, mSx, mDx) = (_plotsXy[0], mid * (mLx = _plotsXy[0].Length), _mSx2, _mDx2);
 							break;
 						}
 						if (SqrAbs(Add(d, _mDy2)) < nd) lo = mid + 1; // target is closer to d stepped towards hi
 						else hi = mid; // target is closer to d stepped away from hi
 					}
 				}
-				//  we haven't found any memory Y match, or only might be intersecting at 0-1 points, 1 point intersection is not worth finding so just render the whole X line
-				// So re-eval the whole frame
-				Value[] ReEval(int start = 0, int end = int.MaxValue) {
-					for (int x = start, iEnd = Math.Min(end, _plotX.Length); x < iEnd && !cancel.IsCancellationRequested; ++x) // eval at the whole X axis range
-						_plotX[x] = Eval(x); // eval at this x coordinate
-					return _plotX;
+				void MultiTask(int taskIndex, int d) => Multi(taskIndex, d, axs[d], taskData, PlotD);
+				void PlotD(int x, int xe, int taskIndex, int div) {
+					Plot.PlotAxis ax = axs[div];
+					Value[] plot = values.V[divMax - div] = _plotsXy[div];
+					var args = _args[taskIndex];
+					// no overlap: just re-eval everything
+					if (reEvalMaster) { 
+						ReEval();
+						Et();
+						return;
+					}
+					// eval 0-iaStart (that isn't in the memory)
+					var ixe = Math.Min(xe, o.IaEnd);
+					ReEval(o.IaStart);
+					if (x >= o.IaStart && x < ixe && AxisMismatch(o, mDx, out var mt)) {
+						var dScale = Math.Max(1, (int)Math.Round(Math.Abs(Div(o.A.d, mDx).Re()))); // can do T.Re as they are co-linear
+						if (StepMismatch(o, Mul(mDx, (Real)dScale), o.IaEnd - o.IaStart)) { 
+							ReEval();
+							Et();
+							return;
+						} // the ratio between asked-memory step sizes is not an integer, the interlacing won't work, so re-eval all
+						int phase; // find the phase when the axis maps to memory ( then we will loop: once "take from memory" then (dScale-1) times "re-eval") 
+						for (phase = 0; phase < dScale && o.IaStart < o.IaEnd && !cancel.IsCancellationRequested; plot[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
+							if (!DistanceMismatch(o, Mul((Real)mt, mDx), o.IaStart))
+								break; // stop evaluating once we find the phase match,then we can proceed with the interlacing
+						if (phase == dScale) { // failed to find any match that might be repeating every phase, just re-eval all:
+							ReEval(/*o.IaStart*/);
+							Et();
+							return;
+						}
+						for (phase = 0, x = o.IaStart; x < ixe && !cancel.IsCancellationRequested; ++x) // do the interlacing
+							plot[x] = phase++ % dScale == 0 ? memY[o.Map(x) + memYo] : Eval(x); // phase 0 % dScale = transfer, otherwise eval
+					} else
+						for (x = o.IaStart; x < o.IaEnd; ++x) // the memory-asked axis bases match, so the transfer can be much simpler:
+							plot[x] = memY[o.Map(x) + memYo];
+					// eval the rest: iaEnd-length (that isn't in the memory)
+					ReEval(/*o.IaEnd*/);
+					
+					return;
+					
+					//  we haven't found any memory Y match, or only might be intersecting at 0-1 points, 1 point intersection is not worth finding so just render the whole X line
+					// So re-eval the whole frame
+					void ReEval(int end = int.MaxValue) {
+						for (var iEnd = Math.Min(end, xe); x < iEnd && !cancel.IsCancellationRequested; ++x) // eval at the whole X axis range
+							plot[x] = Eval(x); // eval at this x coordinate
+					}
+					Value Eval(int ix) {
+						args.Values[0].Leaf = Add(ax.Sample(ix), yC);
+						//args.Values[2].Leaf = T.MakeR(x);
+						return exp.Eval(0, args, false/*SettingsPanel.Tasks <= 1*/);
+					}
+					void Et() {
+						if (!(_xCancelled = cancel.IsCancellationRequested))
+							values.Done = Math.Max(values.Done, divMax - div + 1);
+						_taskArr[taskIndex] = null;
+					}
 				}
-				Value Eval(int x) {
-					args.Values[0].Leaf = Add(ax.Sample(x), yC);
-					//args.Values[2].Leaf = T.MakeR(x);
-					return exp.Eval(0, args, /*tasks <= 1*/SettingsPanel.Tasks <= 1);
+			}
+			void Multi(int taskIndex, int d, Plot.PlotAxis a, TaskData taskData, Action<int,int,int,int> plot) {
+				int tasks = taskData[taskIndex].taskCount, chunks = tasks > 1 ? 8 : 1;
+				float subChunkLength = (float)a.length / (chunks * tasks), chunkDistance = tasks * subChunkLength, yf = taskData[taskIndex].taskIndex * subChunkLength;
+				for (var c = 0; c < chunks; ++c) {
+					var chd = yf + c * chunkDistance;
+					plot((int)Math.Round(chd), (int)Math.Round(chd + subChunkLength), taskIndex, d);
 				}
+			}
+			private void SetupTasks(TaskData taskData, ILeaf memFrame, ref ILeaf t, Action<int, int> task, CancellationToken cancel) {
+				
+				if (_taskArr.Length != SettingsPanel.Tasks) _taskArr = new Task[SettingsPanel.Tasks]; // allocate array if it doesn't exist yet, or has the wrong size
+				// prepare argument data:
+				MakeArgs(taskData.Length, ref _args, ref _taskProgress);
+				for (var i = 0; i < taskData.Length; ++i) // prepare "t" input value
+					_args[i].Values[1].Leaf = t = memFrame;
+				// run tasks
+				/*if (SettingsPanel.Tasks <= 1) {
+					T(0); // single task will not start any tasks
+					return;
+				}*/
+				for (var i = 0; i < SettingsPanel.Tasks; ++i) {
+					var ic = i; // must make a new local variable, otherwise the task could start with a wrong one
+					_taskArr[i] = Task.Run(() => T(ic), cancel);
+				}
+				return;
+				void T(int ic) {
+					// start tasks from the easiest, so that we get the smaller rest images first asap
+					for (var d = taskData[ic].targetDivStart; d >= taskData[ic].targetDivEnd; --d) task(ic, d);
+				}
+			}
+			private TaskData PrepareTasks(int divMax) {
+				int tasks, remainingTasks = tasks = SettingsPanel.Tasks;
+				var taskData = new (int, int, int, int)[tasks];
+				int currentDiv = 0, currentTask = 0;
+				while (remainingTasks > 0) {
+					if (remainingTasks == 1) { // if only 1 task left available the remaining task on all the remaining divs
+						taskData[currentTask] = (divMax, currentDiv, 0, 1);
+						break;
+					}
+					if (currentDiv == divMax) { // if this div resolution is the final one, then use all the remaining tasks on all the remaining divs
+						AssignTasks(remainingTasks);
+						break;
+					}
+					// use half of remaining tasks for this resolution:
+					var assignedTasks = remainingTasks >> 1;
+					remainingTasks -= assignedTasks;
+					AssignTasks(assignedTasks);
+					++currentDiv;
+					continue;
+					void AssignTasks(int t) {
+						for (var i = 0; i < t; ++i)
+							taskData[currentTask++] = (currentDiv, currentDiv, i, t);
+					}
+				}
+				return taskData;
+			}
+			private static void MakeArgs(int tasks, ref Value[] taskArr, ref int[] taskProgress) {
+				if (taskArr.Length < tasks) taskArr = new Value[tasks];
+				if (taskProgress.Length < tasks) taskProgress = new int[tasks];
+				for (int i = 0; i < tasks; taskProgress[i++] = 0)
+					taskArr[i] = new([new(nan, 0, "z"), new(nan, 0, "t")]);
 			}
 		}
 	}

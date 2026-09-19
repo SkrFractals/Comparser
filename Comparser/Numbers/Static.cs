@@ -200,18 +200,38 @@ public static class Static {
 	private static readonly TimeSpan SleepyTime = TimeSpan.FromSeconds(1/20.0);
 	public static readonly string[] Errors = ["", "NaN", "Stack Overflow", "Bad Expression", "Unexpected"];
 	public static void TaskManager(Task[] taskArr, int tasks, int chunks, int total, CancellationToken cancel, Action<float, float, int> run) {
-		int task = 0;
-		if (taskArr.Length != tasks) taskArr = new Task[tasks]; // allocate array if it doesn't exist yet, or has the wrong size
-		for (float t = 0, dr = (float)total / (chunks * tasks); task < tasks; t += dr) // split into 8 chunks, each split into threads, so that easy and hard lines get split evenly
-		{
+		if (tasks <= 1) { 
+			run(0, total, 0); // single task will do it right away, without starting any threads, after all we already are in a parallel thread
+			return;
+		}
+		var task = 0;
+		if (taskArr.Length != tasks) 
+			taskArr = new Task[tasks]; // allocate array if it doesn't exist yet, or has the wrong size
+		// split into 8 chunks, each split into threads, so that easy and hard lines get split evenly
+		for (float t = 0, dr = (float)total / (chunks * tasks); task < tasks; t += dr) { 
 			float tt = t;
-			int tTask = task++;
-			taskArr[tTask] = Task.Run(() => run(tt,dr,tTask), cancel); // run the tasks and give them row chunks to process
+			int tTask = task++;  // run the tasks and give them row chunks to process
+			taskArr[tTask] = Task.Run(() => run(tt,dr,tTask), cancel);
 		}
 		// wait for tasks to finish:
 		for (var done = 0; done < tasks; Thread.Sleep(Static.SleepyTime))
 		for (task = done = 0; task < tasks; ++task)
 			done = taskArr[task].IsCompleted ? done + 1 : done;
+	}
+	public static void Multi(float yf, float subChunkLength, int taskIndex, Action<int, int, int> taskDraw, int tasks, int chunks) {
+		//var args = (Value)argsO;
+		float chunkDistance = tasks * subChunkLength;
+		for (var c = 0; c < chunks; ++c) {
+			float chd;
+			int y = (int)Math.Round(chd = yf + c * chunkDistance);
+			taskDraw(y, (int)Math.Round(chd + subChunkLength), taskIndex);
+		}
+	}
+	public static bool TaskRunning(Task?[] arr) {
+		foreach (var t in arr)
+			if (t != null)
+				return true;
+		return false;
 	}
 }
 

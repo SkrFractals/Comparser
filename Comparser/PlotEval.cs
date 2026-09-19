@@ -22,28 +22,41 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 		public int GetPercent() => _current?.progressRows ?? 0;
 		private PlotFrame? _current;
 
+		private int div = 0, previews = 0, previewBitmap = 0;
+		private void StartAni(bool animate, int h) {
+			previews = animate ? 0 : Math.Max(0, (int)Math.Log2(h) - 4);
+			div = Math.Max(0, previews - previewBitmap);
+		}
+		//private Task? task;
+
+		private bool InitTest(out bool changed, double recallTolerance, Plot.PlotAxis at, bool noPrev, int length) {
+			changed = false;
+			if (_current != null && _current.TaskRunning())
+				return false;
+			if (recallTolerance >= 1) throw new("tolerance must be less than a full pixel, otherwise we could get memory transfer indexing mismatches!");
+			if (_exp is null) throw new("No expression");
+			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
+			_mSt = at.start;
+			_mDt = at.d;
+			StartAni(noPrev, length);
+			return true;
+		}
 		// Axis is a Complex base range struct, the plot coord bases are each a complex/quat number, generic T.
 		// x: (S = input x value on the left side of the screen, step = step value, pixel[x]-pixel[x-1], length = screen width, S + step*length = input x value on the right side of the screen)
 		// y: (S = input y value on the left side of the screen, step = step value, pixel[y]-pixel[y-1], length = screen height, S + step*length = input y value on the right side of the screen)
 		// t: (S = input time on the left side of the screen, step = step value, time[x]-time[x-1], length = animation length, S + step*length = input time on the right side of the screen)
 		// all x,y,t are complex numbers, animation will lerp time complex input from t.S to t.S + t.step * t.length.
 		// basically the frame want to plot a function f(x,y,t), with x = T.Lerp(axisX.S,axisX.S+axisX.step*axisX.length,screen.x/screen.width), same for y, and t = T.Lerp(axisT.S, ..., frame/animationLength) 
-		public Value[] GetPlotX(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, double y, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
-			if (recallTolerance >= 1) throw new("tolerance must be less than a full pixel, otherwise we could get memory transfer indexing mismatches!");
-			if (_exp is null) throw new("No expression");
-			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
-			_mSt = at.start;
-			_mDt = at.d;
-			return (_current = _plot[frame]).GetPlotX(out changed, _exp, new(ax), new(ay),  new(at), y, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
+		public void GetPlotX(bool noPreview, Plot.Values values, out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, double y, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+			if (InitTest(out changed, recallTolerance, at, noPreview, ax.length))
+				(_current = _plot[frame]).GetPlotX(values, div, out changed, _exp!, ax, ay, at, y, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
 		}
-		public Value[] GetPlotXy(out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
-			if (_exp is null) throw new("No expression");
-			if (recallTolerance >= 1) throw new("tolerance must be less than a full pixel, otherwise we could get memory transfer indexing mismatches!");
-			TransferOverlap(at, recallTolerance *= recallTolerance); // all distances are squared
-			_mSt = at.start;
-			_mDt = at.d;
-			return (_current = _plot[frame]).GetPlotXy(out changed, _exp, new(ax), new(ay), new(at), frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
+
+		public void GetPlotXy(bool noPreview, Plot.Values values, out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+			if (InitTest(out changed, recallTolerance, at, noPreview, ay.length))
+				(_current = _plot[frame]).GetPlotXy(values, div, out changed, _exp!, ax, ay, at, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
 		}
+
 		public class AxisOverlap {
 			public static bool New(Plot.PlotAxis a, ILeaf mSa, ILeaf mDa, int mLa, /*int memoryLength,*/ double recallTolerance, out AxisOverlap o)
 				=> (o = new(a, mSa, mDa, mLa, recallTolerance/*, memoryLength*/)).Dmm < 0;
@@ -73,18 +86,6 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 				// is this the range on the time axis line, that has a matching overlap with the time memory line?
 				IaStart = Math.Max(0, (int)Math.Floor(aStart * A.length) - 1);
 				IaEnd = Math.Min(A.length, (int)Math.Ceiling(aEnd * A.length) + 1);
-				// this code might not account for negative _mapA!
-				/*var iMStart = (int)Math.Round(_mapA * IaStart + _mapB);
-				if (iMStart >= _memL) // beginning of axis's overlap if beyond the array end of the memory - no overlap
-					return true;
-				if (iMStart < 0) // beginning of axis's overlap if before the array of the memory begins - shift the bounds to that
-					IaStart = Math.Min((int)Math.Round((iMStart - _mapB) / _mapA), A.length - 1);
-				var iMEnd = (int)Math.Round(_mapA * IaEnd + _mapB);
-				if (iMEnd < 0) // end of axis's overlap if before the array of the memory begins - no overlap 
-					return true;
-				if (iMEnd >= _memL) // beginning of axis's overlap if beyond the array end of the memory - shift the bounds to that
-					IaEnd = Math.Max((int)Math.Round((iMEnd - _mapB) / _mapA) + 1, 0);*/
-				// this should:
 				double iaForM0 = -_mapB / _mapA, iaForM1 = (/*_memL*/_mLa - 1 - _mapB) / _mapA;
 				IaStart = Math.Max(IaStart, (int)Math.Ceiling(Math.Min(iaForM0, iaForM1)));
 				IaEnd   = Math.Min(IaEnd, (int)Math.Floor(Math.Max(iaForM0, iaForM1)) + 1);
@@ -158,3 +159,53 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 	}
 }
 //return (_plot[frame]/* ?? (_plot[frame] = new())*/).GetPlot(xa, ya, y, _mSt + frame*_mStepT);
+
+
+/*var n =
+if (!changed)
+	return;
+values.V.Clear();
+values.V.Add(n);
+values.done = 1;
+if (!noPreview && previews > 0)
+	task = Task.Run(() => TaskPlotX(values, ax, ay, y, at, frame, recallTolerance), Cancel);
+}
+public void TaskPlotX(Plot.Values values, Plot.PlotAxis ax, Plot.PlotAxis ay, double y, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+	--div;
+	values.V.Add((_current = _plot[frame]).GetPlotXy(div, out _, _exp, ax, ay, at, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel));
+	++values.done;
+	if (div > 0)
+		TaskPlotX(values, ax, ay, y, at, frame, recallTolerance);
+	else task = null;
+}*/
+		
+/*var n =
+if (!changed)
+return;
+values.V.Clear();
+values.V.Add(n);
+values.done = 1;
+if (!noPreview && previews > 0)
+task = Task.Run(() => TaskPlotXy(values, ax, ay, at, frame, recallTolerance), Cancel);
+}
+public void TaskPlotXy(Plot.Values values, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+--div;
+values.V.Add((_current = _plot[frame]).GetPlotXy(div, out _, _exp, ax, ay, at, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel));
+++values.done;
+if (div > 0)
+TaskPlotXy(values, ax, ay, at, frame, recallTolerance);
+else task = null;
+}*/
+
+// this code might not account for negative _mapA!
+/*var iMStart = (int)Math.Round(_mapA * IaStart + _mapB);
+if (iMStart >= _memL) // beginning of axis's overlap if beyond the array end of the memory - no overlap
+	return true;
+if (iMStart < 0) // beginning of axis's overlap if before the array of the memory begins - shift the bounds to that
+	IaStart = Math.Min((int)Math.Round((iMStart - _mapB) / _mapA), A.length - 1);
+var iMEnd = (int)Math.Round(_mapA * IaEnd + _mapB);
+if (iMEnd < 0) // end of axis's overlap if before the array of the memory begins - no overlap
+	return true;
+if (iMEnd >= _memL) // beginning of axis's overlap if beyond the array end of the memory - shift the bounds to that
+	IaEnd = Math.Max((int)Math.Round((iMEnd - _mapB) / _mapA) + 1, 0);*/
+// this should:

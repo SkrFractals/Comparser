@@ -1,6 +1,7 @@
 ﻿using Comparser.Comparser;
 using Comparser.Forms.Core;
 using static Comparser.Forms.Core.IPanel;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 namespace Comparser.Forms;
 
 public partial class SettingsPanel : UserControl, IPanel {
@@ -8,25 +9,25 @@ public partial class SettingsPanel : UserControl, IPanel {
 	private readonly ControlVar _var;
 	public ControlVar GetVar() => _var;
 	public Size GetSize() => new(320, 320);//new( Pad * 5 + decLabel.Width + decimalBox.Width + algebraBox.Width + darkButton.Width, 
-		//(Pad << 1) + RowHeight + Pad);
-	public void SetDark(bool dark) { BaseSetDark(this);	darkButton.Text = dark ? "☾" : "☀︎"; }
+										   //(Pad << 1) + RowHeight + Pad);
+	public void SetDark(bool dark) { BaseSetDark(this); darkButton.Text = dark ? "☾" : "☀︎"; }
 	public void PerformClose() { }
 	public void CoreLayout() { }
 	#endregion
 
 	#region Variables
 	//private SettingsLayout _s = new();
-	public static bool MemX, MemXy;
+	public static bool UseMem;
 	public static int Decimals = 3;
 	//public static int Algebra = 1;
 	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
-	public static int Tasks =  Environment.ProcessorCount - (Environment.ProcessorCount >> 3); 
+	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1;
 	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	public static IComparser Context = new Comparser.Comparser();
 	private bool _darkMode = true, _preEvaluate = true;
 	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000;
 	public static Reporting ReportingMode = Reporting.Report;
-	public static bool AutoBuild = true, AutoPlot = true;
+	public static bool AutoBuild = true, AutoPlot = true, PreviewFrames = true;
 	public enum Reporting : byte { Silent = 0, Timer = 1, Report = 2 }
 	#endregion
 
@@ -51,7 +52,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		autoLabel.Text = "Auto Build:";
 		decLabel.Text = "Decimals:";
 		reportLabel.Text = "Report Logs:";
-		
+
 		// blocks scrolling over int from changing their value
 		algebraBox.MouseWheel += ComboBox_MouseWheel;
 	}
@@ -94,6 +95,20 @@ public partial class SettingsPanel : UserControl, IPanel {
 		if (!int.TryParse(taskBox.Text, out Tasks) || Tasks < 1) Tasks = 1;
 		if (Tasks > MaxTasks) Tasks = MaxTasks;
 	}
+	private void chunkBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(chunkBox.Text, out Tasks) || Chunks < 1) Chunks = 1;
+		if (Tasks > MaxTasks) Tasks = MaxTasks;
+	}
+
+	private void drawTaskBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(drawTaskBox.Text, out Tasks) || DrawTasks < 1) DrawTasks = 1;
+		if (Tasks > MaxTasks) Tasks = MaxTasks;
+	}
+
+	private void drawChunkBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(drawChunkBox.Text, out Tasks) || DrawChunks < 1) DrawChunks = 1;
+		if (Tasks > MaxTasks) Tasks = MaxTasks;
+	}
 	private void preEvalBox_CheckedChanged(object sender, EventArgs e) {
 		_preEvaluate = preEvalBox.Checked;
 		SetPreEval();
@@ -107,13 +122,12 @@ public partial class SettingsPanel : UserControl, IPanel {
 		UpdatePlot();
 	}
 	private void xMemBox_CheckedChanged(object sender, EventArgs e) {
-		MemX = xMemBox.Checked;
-		MessageBox.Show("This feature is quite advanced and has not yet been fully debugged, it's only about 80% functional. I do not recommend turning this on yet.", "WARNING: Not debugged!");
+		UseMem = xMemBox.Checked;
+		MessageBox.Show("This feature is quite advanced and has not yet been fully debugged, but may be functional.", "WARNING: Not debugged!");
 	}
 
-	private void xyMemBox_CheckedChanged(object sender, EventArgs e) {
-		MemXy = xyMemBox.Checked;
-		MessageBox.Show("This feature is quite advanced and has not yet been fully debugged, but may be functional.", "WARNING: Not debugged!");
+	private void PreviewBoxCheckedChanged(object sender, EventArgs e) {
+		PreviewFrames = previewBox.Checked;
 	}
 	#endregion
 
@@ -131,7 +145,9 @@ public partial class SettingsPanel : UserControl, IPanel {
 		_ => "???"
 	};
 	private void UpdatePlot() => plotButton.Text = AutoPlot ? "DELEAYED AUTOMATIC" : "MANUAL";
-	#endregion	
-	
-	public static void ComboBox_MouseWheel(object? sender, MouseEventArgs e) =>	((HandledMouseEventArgs)e).Handled = true;
+	#endregion
+
+	public static void ComboBox_MouseWheel(object? sender, MouseEventArgs e) => ((HandledMouseEventArgs)e).Handled = true;
+
+
 }

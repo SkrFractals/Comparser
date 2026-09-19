@@ -18,7 +18,8 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 	public partial class Plot {
 		public class PlotAxis(Comparser/*<T>*/ c, ILeaf/*<T>*/ initStart, ILeaf/*<T>*/ initStep, int initLength = 0) : IPlotAxis {
 
-			public PlotAxis(PlotAxis copy) : this(copy._context, copy.start, copy.d, copy.length) { }
+			public PlotAxis(PlotAxis copy, int div = 1) : this(copy._context, copy.start, copy.d, copy.length) 
+				=> d = Mul(d, (Real)((double)length / (length >>= div)));
 
             private readonly Comparser/*<T>*/ _context = c;
 			public void SetL(int l) => Locked = l;
@@ -166,23 +167,24 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				
 				void Lin(ILeaf/*<T>*/ lStart, ILeaf/*<T>*/ lEnd) { 
 					field = new Color[length];
-					return; // ILeaf/*<T>*/ODO this
-					(lStart, lEnd) = (ILeaf/*<T>*/.D2(lStart, lEnd, Math.Min), ILeaf/*<T>*/.D2(lStart, lEnd, Math.Max));
-					var h = Lc(Sub(lEnd, lStart));
-					//if (lEnd.Equals(lStart)) return;
-					var mod = ILeaf/*<T>*/.D1(Sub(lEnd, lStart), x => Math.Log(Math.Abs(x)) / Math.Log(divBase) % 1); 
-					byte divided = 64;
-					var lineB = new ILeaf/*<T>*/[4];
-					lineB[0] = Mul((Real)divided, Sub((Real)1, mod));
-					for (int i = 1; i < lineB.Length - 2; ++i)
-						lineB[i] = Mul((Real)(divided >>= 1), Add((Real)1, mod));
-					lineB[^2] = Mul(one, (Real)divided);
-					lineB[^1] = Mul(mod, (Real)divided);
-					for (byte b = 0; b < lineB.Length; ++b, h = Div(h, (Real)10)) {
-						ILeaf/*<T>*/ fs = Floor(Div(lStart, h)), fe = Floor(Div(lEnd, h));
-						for (int i = (int)ILeaf/*<T>*/.Mix(fs, Math.Min), e = (int)ILeaf.Mix(fe, Math.Max); i <= e; ++i)
-							ILeaf/*<T>*/.IndexAndAddToRgb(field, Floor(Mul((Real)length, D2(Sub(Mul((Real)i, h), start), Sub(end, start), Static.Div))), lineB[b]);
-					}
+					// TODO this
+					/*(lStart, lEnd) = (ILeaf<T>.*/ //D2(lStart, lEnd, Math.Min), ILeaf/*<T>*/.D2(lStart, lEnd, Math.Max));
+					//var h = Lc(Sub(lEnd, lStart));
+					/*if (lEnd.Equals(lStart)) return;*/
+					//var mod = ILeaf/*<T>*/.D1(Sub(lEnd, lStart), x => Math.Log(Math.Abs(x)) / Math.Log(divBase) % 1); 
+					//byte divided = 64;
+					//var lineB = new ILeaf/*<T>*/[4];
+					//lineB[0] = Mul((Real)divided, Sub((Real)1, mod));
+					//for (int i = 1; i < lineB.Length - 2; ++i)
+					//	lineB[i] = Mul((Real)(divided >>= 1), Add((Real)1, mod));
+					//lineB[^2] = Mul(one, (Real)divided);
+					//lineB[^1] = Mul(mod, (Real)divided);
+					//for (byte b = 0; b < lineB.Length; ++b, h = Div(h, (Real)10)) {
+					//	ILeaf/*<T>*/ fs = Floor(Div(lStart, h)), fe = Floor(Div(lEnd, h));
+					//	for (int i = (int)ILeaf/*<T>*/.Mix(fs, Math.Min), e = (int)ILeaf.Mix(fe, Math.Max); i <= e; ++i)
+					//		ILeaf/*<T>*/.IndexAndAddToRgb(field, Floor(Mul((Real)length, D2(Sub(Mul((Real)i, h), start), Sub(end, start), Static.Div))), lineB[b]);
+					//}
+					
 				}
 				ILeaf/*<T>*/ Lc(ILeaf/*<T>*/ c) => ILeaf/*<T>*/.D1(c, (x) => Math.Round(Math.Pow(divBase, Math.Floor(Math.Log(Math.Abs(x)) / Math.Log(divBase)))));
 				}

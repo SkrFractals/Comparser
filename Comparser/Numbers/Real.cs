@@ -8,7 +8,8 @@ public readonly struct Real/*<double>*/(double r = default) : ILeaf/*<double>*/,
 	public ILeaf/*<double>*/ Cast(NumericKind to) => to switch {
 		NumericKind.Real => this,
 		NumericKind.Complex => (Complex)R,
-		NumericKind.Quaternion => (Quaternion)R
+		NumericKind.Quaternion => (Quaternion)R,
+		_ => nan
 	};
 	#endregion
 	

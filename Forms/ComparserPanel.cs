@@ -1,4 +1,5 @@
 ﻿#define UNSAFEPARSE
+using Comparser.Comparser;
 using Comparser.Forms.Controls;
 using Comparser.Forms.Core;
 using System.Diagnostics;
@@ -31,7 +32,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		_lines.Height = codeBox.Height;
 		_lines.Width = 0;
 		// all the events that should update Line Numbers
-		codeBox.SizeChanged +=  (_, _) => RefreshLines();
+		codeBox.SizeChanged += (_, _) => RefreshLines();
 		codeBox.FontChanged += (_, _) => RefreshLines();
 		codeBox.VScroll += (_, _) => RefreshLines();
 		codeBox.Resize += (_, _) => RefreshLines();
@@ -41,6 +42,17 @@ public partial class ComparserPanel : UserControl, IPanel {
 		codeBox.SelectionChanged += (_, _) => _codeTime.Restart();
 		InitRichTextBox(codeBox, CodeBox_TextChanged);
 		splitContainer.Panel2.Controls.Add(_lines);
+		Init();
+	}
+	private void Init() {
+		bool oldState = _myStates.ContainsKey(SettingsPanel.Context!);
+		var s = oldState ? _myStates[SettingsPanel.Context!] : _myStates[SettingsPanel.Context!] = new();
+		s.Suppressed = true;
+		// initialize controls here
+		s.Suppressed = false;
+		if (oldState)
+			return;
+		// bind state transactions
 	}
 	#endregion
 
@@ -48,7 +60,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 	public bool CodeChanged;
 	private readonly LineNumberControl? _lines;
 	private readonly Stopwatch _freeTime = new(), _codeTime = new();
-	private enum ParseState { Free,Parsing,Cancelled,Finished }
+	private enum ParseState { Free, Parsing, Cancelled, Finished }
 	private volatile ParseState _parsing = ParseState.Free;
 	private (int position, Color color)[] _colors = [];
 	private List<(Color color, string log)> _logs = [];
@@ -159,7 +171,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		//DrawLogsAndColors();
 	}
 	private void TransferLog() {
-		if (_var.Root.Log?.GetVar().Form.Visible ?? false) { 
+		if (_var.Root.Log?.GetVar().Form.Visible ?? false) {
 			_var.Root.Log?.Transfer(logBox.Rtf);
 			_dirtyLog = false;
 		} else _dirtyLog = true;
@@ -259,7 +271,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		_ = box.BeginInvoke(() => {
 			if (box.IsDisposed || !box.IsHandleCreated)
 				return;
-			box.SelectionStart =  box.GetCharIndexFromPosition(clickPoint);
+			box.SelectionStart = box.GetCharIndexFromPosition(clickPoint);
 			box.SelectionLength = 0;
 		});
 	}
@@ -270,11 +282,11 @@ public partial class ComparserPanel : UserControl, IPanel {
 		box.SelectedText = Clipboard.GetText(TextDataFormat.UnicodeText);
 		e.SuppressKeyPress = true;
 	}
-	public static void Override_DragEnter(object? sender, DragEventArgs e) 
+	public static void Override_DragEnter(object? sender, DragEventArgs e)
 		=> e.Effect = e.Data?.GetDataPresent(DataFormats.UnicodeText) == true ? DragDropEffects.Copy : DragDropEffects.None;
 
 	public static void Override_DragDrop(object? sender, DragEventArgs e) {
-		if (sender is not RichTextBox box || e.Data?.GetDataPresent(DataFormats.UnicodeText) != true || e.Data.GetData(DataFormats.UnicodeText) is not string text) 
+		if (sender is not RichTextBox box || e.Data?.GetDataPresent(DataFormats.UnicodeText) != true || e.Data.GetData(DataFormats.UnicodeText) is not string text)
 			return;
 		// Put the caret where the text was dropped.
 		var clientPoint = box.PointToClient(new Point(e.X, e.Y));
@@ -308,4 +320,43 @@ public partial class ComparserPanel : UserControl, IPanel {
 		}
 	}
 	#endregion
+
+	#region LogState
+	private void LogState(Control c, byte action = 0) => _myStates[SettingsPanel.Context!].Log(c, action);
+	override protected bool ProcessCmdKey(ref Message msg, Keys k) {
+		if (SettingsPanel.Context is not { } c)
+			return base.ProcessCmdKey(ref msg, k);
+		switch (k) {
+		case Keys.Control | Keys.Z:
+			_myStates[c].Undo();
+			return true;
+		case Keys.Control | Keys.Y:
+			_myStates[c].Redo();
+			return true;
+		default:
+			return base.ProcessCmdKey(ref msg, k);
+		}
+	}
+	private readonly Dictionary<IComparser, States> _myStates = [];
+	#endregion
+	
+	private void openCode_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
+		if (SettingsPanel.Context is not { } c)
+			return;
+		var file = openCode.FileName;
+		if (!File.Exists(file)) {
+			MessageBox.Show("Selected file couldn't be found.", "NO FILE");
+			return;
+		}
+		var read = 0;
+		_myStates[c].Deserialize(_myStates[c].D[codeBox],File.ReadAllText(file), ref read); // read code
+	}
+
+	private void saveCode_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
+		if (SettingsPanel.Context is not { } c)
+			return;
+		var d = _myStates[c].D;
+		File.WriteAllText(saveCode.FileName,d[codeBox].Serialize()); // outputs
+		MessageBox.Show("Code saved.", "SAVED");
+	}
 }
