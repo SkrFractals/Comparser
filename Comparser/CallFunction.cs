@@ -10,7 +10,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		public abstract Expression Call(Reader read, Value args);
 		// how to use: e.Insert(args, e.GetEval(args) ? e.result.Eval : base.Eval([], args).v); 
 		public class EvalCache(int size = 0) {
-			//private List<(Value args, Value eval)> Debug = []; // TODO remove this when I'm finished debugging
+			//private List<(Value args, Value eval)> Debug = [];
 			private int _filled;
 			private Evaluated? _cache;
 			public Evaluated? Result;

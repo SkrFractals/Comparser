@@ -214,7 +214,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				vals = CallVirtual(ff, bv);
 			else {
 				vals.Leaf = o(av.Leaf, bv.Leaf);
-				vals.String = so(av.String, bv.String);
+				vals.String = av.Leaf.IsNaN() && bv.Leaf.IsNaN() ? so(av.String, bv.String) : av.String;
 				Expression.Err(ref vals.Error, av);
 				Expression.Err(ref vals.Error, bv);
 			}

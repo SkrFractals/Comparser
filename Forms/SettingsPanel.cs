@@ -1,7 +1,6 @@
 ﻿using Comparser.Comparser;
 using Comparser.Forms.Core;
 using static Comparser.Forms.Core.IPanel;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.ProgressBar;
 namespace Comparser.Forms;
 
 public partial class SettingsPanel : UserControl, IPanel {
@@ -23,11 +22,11 @@ public partial class SettingsPanel : UserControl, IPanel {
 	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
 	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1;
 	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
-	public static IComparser Context = new Comparser.Comparser();
-	private bool _darkMode = true, _preEvaluate = true;
-	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000;
+	private bool  _preEvaluate = true, _darkMode = true;
+	public static readonly IComparser Context = new Comparser.Comparser();
+	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000, PreviewLoad = 3;
 	public static Reporting ReportingMode = Reporting.Report;
-	public static bool AutoBuild = true, AutoPlot = true, PreviewFrames = true;
+	public static bool AutoBuild = true, AutoPlot = true;
 	public enum Reporting : byte { Silent = 0, Timer = 1, Report = 2 }
 	#endregion
 
@@ -39,7 +38,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		//algebraBox.SelectedIndex = 1;//AlgebraBox_SelectedIndexChanged(algebraBox, EventArgs.Empty);
 		//Context = _algebras[Algebra];
 		DecimalBox_TextChanged(decimalBox, EventArgs.Empty);
-		_var.Root.Code?.CodeChanged = true;
+		//_var.Root.Code?.CodeChanged = true;
 		parent.SetMinSize();
 		parent.Text = "Comparser - Settings";
 		reportBox_TextChanged(reportBox, EventArgs.Empty);
@@ -47,7 +46,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 		UpdateAuto();
 		UpdateReport();
 		preEvalBox.Checked = true;
-		//taskBox.Text = MaxTasks.ToString();
+		var initTasks = Math.Max(MaxTasks / 2, 1);
+		taskBox.Text = initTasks.ToString();
+		drawTaskBox.Text = initTasks.ToString();
+		previewSelect.SelectedIndex = 2;
 		plotLabel.Text = "Auto Plot";
 		autoLabel.Text = "Auto Build:";
 		decLabel.Text = "Decimals:";
@@ -55,6 +57,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 
 		// blocks scrolling over int from changing their value
 		algebraBox.MouseWheel += ComboBox_MouseWheel;
+		previewSelect.MouseWheel += ComboBox_MouseWheel;
 	}
 	#endregion
 
@@ -96,18 +99,16 @@ public partial class SettingsPanel : UserControl, IPanel {
 		if (Tasks > MaxTasks) Tasks = MaxTasks;
 	}
 	private void chunkBox_TextChanged(object sender, EventArgs e) {
-		if (!int.TryParse(chunkBox.Text, out Tasks) || Chunks < 1) Chunks = 1;
-		if (Tasks > MaxTasks) Tasks = MaxTasks;
+		if (!int.TryParse(chunkBox.Text, out Chunks) || Chunks < 1) Chunks = 1;
 	}
 
 	private void drawTaskBox_TextChanged(object sender, EventArgs e) {
-		if (!int.TryParse(drawTaskBox.Text, out Tasks) || DrawTasks < 1) DrawTasks = 1;
-		if (Tasks > MaxTasks) Tasks = MaxTasks;
+		if (!int.TryParse(drawTaskBox.Text, out DrawTasks) || DrawTasks < 1) DrawTasks = 1;
+		if (DrawTasks > MaxTasks) DrawTasks = MaxTasks;
 	}
 
 	private void drawChunkBox_TextChanged(object sender, EventArgs e) {
-		if (!int.TryParse(drawChunkBox.Text, out Tasks) || DrawChunks < 1) DrawChunks = 1;
-		if (Tasks > MaxTasks) Tasks = MaxTasks;
+		if (!int.TryParse(drawChunkBox.Text, out DrawChunks) || DrawChunks < 1) DrawChunks = 1;
 	}
 	private void preEvalBox_CheckedChanged(object sender, EventArgs e) {
 		_preEvaluate = preEvalBox.Checked;
@@ -126,9 +127,6 @@ public partial class SettingsPanel : UserControl, IPanel {
 		MessageBox.Show("This feature is quite advanced and has not yet been fully debugged, but may be functional.", "WARNING: Not debugged!");
 	}
 
-	private void PreviewBoxCheckedChanged(object sender, EventArgs e) {
-		PreviewFrames = previewBox.Checked;
-	}
 	#endregion
 
 	#region Actions
@@ -149,5 +147,11 @@ public partial class SettingsPanel : UserControl, IPanel {
 
 	public static void ComboBox_MouseWheel(object? sender, MouseEventArgs e) => ((HandledMouseEventArgs)e).Handled = true;
 
+	private void SettingsPanel_Load(object sender, EventArgs e) {
+		PreviewLoad = Math.Max(previewSelect.SelectedIndex, 0);
+	}
 
+	private void previewSelect_SelectedIndexChanged(object sender, EventArgs e) {
+
+	}
 }

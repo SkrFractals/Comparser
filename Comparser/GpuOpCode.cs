@@ -194,7 +194,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		// Special
 		Gauss,      // = Exp(Neg(Sqr(X)))
 		// Colors
-		Rgb2Hsv, // TODO implement in some way
+		Rgb2Hsv, // TODO implement in some way in Gpu
 		Hsv2Rgb,
 		Log2Hsv,
 		Lin2Hsv,

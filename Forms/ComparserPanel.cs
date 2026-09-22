@@ -45,8 +45,8 @@ public partial class ComparserPanel : UserControl, IPanel {
 		Init();
 	}
 	private void Init() {
-		bool oldState = _myStates.ContainsKey(SettingsPanel.Context!);
-		var s = oldState ? _myStates[SettingsPanel.Context!] : _myStates[SettingsPanel.Context!] = new();
+		bool oldState = _myStates.ContainsKey(SettingsPanel.Context);
+		var s = oldState ? _myStates[SettingsPanel.Context] : _myStates[SettingsPanel.Context] = new();
 		s.Suppressed = true;
 		// initialize controls here
 		s.Suppressed = false;
@@ -92,7 +92,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 					return;
 				var r = "BUILDING: " + Math.Floor(_buildTime.ElapsedMilliseconds / 1000.0) + "s\n";
 				if (SettingsPanel.ReportingMode >= SettingsPanel.Reporting.Report)
-					r += "Remaining text:\n" + SettingsPanel.Context?.ParsePeek();
+					r += "Remaining text:\n" + SettingsPanel.Context.ParsePeek();
 				UpdateLog(r);
 				break;
 		}
@@ -136,7 +136,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		_token = (_cancel = new()).Token;
 		buildButton.Text = "CANCEL";
 		_buildTime = Stopwatch.StartNew();
-		Task.Run(Parse, _token);
+		Task.Run(Parse/*, _token*/);
 	}
 	private void UpdateLog(string r) {
 		NativeMethods.SendMessage(logBox.Handle, NativeMethods.WmSetRedraw, IntPtr.Zero, IntPtr.Zero);
@@ -156,7 +156,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 	private void Parse() {
 		Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
 #if UNSAFEPARSE
-		_logs = SettingsPanel.Context?.ReadCode(_toParse, _token, out _colors) ?? [];
+		_logs = SettingsPanel.Context.ReadCode(_toParse, _token, out _colors) ?? [];
 #else
 		try { _logs =SettingsControl.Context?.ReadCode(_toParse, token, out _colors) ?? []; } catch (Exception e) {
 			_logs = [(Color.Red,e.Message), (Color.Red, e.StackTrace ?? "")];
@@ -240,9 +240,9 @@ public partial class ComparserPanel : UserControl, IPanel {
 	#endregion
 
 	#region Getters
-	private Color GetForeColor() => SettingsPanel.Context?.GetColor().f ?? Color.White;
-	private Color GetErrorColor() => SettingsPanel.Context?.GetErrorSuccessColor().e ?? Color.Red;
-	private Color GetSuccessColor() => SettingsPanel.Context?.GetErrorSuccessColor().s ?? Color.Green;
+	private Color GetForeColor() => SettingsPanel.Context.GetColor().f;
+	private Color GetErrorColor() => SettingsPanel.Context.GetErrorSuccessColor().e;
+	private Color GetSuccessColor() => SettingsPanel.Context.GetErrorSuccessColor().s;
 	#endregion
 
 	#region Code Handling
@@ -322,7 +322,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 	#endregion
 
 	#region LogState
-	private void LogState(Control c, byte action = 0) => _myStates[SettingsPanel.Context!].Log(c, action);
+	private void LogState(Control c, byte action = 0) => _myStates[SettingsPanel.Context].Log(c, action);
 	override protected bool ProcessCmdKey(ref Message msg, Keys k) {
 		if (SettingsPanel.Context is not { } c)
 			return base.ProcessCmdKey(ref msg, k);

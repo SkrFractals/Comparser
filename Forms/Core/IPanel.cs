@@ -44,7 +44,7 @@ public interface IPanel{
 		public readonly MenuPanel Root = root;
 	}
 
-	public static void BaseSetDark(IPanel self) => self.DarkC(((UserControl)self).Controls, SettingsPanel.Context?.GetColor() ?? (Color.Black, Color.White));
+	public static void BaseSetDark(IPanel self) => self.DarkC(((UserControl)self).Controls, SettingsPanel.Context.GetColor());
 	public void SetDark(bool dark);
 		
 	private void DarkC(ControlCollection c, (Color back, Color fore) color) {
@@ -91,7 +91,6 @@ public interface IPanel{
 	public static object? Parse(TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null)
 		=> Parse(SettingsPanel.Context, field, cachedParse, args, cancel);
 	public static object? Eval(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { 
-		// TODO call re-eval together with expressionControl
 		if (c == null)
 			return null;
 		if (cachedParse && field.Exp != null && field.Text == field.Box.Text)
@@ -101,7 +100,6 @@ public interface IPanel{
 		return field.Value;
 	}
 	public static object? Parse(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { 
-		// TODO call re-eval together with expressionControl
 		if (c is null || cachedParse && field.Exp != null && field.Text == field.Box.Text)
 			return null;
 		field.Exp = c.Parse(cancel ?? CancellationToken.None, field.Text = field.Box.Text, 0, out var colors, PrepareArgs(c, field, args));

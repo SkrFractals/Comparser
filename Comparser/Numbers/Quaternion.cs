@@ -296,13 +296,13 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static Quaternion DivI(double v, Quaternion q) => MulI(v, Inv(q));
 	// imaginary / quaternion (left division)
 	public static Quaternion LDivI(double v, Quaternion q) => MulI(Inv(q), v);
-	// TODO DivJ, DivK
+	// TODO (Unimportant) DivJ, DivK
 	public static Quaternion operator %(Quaternion a, Quaternion b) => INumber<Quaternion>.NewMod(a, b);
 	#endregion
 
 	#region ExpLogs
 	// Ln(quaternion)
-	public static Quaternion Log(Quaternion q) { // TODO memory
+	public static Quaternion Log(Quaternion q) {
 		var iDot = I_Dot(q);
 		return iDot > 0 ? new(q.Mi, q.Mj, q.Mk, 
 				.5 * Math.Log(q.R * q.R + iDot), 

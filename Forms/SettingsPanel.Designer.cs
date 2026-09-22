@@ -37,7 +37,6 @@ partial class SettingsPanel {
 		plotBox = new TextBox();
 		plotLabel = new Label();
 		xMemBox = new CheckBox();
-		previewBox = new CheckBox();
 		preEvalBox = new CheckBox();
 		chunkBox = new TextBox();
 		drawTasksLabel = new Label();
@@ -45,6 +44,8 @@ partial class SettingsPanel {
 		drawChunkBox = new TextBox();
 		drawChunksLabel = new Label();
 		plotChunksLabel = new Label();
+		previewSelect = new ComboBox();
+		previewLabel = new Label();
 		SuspendLayout();
 		// 
 		// darkButton
@@ -144,7 +145,7 @@ partial class SettingsPanel {
 		// 
 		plotTasksLabel.AutoSize = true;
 		plotTasksLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		plotTasksLabel.Location = new Point(160, 125);
+		plotTasksLabel.Location = new Point(160, 153);
 		plotTasksLabel.Name = "plotTasksLabel";
 		plotTasksLabel.Size = new Size(84, 15);
 		plotTasksLabel.TabIndex = 9;
@@ -164,7 +165,7 @@ partial class SettingsPanel {
 		// taskBox
 		// 
 		taskBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		taskBox.Location = new Point(250, 121);
+		taskBox.Location = new Point(250, 149);
 		taskBox.Name = "taskBox";
 		taskBox.Size = new Size(67, 23);
 		taskBox.TabIndex = 10;
@@ -217,7 +218,7 @@ partial class SettingsPanel {
 		// xMemBox
 		// 
 		xMemBox.AutoSize = true;
-		xMemBox.Location = new Point(9, 121);
+		xMemBox.Location = new Point(9, 172);
 		xMemBox.Name = "xMemBox";
 		xMemBox.Size = new Size(134, 19);
 		xMemBox.TabIndex = 16;
@@ -225,35 +226,23 @@ partial class SettingsPanel {
 		xMemBox.UseVisualStyleBackColor = true;
 		xMemBox.CheckedChanged += xMemBox_CheckedChanged;
 		// 
-		// previewBox
-		// 
-		previewBox.AutoSize = true;
-		previewBox.Checked = true;
-		previewBox.CheckState = CheckState.Checked;
-		previewBox.Location = new Point(9, 146);
-		previewBox.Name = "previewBox";
-		previewBox.Size = new Size(126, 19);
-		previewBox.TabIndex = 17;
-		previewBox.Text = "Preview Sequences";
-		previewBox.UseVisualStyleBackColor = true;
-		previewBox.CheckedChanged += PreviewBoxCheckedChanged;
-		// 
 		// preEvalBox
 		// 
 		preEvalBox.AutoSize = true;
 		preEvalBox.Checked = true;
 		preEvalBox.CheckState = CheckState.Checked;
-		preEvalBox.Location = new Point(9, 171);
+		preEvalBox.Location = new Point(9, 147);
 		preEvalBox.Name = "preEvalBox";
 		preEvalBox.Size = new Size(92, 19);
 		preEvalBox.TabIndex = 18;
 		preEvalBox.Text = "Pre-Evaluate";
 		preEvalBox.UseVisualStyleBackColor = true;
+		preEvalBox.CheckedChanged += preEvalBox_CheckedChanged;
 		// 
 		// chunkBox
 		// 
 		chunkBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		chunkBox.Location = new Point(250, 150);
+		chunkBox.Location = new Point(250, 178);
 		chunkBox.Name = "chunkBox";
 		chunkBox.Size = new Size(67, 23);
 		chunkBox.TabIndex = 19;
@@ -264,7 +253,7 @@ partial class SettingsPanel {
 		// 
 		drawTasksLabel.AutoSize = true;
 		drawTasksLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		drawTasksLabel.Location = new Point(160, 182);
+		drawTasksLabel.Location = new Point(160, 210);
 		drawTasksLabel.Name = "drawTasksLabel";
 		drawTasksLabel.Size = new Size(84, 15);
 		drawTasksLabel.TabIndex = 20;
@@ -274,7 +263,7 @@ partial class SettingsPanel {
 		// drawTaskBox
 		// 
 		drawTaskBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		drawTaskBox.Location = new Point(250, 179);
+		drawTaskBox.Location = new Point(250, 207);
 		drawTaskBox.Name = "drawTaskBox";
 		drawTaskBox.Size = new Size(67, 23);
 		drawTaskBox.TabIndex = 21;
@@ -284,7 +273,7 @@ partial class SettingsPanel {
 		// drawChunkBox
 		// 
 		drawChunkBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		drawChunkBox.Location = new Point(250, 208);
+		drawChunkBox.Location = new Point(250, 236);
 		drawChunkBox.Name = "drawChunkBox";
 		drawChunkBox.Size = new Size(67, 23);
 		drawChunkBox.TabIndex = 22;
@@ -295,7 +284,7 @@ partial class SettingsPanel {
 		// 
 		drawChunksLabel.AutoSize = true;
 		drawChunksLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		drawChunksLabel.Location = new Point(153, 211);
+		drawChunksLabel.Location = new Point(153, 239);
 		drawChunksLabel.Name = "drawChunksLabel";
 		drawChunksLabel.Size = new Size(91, 15);
 		drawChunksLabel.TabIndex = 23;
@@ -306,17 +295,43 @@ partial class SettingsPanel {
 		// 
 		plotChunksLabel.AutoSize = true;
 		plotChunksLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
-		plotChunksLabel.Location = new Point(153, 153);
+		plotChunksLabel.Location = new Point(153, 181);
 		plotChunksLabel.Name = "plotChunksLabel";
 		plotChunksLabel.Size = new Size(91, 15);
 		plotChunksLabel.TabIndex = 24;
 		plotChunksLabel.Text = "Plot Chunks:";
 		plotChunksLabel.UseMnemonic = false;
 		// 
+		// previewSelect
+		// 
+		previewSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		previewSelect.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
+		previewSelect.FormattingEnabled = true;
+		previewSelect.Items.AddRange(new object[] { "No", "1 task", "33%", "50%", "66%" });
+		previewSelect.Location = new Point(163, 120);
+		previewSelect.Name = "previewSelect";
+		previewSelect.Size = new Size(154, 23);
+		previewSelect.TabIndex = 25;
+		previewSelect.Text = "50%";
+		previewSelect.SelectedIndexChanged += previewSelect_SelectedIndexChanged;
+		// 
+		// previewLabel
+		// 
+		previewLabel.AutoSize = true;
+		previewLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
+		previewLabel.Location = new Point(3, 123);
+		previewLabel.Name = "previewLabel";
+		previewLabel.Size = new Size(133, 15);
+		previewLabel.TabIndex = 26;
+		previewLabel.Text = "Preview Sequences:";
+		previewLabel.UseMnemonic = false;
+		// 
 		// SettingsPanel
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
+		Controls.Add(previewLabel);
+		Controls.Add(previewSelect);
 		Controls.Add(plotChunksLabel);
 		Controls.Add(drawChunksLabel);
 		Controls.Add(drawChunkBox);
@@ -324,7 +339,6 @@ partial class SettingsPanel {
 		Controls.Add(drawTasksLabel);
 		Controls.Add(chunkBox);
 		Controls.Add(preEvalBox);
-		Controls.Add(previewBox);
 		Controls.Add(xMemBox);
 		Controls.Add(plotLabel);
 		Controls.Add(plotBox);
@@ -344,6 +358,7 @@ partial class SettingsPanel {
 		Location = new Point(15, 15);
 		Name = "SettingsPanel";
 		Size = new Size(320, 320);
+		Load += SettingsPanel_Load;
 		ResumeLayout(false);
 		PerformLayout();
 	}
@@ -365,11 +380,12 @@ partial class SettingsPanel {
 	private System.Windows.Forms.Label plotLabel;
 	private System.Windows.Forms.Label plotTasksLabel;
 	private System.Windows.Forms.CheckBox xMemBox;
-	private System.Windows.Forms.CheckBox previewBox;
 	private TextBox chunkBox;
 	private Label drawTasksLabel;
 	private TextBox drawTaskBox;
 	private TextBox drawChunkBox;
 	private Label drawChunksLabel;
 	private Label plotChunksLabel;
+	private ComboBox previewSelect;
+	private Label previewLabel;
 }

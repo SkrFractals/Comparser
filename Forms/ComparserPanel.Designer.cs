@@ -108,13 +108,13 @@ partial class ComparserPanel {
 		// saveCode
 		// 
 		saveCode.FileName = "saveCode";
-		saveCode.Filter = "\"COMPARSER programs (*.txt)|*.txt\";";
+		saveCode.Filter = "COMPARSER programs (*.txt)|*.txt";
 		saveCode.FileOk += saveCode_FileOk;
 		// 
 		// openCode
 		// 
 		openCode.FileName = "openCode";
-		openCode.Filter = "\"COMPARSER programs (*.txt)|*.txt\";";
+		openCode.Filter = "COMPARSER programs (*.txt)|*.txt";
 		openCode.FileOk += openCode_FileOk;
 		// 
 		// ComparserPanel

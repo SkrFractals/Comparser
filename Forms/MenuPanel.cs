@@ -38,7 +38,7 @@ public partial class MenuPanel : UserControl, IPanel {
 		Code = new(this, _codeForm = new());
 		Exp = new(this, _expForm = new());
 		SettingsPanel set = new(this, _setForm = new());
-		SettingsPanel.Context?.ReadCode("", CancellationToken.None, out _);
+		SettingsPanel.Context.ReadCode("", CancellationToken.None, out _);
 		PlotSet = new(this, PlotSetForm = new());
 		Plot = new(this, _plotForm = new());
 		//ParentForm[] p = [LogForm, _codeForm, _expForm, _setForm, _plotForm];

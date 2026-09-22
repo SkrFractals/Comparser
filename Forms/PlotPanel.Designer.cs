@@ -55,19 +55,19 @@ partial class PlotPanel {
 		// openPlot
 		// 
 		openPlot.FileName = "openPlot";
-		openPlot.Filter = "\"COMPARSER plotters (*.plot)|*.plot\";";
+		openPlot.Filter = "COMPARSER plotters (*.plot)|*.plot";
 		openPlot.FileOk += openPlot_FileOk;
 		// 
 		// savePlot
 		// 
 		savePlot.FileName = "savePlot";
-		savePlot.Filter = "\"COMPARSER plotters (*.plot)|*.plot\";";
+		savePlot.Filter = "COMPARSER plotters (*.plot)|*.plot";
 		savePlot.FileOk += savePlot_FileOk;
 		// 
 		// saveMp4
 		// 
 		saveMp4.FileName = "saveMp4";
-		saveMp4.Filter = "\"MP4 video (*.mp4)|*.mp4\";";
+		saveMp4.Filter = "MP4 video (*.mp4)|*.mp4";
 		saveMp4.FileOk += saveMp4_FileOk;
 		// 
 		// PlotPanel

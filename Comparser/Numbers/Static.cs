@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 namespace Comparser.Comparser.Numbers;
 public static class Static {
@@ -197,9 +198,9 @@ public static class Static {
 	public static double Lerp(double a, double b, double t) => a * (1 - t) + b * t;
 	#endregion
 
-	private static readonly TimeSpan SleepyTime = TimeSpan.FromSeconds(1/20.0);
+	//private static readonly TimeSpan SleepyTime = TimeSpan.FromSeconds(1/50.0);
 	public static readonly string[] Errors = ["", "NaN", "Stack Overflow", "Bad Expression", "Unexpected"];
-	public static void TaskManager(Task[] taskArr, int tasks, int chunks, int total, CancellationToken cancel, Action<float, float, int> run) {
+	public static void TaskManager(ref Task[] taskArr, int tasks, int chunks, int total, CancellationToken cancel, Action<float, float, int> run) {
 		if (tasks <= 1) { 
 			run(0, total, 0); // single task will do it right away, without starting any threads, after all we already are in a parallel thread
 			return;
@@ -211,12 +212,13 @@ public static class Static {
 		for (float t = 0, dr = (float)total / (chunks * tasks); task < tasks; t += dr) { 
 			float tt = t;
 			int tTask = task++;  // run the tasks and give them row chunks to process
-			taskArr[tTask] = Task.Run(() => run(tt,dr,tTask), cancel);
+			taskArr[tTask] = Task.Run(() => run(tt,dr,tTask)/*, cancel*/);
 		}
 		// wait for tasks to finish:
-		for (var done = 0; done < tasks; Thread.Sleep(Static.SleepyTime))
-		for (task = done = 0; task < tasks; ++task)
-			done = taskArr[task].IsCompleted ? done + 1 : done;
+		Task.WaitAll(taskArr/*, cancel*/);
+		//for (var done = 0; done < tasks; Thread.Sleep(SleepyTime))
+		//for (task = done = 0; task < tasks; ++task)
+		//	done = taskArr[task].IsCompleted ? done + 1 : done;
 	}
 	public static void Multi(float yf, float subChunkLength, int taskIndex, Action<int, int, int> taskDraw, int tasks, int chunks) {
 		//var args = (Value)argsO;
@@ -233,6 +235,8 @@ public static class Static {
 				return true;
 		return false;
 	}
+	//public static bool notinplace = false;
+	public static Stopwatch Time = Stopwatch.StartNew();
 }
 
 

@@ -18,7 +18,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 	public partial class Plot {
 		public class PlotAxis(Comparser/*<T>*/ c, ILeaf/*<T>*/ initStart, ILeaf/*<T>*/ initStep, int initLength = 0) : IPlotAxis {
 
-			public PlotAxis(PlotAxis copy, int div = 1) : this(copy._context, copy.start, copy.d, copy.length) 
+			public PlotAxis(PlotAxis copy, int div = 0) : this(copy._context, copy.start, copy.d, copy.length) 
 				=> d = Mul(d, (Real)((double)length / (length >>= div)));
 
             private readonly Comparser/*<T>*/ _context = c;
@@ -189,15 +189,6 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				ILeaf/*<T>*/ Lc(ILeaf/*<T>*/ c) => ILeaf/*<T>*/.D1(c, (x) => Math.Round(Math.Pow(divBase, Math.Floor(Math.Log(Math.Abs(x)) / Math.Log(divBase)))));
 				}
 			} = []; // plot lines
-			/*public bool Adjust(double zoomOut) { // called when resizing the window and not lock ranged, returns if it happened, when it does, it should keep the memory inside
-				if (LockRange) return false;
-				// TODO change to step/start and calculate memory (the eval should remember its last start/shift/x/y and then look at the new ones and figure out which pixels are reused (move them and then re-eval the rest))
-				ILeaf c = center, diff = start - c;
-				d *= zoomOut;
-				start = c + diff * zoomOut;
-				//_dirtyR = true;
-				return true;
-			}*/
 			public bool Zoom(int c, double zoomSize) {
 				if (_lockRange) return false;
 				var l = Locked; // temporarily disable pinning, so that moving start will only translate the image

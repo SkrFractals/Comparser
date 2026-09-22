@@ -124,9 +124,6 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 				if (read.TrimStart(1))
 					return;
 				switch (read.nextChar) {
-
-				// TODO must account for whitespace everywhere!
-
 				case '/': // Comment
 					if (!read.IsComment())
 						Cl(FailReason.Unexpected);

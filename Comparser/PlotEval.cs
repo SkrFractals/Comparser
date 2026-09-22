@@ -31,7 +31,7 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 
 		private bool InitTest(out bool changed, double recallTolerance, Plot.PlotAxis at, bool noPrev, int length) {
 			changed = false;
-			if (_current != null && _current.TaskRunning())
+			if (at.length == 0 || _current != null && _current.TaskRunning())
 				return false;
 			if (recallTolerance >= 1) throw new("tolerance must be less than a full pixel, otherwise we could get memory transfer indexing mismatches!");
 			if (_exp is null) throw new("No expression");
