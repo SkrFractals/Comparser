@@ -1,4 +1,5 @@
-﻿using Comparser.Comparser.Numbers;
+﻿#define NOCACHE
+using Comparser.Comparser.Numbers;
 namespace Comparser.Comparser;
 public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T>*/ {
 	#region Call Functions
@@ -10,6 +11,11 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		public abstract Expression Call(Reader read, Value args);
 		// how to use: e.Insert(args, e.GetEval(args) ? e.result.Eval : base.Eval([], args).v); 
 		public class EvalCache(int size = 0) {
+			#if NOCACHE
+			private readonly int _size =  0;
+			#else
+			private readonly int _size =  size;
+			#endif
 			//private List<(Value args, Value eval)> Debug = [];
 			private int _filled;
 			private Evaluated? _cache;
@@ -30,11 +36,11 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 				return false;
 			}
 			public Value Insert(Value args, Value eval) {
-				if (size <= _filled) {
-					if (size == 1) _cache = null; 
+				if (_size <= _filled) {
+					if (_size == 1) _cache = null; 
 					else Result?.Next = null; 
 				} else ++_filled;
-				if (size > 0) _cache = new(_cache, args, eval);
+				if (_size > 0) _cache = new(_cache, args, eval);
 				//Debug.Add((args,eval));
 				return eval;
 			}
@@ -73,8 +79,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			: base(read, out _, args) => (_parent, OpCode) = (parent, op);
 		protected FunctionExpression(Comparser/*<T>*/ context, CallFunction parent, OpCode op, Value input) 
 			: base(context, input) => (_parent, OpCode) = (parent, op);
-		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true) {
-			var v = base.Eval(depth, args/*, text*/, allowCache);
+		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true, bool collapse = true) {
+			var v = base.Eval(depth, args/*, text*/, allowCache, false);
 			return allowCache ? _parent.Cache.GetEval(v) ? _parent.Cache.Result?.Eval! : _parent.Cache.Insert(v, EvalF(depth, v, args, allowCache)) : EvalF(depth, v, args, allowCache);
 		}
 		protected abstract Value EvalF(ushort depth, Value v, Value args, bool allowCache);
@@ -147,7 +153,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 	#region Function Expressions - Vectors
 	// extracts terms from a vector using indices in: [expression]. Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] = (30d,31e),2c,(5,1,(30d,31e))
 	private class FuncIndex(Comparser/*<T>*/ context, Value input, Value indices) : Expression(context, input) {
-		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true) 
+		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true, bool collapse = true) 
 			=> depth > Context._stackOverflow ? StackOverflow : Value.OperateValue(EvalValue((ushort)(1 + depth), CollapseScalar(indices), args, allowCache), Take, base.Eval(depth, args/*, text*/, allowCache));
 		private Value Take(Value from, object? i) {
 			if (i is not Value v)
@@ -205,7 +211,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			_args = new(new Value[iteratorIndex + 1]);
 			Array.Copy(args.Values, _args.Values, iteratorIndex);
 			_args.Values[iteratorIndex] = new(nan, 0, V.Values[0].String);
-			_expr =  new(new(read.Context, V.Values.Length == 4 ? V.Values[3].String : "", read.Cancel), out _, _args);
+			_expr = new(new(read.Context, V.Values.Length == 4 ? V.Values[3].String : "", read.Cancel), out _, _args);
 		}
 		private readonly Expression _expr;
 		private readonly Value _args;
@@ -224,7 +230,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			return Result(EvalK, from, to, allowCache);
 			Value EvalK(int f) {
 				_args.Values[iteratorIndex].Leaf = (Real)f;
-				return depth < Context._stackOverflow ? _expr.Eval((ushort)(1 + depth), _args, allowCache) : None;
+				return depth < Context._stackOverflow ? _expr.Eval/*Copy*/((ushort)(1 + depth), _args, allowCache) : None;
 			}
 		}
 		virtual protected void Op(ref Value result, Value iteration, bool allowCache) => result = iteration;

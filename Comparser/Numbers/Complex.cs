@@ -210,7 +210,7 @@ public readonly struct Complex/*<double>*/(double r = default, double i = defaul
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static double Sqr(double r) => r * r;
 	// complex^3
-	public static Complex/*<T>*/ Cub(Complex/*<T>*/ c) { double cr = c.R, ci = c.I, rr = cr*cr, ii = ci*cr; return new(cr * (rr - 3 * ii), ci * (3 * rr - ii)); }
+	public static Complex/*<T>*/ Cub(Complex/*<T>*/ c) { double cr = c.R, ci = c.I, rr = cr*cr, ii = ci*ci; return new(cr * (rr - 3 * ii), ci * (3 * rr - ii)); }
 	// complex^4
 	public static Complex/*<T>*/ Quart(Complex/*<T>*/ c) { double cr = c.R, ci = c.I, a = cr * cr + ci * ci, ri = cr * ci; return new(a * a - 6 * ri * ri, 4 * a * ri); }
 	// |a| + |b|i

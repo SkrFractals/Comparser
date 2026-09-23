@@ -173,7 +173,7 @@ public interface ILeaf/*<T> where T : unmanaged, IScalar<T>*/ {
 		_ => Real/*<T>*/.nan
 	};
 	public static ILeaf/*<T>*/ Pow(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => (a.kind, b.kind) switch {
-		(NumericKind.Real, NumericKind.Real) => (Real/*<T>*/)a ^ (Real/*<T>*/)b,
+		(NumericKind.Real, NumericKind.Real) =>  N(a, out var r) ? new Complex(r) ^ ((Real)b).R : r ^ (Real)b,
 		(NumericKind.Real, NumericKind.Complex) => ((Real/*<T>*/)a).R ^ (Complex/*<T>*/)b,
 		(NumericKind.Real, NumericKind.Quaternion) => ((Real/*<T>*/)a).R ^ (Quaternion/*<T>*/)b,
 		(NumericKind.Complex, NumericKind.Real)  => (Complex/*<T>*/)a ^ ((Real/*<T>*/)b).R,
@@ -705,6 +705,18 @@ public interface ILeaf/*<T> where T : unmanaged, IScalar<T>*/ {
 	#endregion
 	
 	#region Binary
+	public static bool LeafNotEquals(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real)a != (Real)b,
+		NumericKind.Complex =>  (Complex)a != (Complex)b,
+		NumericKind.Quaternion =>  (Quaternion)a != (Quaternion)b,
+		_ => true
+	};
+	public static bool LeafEquals(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
+		NumericKind.Real => (Real)a == (Real)b,
+		NumericKind.Complex =>  (Complex)a == (Complex)b,
+		NumericKind.Quaternion =>  (Quaternion)a == (Quaternion)b,
+		_ => false
+	};
 	public static ILeaf/*<T>*/ Min(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b) => Promote(ref a, ref b) switch {
 		NumericKind.Real => Real/*<T>*/.Min((Real/*<T>*/)a, (Real/*<T>*/)b),
 		NumericKind.Complex => Complex/*<T>*/.Min((Complex/*<T>*/)a, (Complex/*<T>*/)b),

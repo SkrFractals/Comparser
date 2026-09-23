@@ -1,4 +1,5 @@
-﻿using Comparser.Forms.Core;
+﻿using Comparser.Comparser;
+using Comparser.Forms.Core;
 using static Comparser.Forms.Core.IPanel;
 
 namespace Comparser.Forms;
@@ -31,4 +32,6 @@ public partial class LogPanel : UserControl, IPanel {
 		}
 	}
 	#endregion
+	public bool Undo() => true;
+	public bool Redo() => true;
 }

@@ -54,7 +54,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				if (s is Value vs && !(t = vs.GetLeaf()).IsNaN())
 					start = t;
 				if (e is Value ve && !(t = ve.GetLeaf()).IsNaN())
-					start = t;
+					end = t;
 			}
 			//public string SetLog(bool l);
 			public SceState SetLength(int l) {

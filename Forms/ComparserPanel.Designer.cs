@@ -30,6 +30,8 @@ partial class ComparserPanel {
 		splitContainer = new SplitContainer();
 		saveCode = new SaveFileDialog();
 		openCode = new OpenFileDialog();
+		loadButton = new Button();
+		saveButton = new Button();
 		((ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
 		splitContainer.Panel2.SuspendLayout();
@@ -59,7 +61,7 @@ partial class ComparserPanel {
 		logBox.Location = new Point(76, 3);
 		logBox.Name = "logBox";
 		logBox.ReadOnly = true;
-		logBox.Size = new Size(241, 68);
+		logBox.Size = new Size(241, 160);
 		logBox.TabIndex = 0;
 		logBox.Text = "[logs]";
 		// 
@@ -69,7 +71,7 @@ partial class ComparserPanel {
 		codeBox.Location = new Point(0, 0);
 		codeBox.MinimumSize = new Size(0, 32);
 		codeBox.Name = "codeBox";
-		codeBox.Size = new Size(320, 226);
+		codeBox.Size = new Size(320, 126);
 		codeBox.TabIndex = 0;
 		codeBox.Text = "";
 		// 
@@ -93,6 +95,8 @@ partial class ComparserPanel {
 		// 
 		// splitContainer.Panel1
 		// 
+		splitContainer.Panel1.Controls.Add(saveButton);
+		splitContainer.Panel1.Controls.Add(loadButton);
 		splitContainer.Panel1.Controls.Add(buildButton);
 		splitContainer.Panel1.Controls.Add(logBox);
 		splitContainer.Panel1.Controls.Add(logButton);
@@ -101,7 +105,7 @@ partial class ComparserPanel {
 		// 
 		splitContainer.Panel2.Controls.Add(codeBox);
 		splitContainer.Size = new Size(320, 320);
-		splitContainer.SplitterDistance = 74;
+		splitContainer.SplitterDistance = 166;
 		splitContainer.SplitterWidth = 12;
 		splitContainer.TabIndex = 3;
 		// 
@@ -116,6 +120,28 @@ partial class ComparserPanel {
 		openCode.FileName = "openCode";
 		openCode.Filter = "COMPARSER programs (*.txt)|*.txt";
 		openCode.FileOk += openCode_FileOk;
+		// 
+		// loadButton
+		// 
+		loadButton.Location = new Point(3, 79);
+		loadButton.Name = "loadButton";
+		loadButton.Size = new Size(67, 32);
+		loadButton.TabIndex = 3;
+		loadButton.Text = "LOAD";
+		loadButton.UseMnemonic = false;
+		loadButton.UseVisualStyleBackColor = true;
+		loadButton.Click += loadButton_Click;
+		// 
+		// saveButton
+		// 
+		saveButton.Location = new Point(3, 117);
+		saveButton.Name = "saveButton";
+		saveButton.Size = new Size(67, 32);
+		saveButton.TabIndex = 4;
+		saveButton.Text = "SAVE";
+		saveButton.UseMnemonic = false;
+		saveButton.UseVisualStyleBackColor = true;
+		saveButton.Click += saveButton_Click;
 		// 
 		// ComparserPanel
 		// 
@@ -139,4 +165,6 @@ partial class ComparserPanel {
 	private System.Windows.Forms.SplitContainer splitContainer;
 	private SaveFileDialog saveCode;
 	private OpenFileDialog openCode;
+	private Button saveButton;
+	private Button loadButton;
 }

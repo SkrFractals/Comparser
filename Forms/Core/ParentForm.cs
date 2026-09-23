@@ -33,7 +33,7 @@ public partial class ParentForm : Form {
 	}
 	public Panel GetInnerPanel() => innerPanel;
 
-    protected override void WndProc(ref Message m) {
+    override protected void WndProc(ref Message m) {
         const int WM_MOUSEACTIVATE = 0x21;
         const int MA_NOACTIVATE = 3;
 
@@ -47,6 +47,9 @@ public partial class ParentForm : Form {
         }
 
         base.WndProc(ref m);
+    }
+    override protected bool ProcessCmdKey(ref Message msg, Keys k) {
+	    return k switch { Keys.Control | Keys.Z => _myControl?.Undo() ?? true, Keys.Control | Keys.Y => _myControl?.Redo() ?? true, _ => base.ProcessCmdKey(ref msg, k) };
     }
 
     /*private const int WM_GETMINMAXINFO = 0x0024;

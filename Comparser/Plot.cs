@@ -18,9 +18,10 @@ public interface IPlot {
 	public void ZoomContinuous(int x, int y, double size);
 	public void ZoomBinary(int x, int y, bool zoomIn) => ZoomContinuous(x, y, zoomIn ? .5 : 2);
 	public void Shift(int dx, int dy);
-	public bool Update(int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel);
+	public bool Update(out bool memory, int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel);
 	public IPlotAxis[] GetAxis();
 	public void DelOutput(int output);
+	public void DelAll();
 	public void AddOutput(string name, object? newRgb, object? newCode);
 	public void SetCode(int output, object? code);
 	public void SetRgb(int output, object? rgb);
@@ -34,7 +35,7 @@ public interface IPlot {
 	public int GetPercent();
 	public bool InPlace((object? x, object? y) a);
 	public (Point p, Size s) GetPlace((object? x, object? y) a);
-	public void SetFinished(Action<object?, object?, Bitmap?, int, CancellationToken> finishedImage);
+	public void SetFinished(Action<object?, object?, Bitmap?, int, CancellationToken/*, string*/> finishedImage);
 	public void SoftCancel(CancellationTokenSource cancel);
 }
 public /*abstract*/  partial class Comparser/*<T>*/{
@@ -123,7 +124,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				args.Values[4].Leaf = (Real)x;
 				args.Values[5].Leaf = (Real)y;
 				args.Values[6].Leaf = (Real)f;
-				var rgb = ColorCodeRgb?.Eval(0, args, taskIndex == 0);
+				var rgb = ColorCodeRgb?.Eval(0, args, SettingsPanel.DrawTasks <= 1);
 				if (rgb is null)
 					return (0,0,0);
 				if (rgb.Values.Length >= 3) {
@@ -142,6 +143,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 
 
 		public void DelOutput(int output) => OutputR.RemoveAt(output);
+		public void DelAll() => OutputR.Clear();
 		public void AddOutput(string name, object? newRgb, object? newCode) => OutputR.Add(new(name, new(newCode), newRgb as Expression));
 		public void SetCode(int output, object? code) => OutputR[output].Eval = new(code);
 		public void SetRgb(int output, object? rgb) => OutputR[output].ColorCodeRgb = rgb as Expression;
@@ -244,12 +246,12 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					Adjust(a, b);
 				}
 				return true;
-				bool R(ref Color[] lines) {
+				/*bool R(ref Color[] lines) {
 					if (size == lines.Length)
 						return true;
 					lines = new Color[a.length = size];
 					return false;
-				}
+				}*/
 				/*var p = new int[a.Length];
 				for (int i = 0; i < a.Length; ++i) p[i] = a[i].length;
 				if (locked) {
@@ -305,11 +307,15 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			if (OutputY.Shift(dx) && Mode == PlotMode.Xy)
 				_dirtyXy = true;*/
 		}
+		public class BitmapReady(Bitmap? bmp = null, bool finished = false) {
+			public Bitmap? D = bmp;
+			public bool F = finished;
+		}
 		public class Renders {
 			private readonly List<(Expression? e, PlotEval? v, int c)> _outs = [];
 			private int _length = -1;
 			private PlotMode _mode;
-			private Bitmap?[] _bitmaps = []; // [frames]
+			private BitmapReady?[] _bitmaps = []; // [frames]
             //public Bitmap?[] WorkMaps = [];
             private int _w, _h, _previewBitmap, _previews = -1;
 			public int RenderDiv;
@@ -319,14 +325,13 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			private int _currentFrame;
 			public void Cancel() {
 				RenderDiv = 0;
-				_bitmaps[_currentFrame] = null;
+				_bitmaps[_currentFrame] = new();
 			}
-			public bool GetBitmap(int drawn, bool animate, out Bitmap bmp/*, out Bitmap workMap*/, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false, bool dirtied = false) {
+			public bool GetBitmap(out bool memory, int drawn, bool animate, out BitmapReady bmp/*, out Bitmap workMap*/, int w, int h, int length, int frame, PlotMode mode, List<PlotOutput> rgbs, bool dirty = false, bool dirtied = false) {
 				_currentFrame = frame;
 				w = Math.Max(1, w); h = Math.Max(1, h);
-				bool match = Match();
-				bool sameSize = w == _w && h == _h && length == _length && mode == _mode /* && !dirty*/;
-				if (match && sameSize  && !dirty) {
+				bool match = Match(), sameSize = w == _w && h == _h && length == _length && mode == _mode /* && !dirty*/;
+				if (match && sameSize && !dirty) {
 					_previewBitmap = Math.Min(drawn, _previews);
 					if (_previewBitmap < _previews) {
 
@@ -334,9 +339,9 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						//wb = _pwBmp[_previewBitmap];
 						RenderDiv = _previews - _previewBitmap;
 						//if (b == null/* || wb == null*/) {
-						bmp = _pBmp[_previewBitmap] = new(w >> RenderDiv, h >> RenderDiv);
+						bmp = new(_pBmp[_previewBitmap] = new(w >> RenderDiv, h >> RenderDiv), true);
 						//workMap = _pwBmp[_previewBitmap] = new Bitmap(w >> RenderDiv, h >> RenderDiv);
-						return false;// false;
+						return memory = false;// false;
 						//}
 						//bmp = b;
 						//workMap = wb;
@@ -345,15 +350,20 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					RenderDiv = 0;
 					var b = _bitmaps[frame]; // = pBmp[previews-1];
 					//wb = WorkMaps[frame];//= pwBmp[previews-1];
-					if (b == null /*|| wb == null*/) {
-						bmp = _bitmaps[frame] = new(w, h);
+					if (b?.D == null || b.D.Width != w || b.D.Height != h/*|| wb == null*/) {
+						bmp = _bitmaps[frame] = new(new(w, h));
 						//workMap = WorkMaps[frame] = new(w, h);
-						return false;// false;
+						return memory = false;// false;
 					}
                     bmp = b;
 					//workMap = wb;
-					return false;// true;
+					return memory = true; //return false;// true;
 				}
+				if (length != _length) 
+					_bitmaps = new BitmapReady?[length];
+				//if(_bitmaps[frame] != null)
+				_bitmaps[frame]?.F = false;
+				memory = false;
 				_mode = mode; _w = w;_h = h;
 				_length = length;
 				_previewBitmap = 0;
@@ -366,13 +376,13 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					_pBmp[i] = new(w >> RenderDiv, h >> RenderDiv);
 				}
 				//WorkMaps = new Bitmap[length];
-				_bitmaps = new Bitmap[length];
+				//_bitmaps = new Bitmap[length];
 				if (_previews > 0) {
 					//workMap = _pwBmp[0]!;
-					bmp = _pBmp[0]!;
+					bmp = new(_pBmp[0]!);
 				} else {
 					//workMap = WorkMaps[frame] = new(w,h);
-					bmp = _bitmaps[frame] = new(w,h);
+					bmp = _bitmaps[frame] = new(new(w, h));
 				}
 				RenderDiv = _previews;
 				return !dirtied && !sameSize;
@@ -397,7 +407,6 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			}
 		}
 		public void SoftCancel(CancellationTokenSource cancel) {
-			// TODO figure out why this keep getting stuck on low res image (appear to soft cancel after the final dirtied happened)
 			if (_drawn > 0)
 				cancel.Cancel();
 			else
@@ -438,7 +447,8 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			}
 		}*/
 		
-		public bool Update(int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel) {
+		public bool Update(out bool memory, int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel) {
+			memory = false;
 			bool DoSoftCancel(ref CancellationTokenSource cancel) {
 				if (_softCancel == cancel) {
 					if (_drawn > 0) { 
@@ -544,10 +554,12 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				return false;
 			//DoSoftCancel(ref cancel);
 			_dirty = false;
-			if (_r.GetBitmap(_drawn, noPreview, out var bmp, w, h, l, Frame, Mode, OutputR, dirt, dirtied)){
+			if (_r.GetBitmap(out memory, _drawn, noPreview, out var bmp, w, h, l, Frame, Mode, OutputR, dirt, dirtied)){
 				//Console.WriteLine("DirtiedBmp");
-				cancel.Cancel();
-				return false;
+				if (!memory) {
+					cancel.Cancel();
+					return false;
+				}
 			}
 			//	) { // nothing has changed, no need to redraw the screen
 				//Console.WriteLine("Returned");
@@ -561,25 +573,30 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				//if(Static.notinplace)Console.WriteLine("notReady");
 				return false;
 			}
-				
-			/*++_done; 
-			foreach (var o in OutputR)
-				if (o.Values.V[done].remainingTasks <= 0)
-					_done = o.Values.Done;
-			if (_drawn >= _done)
-				return prevBmp;*/
+			if (memory && bmp.F) {
+				FinishedImage?.Invoke(
+					_renderIx != null ? new PlotAxis(_renderIx) : null,
+					new PlotAxis(Mode == PlotMode.Xy ? InputY : OutputY),
+					bmp.D, 0, CancellationToken.None/*, "MEM"*/);
+				return false;
+			}
+			/*++_done;
+		foreach (var o in OutputR)
+			if (o.Values.V[done].remainingTasks <= 0)
+				_done = o.Values.Done;
+		if (_drawn >= _done)
+			return prevBmp;*/
 			//Console.WriteLine("StartDraw");
 			unsafe {
-				Console.WriteLine("StartDraw: W"+bmp.Width + " T"+Static.Time.ElapsedMilliseconds);
+				//Console.WriteLine("StartDraw: W"+bmp.d.Width + " T"+Static.Time.ElapsedMilliseconds);
 				//var nbmp = new Bitmap(bw), bh);
 				var renderBitmap = bmp;
-				int bw = renderBitmap.Width, bh = renderBitmap.Height;
+				int bw = renderBitmap.D!.Width, bh = renderBitmap.D!.Height;
 				if (0 == linesX.Length || 0 == linesY.Length)
 					return false;
-				var lb = renderBitmap.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+				var lb = renderBitmap.D.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				var ptr = (byte*)(void*)lb.Scan0;
 				var t = InputT.Sample(Frame);
-				//cancel = newCancel; // TODO verify this won't be a problem for detached draw task
 				
 				/*PlotAxis? renderIx = _renderIx,
 					renderIy = _renderIy,
@@ -677,20 +694,22 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				}
 				void DrawTask(Action<float,float,int> del, PlotAxis? rY) {
 					Static.TaskManager(ref _taskArr, tasks, chunks, bh, renderToken, del);
-					renderBitmap.UnlockBits(lb);
+					
+					renderBitmap.D.UnlockBits(lb);
+					var rbmp = renderBitmap.D;
 					if (renderToken.IsCancellationRequested) {
-						renderBitmap = null;
+						rbmp = null;
 						_dirty = true;
 						_drawn = 0;
 						_r.Cancel();
-						Console.WriteLine("FinishCancel " + Static.Time.ElapsedMilliseconds);
+						//Console.WriteLine("FinishCancel " + Static.Time.ElapsedMilliseconds);
 					} else {
-						Console.WriteLine("Finish W" + renderBitmap.Width + " T" + Static.Time.ElapsedMilliseconds);
+						renderBitmap.F = true; // mark is as finished, so that it is safe to just pick it from the memory and return it without drawing it again
+						//Console.WriteLine("Finish W" + renderBitmap.d.Width + " T" + Static.Time.ElapsedMilliseconds);
 						++_drawn;
-						//if (OutputR[0].Values.X?.start != _renderIx?.start)throw new("inconsisten axis!");
+						//if (OutputR[0].Values.X?.start != _renderIx?.start)throw new("inconsistent axis!");
 					}
-					if(FinishedImage != null)
-						FinishedImage(_renderIx != null ? new PlotAxis(_renderIx) : null, rY != null ? new PlotAxis(rY) : null, renderBitmap, _r.RenderDiv, renderToken);
+					FinishedImage?.Invoke(_renderIx != null ? new PlotAxis(_renderIx) : null, rY != null ? new PlotAxis(rY) : null, rbmp, _r.RenderDiv, renderToken/*, "FIN"*/);
 				}
 				(byte, byte, byte) GetRgb((double r, double g, double b) c) => ((byte)Math.Clamp(c.r * 255, 0, 255), (byte)Math.Clamp(c.g * 255, 0, 255),(byte)Math.Clamp(c.b * 255, 0, 255));
             }
@@ -703,7 +722,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		public static int ValueToScreenLog(ILeaf value, ILeaf start, ILeaf d) => ValueToScreenLin(D1(value, Math.Log), start, d);//length * ((ILeaf.D1(value, Math.Log) - start) / (end - start));
 		public static ILeaf ScreenToValueLog(int x, ILeaf start, ILeaf d) => D1(ScreenToValueLin(x, start, d),Math.Exp); //ILeaf.D1(ScreenToValueLin(length, x, start, end), Math.Exp);
 
-		public void SetFinished( Action<object?, object?, Bitmap?, int, CancellationToken> finishedImage) => FinishedImage = finishedImage;
-		public Action<object?, object?, Bitmap?, int, CancellationToken>? FinishedImage;
+		public void SetFinished( Action<object?, object?, Bitmap?, int, CancellationToken/*, string*/> finishedImage) => FinishedImage = finishedImage;
+		public Action<object?, object?, Bitmap?, int, CancellationToken/*, string*/>? FinishedImage;
 	}
 }

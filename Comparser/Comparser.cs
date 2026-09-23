@@ -29,6 +29,7 @@ public interface IComparser {
 
 public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unmanaged, IScalar<T>*/ {
 
+
 	public Comparser(
 		bool caseInsensitive = true, 
 		bool operatorLess = true,
@@ -46,7 +47,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		_doOverflow = doOverflowLimit;
 		_loopOverflow = loopOverflowLimit; 
 		_iterOverflow = iteratorOverflowLimit;
-		_caseInsensitive = caseInsensitive;
+		_caseInsensitiveDef = caseInsensitive;
 		_allowParsePeek = allowParsePeek;
 		_operatorLessDef = operatorLess;
 		_operatorLess = operatorLess;
@@ -91,6 +92,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		_iterOverflow = _iterOverflowDef;
 		_loopOverflow = _loopOverflowDef;
 		_stackOverflow = _stackOverflowDef;
+		_caseInsensitive = _caseInsensitiveDef;
 		// clear the previous build
 		Context.Clear();
 		// put defaults back in
@@ -160,26 +162,47 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 						}
 						var actionCode = name switch { // f(x) : "returned"+"string", 1+1 
 							"print" => Actions.Print, // prints the expression, and it's value with its type.								f(x) = "returnedString", 2
+							"Print" => Actions.Print,
 							"printvalue" => Actions.PrintValue, // prints just the value, without type (number > string > expression).		returnedString, 2
+							"PrintValue" => Actions.PrintValue,
 							"printnumber" => Actions.PrintNumber, // prints just the numerical value, without fallback to string values.	NaN + NaNi, 2
+							"PrintNumber" => Actions.PrintNumber, 
 							"printstring" => Actions.PrintString, // prints only the string value, even if there's a numeric value			returnedString, '1+1'
+							"PrintString" => Actions.PrintString, 
 							"do" => Actions.Do,
+							"Do" => Actions.Do,
 							"include" => Actions.Include,
+							"Include" => Actions.Include,
 							"if" => Actions.If,
+							"If" => Actions.If,
 							"while" => Actions.While,
+							"While" => Actions.While,
 							"return" => Actions.Return,
+							"Return" => Actions.Return,
 							"break" => Actions.Break,
+							"Break" => Actions.Break,
 							"continue" => Actions.Continue,
+							"Continue" => Actions.Continue,
 							"stackoverflow" => Actions.StackOverflow,
+							"StackOverflow" => Actions.StackOverflow,
 							"iteratoroverflow" => Actions.IterOverflow,
+							"IteratorOverflow" => Actions.IterOverflow,
 							"whileoverflow" => Actions.WhileOverflow,
+							"WhileOverflow" => Actions.WhileOverflow,
 							"dooverflow" => Actions.DoOverflow,
+							"DoOverflow" => Actions.DoOverflow,
 							"operatorless" => Actions.Operator,
+							"OperatorLess" => Actions.Operator,
+							"casesensitive" => Actions.CaseSensitive,
+							"CaseSensitive" => Actions.CaseSensitive,
 							_ => Actions.None
 						};
 						read.AddC(beforeI, beforeI + name.Length, actionCode == Actions.None ? ParseDictionary.Type.UserC : ParseDictionary.Type.Action);
 						ReadExpression();
 						switch (actionCode) {
+						case Actions.CaseSensitive:
+							_caseInsensitive = eval.GetLeaf().IsFalse();
+							break;
 						case Actions.Print:
 							log.Add((GetColor(ParseDictionary.Type.Text), ToString(eval, Decimals)));
 							Cl(FailReason.Success);
@@ -588,7 +611,8 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		IterOverflow = 13,
 		WhileOverflow = 14,
 		DoOverflow = 15,
-		Operator = 16
+		Operator = 16,
+		CaseSensitive = 17
 	}
 	[Flags] public enum FailReason : byte {
 		Success = 0,
@@ -728,8 +752,8 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 
 	private readonly ushort _stackOverflowDef, _doOverflowDef, _loopOverflowDef, _iterOverflowDef;
 	private ushort _stackOverflow, _doOverflow, _loopOverflow, _iterOverflow;
-	private readonly bool _caseInsensitive, _allowParsePeek, _operatorLessDef;
-	private bool _operatorLess;
+	private readonly bool _caseInsensitiveDef, _allowParsePeek, _operatorLessDef;
+	private bool _operatorLess, _caseInsensitive;
 	public static readonly Value None = new();
 	private static readonly Value StackOverflow = new(FailReason.StackOverflow);
 	private static readonly Cf OpFact = new(Factorial, OpCode.Factorial);
@@ -997,7 +1021,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 			var s = "";
 			while (from < end && ++lo < Colors.Count) {
 				var t = Colors[lo].position;
-				if (!comment && t > from) s += lo >= Colors.Count ? Text[from..] : Text[from..t];
+				if (!comment && t > from) s += lo >= Colors.Count ? Text[from..] : Text[from..Math.Min(t, end)];
 				comment = Colors[lo].color == ParseDictionary.Type.Comment;
 				from = t;
 			}
@@ -1020,7 +1044,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		if ((location = /*(txt.Length == 0 ? codeL : txt)*/txt.IndexOf(c)) < 0) location = int.MaxValue;
 	}
 	private static Value CollapseScalar(Value i) {
-		while (i.Values.Length == 1)
+		while (i.Values.Length == 1 /*&& !i.Parentheses*/)
 			i = i.Values[0];
 		return i;
 	}
@@ -1171,7 +1195,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		A(["√", "sqrt", "Sqrt", "squareroot", "SquareRoot","Squareroot"], new Cf(/*T*/Sqrt, OpCode.Sqrt)); // square root = z^(1/2)
 		A(["sqr", "Sqr", "square", "Square"], OpSqr); // square = z^2
 		A(["cbrt", "Cbrt", "cuberoot", "CubeRoot", "Cuberoot"], new Cf(Cbrt, OpCode.Cbrt)); // cube root = z^(1/3)
-		A(["cube", "Cube"], new Cf(/*T*/Cub, OpCode.Cub)); // cube = z^3
+		A(["cube", "Cube", "cub", "Cub"], new Cf(/*T*/Cub, OpCode.Cub)); // cube = z^3
 		A(["quart", "hypercube", "HyperCube", "Hypercube", "tesseract", "Tesseract"], new Cf(/*T*/Quart, OpCode.Quart)); // z^4
 
 		// colors

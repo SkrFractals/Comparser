@@ -50,18 +50,13 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 				if (AxisMatchA(mSx, mDx, axF) && AxisMatchA(mSy, mDy, ayF) && _mLx2 == axF.length && _mLy2 == ayF.length) {
 					// plotting the same exact axes - just return back the previous result
 					_xyCancelled = changed = false;
-					
-					(_plotsXy[0], _memXy) = (_memXy, _plotsXy[0]);
+					(_plotsXy[0], _memXy) = (values.V[0].div = _memXy, _plotsXy[0]);
 					//values.V = [_plotsXy[0]];
 					//values.Done = 1;
 					//values.Total = 1;
 					return; // _plotXy;
 				}
 				changed = true; // not the same axes, so the image will be changed
-
-				//values.X = new(axF); // TODO debug remove
-				
-				
 				// remember what axes are we going to plot:
 				(_mLx2, _mLy2, _mSx2, _mSy2, _mDx2, _mDy2) = (axF.length, ayF.length, axF.start, ayF.start, axF.d, ayF.d);
 				// prepare the div axes:
@@ -282,7 +277,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					//if (memY != _plotX) // x-axis is not identical to the memory	
 					//	for (var x = 0; x < _plotX.Length && !cancel.IsCancellationRequested; _plotX[x] = memY[x++ + memYo]) { } // the identical memory is the 2D plot, not already our 1D one
 					// transfer the whole Y slice form the 2d memory (tolerance is < pixel, so the array lengths should match)
-					(_plotsX[0], _memX) = (_memX, _plotsX[0]); // switch back
+					(_plotsX[0], _memX) = (values.V[0].div = _memX, _plotsX[0]); // switch back
 					_xCancelled = changed = false;
 					return;
 				}
@@ -392,17 +387,17 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					}
 				}
 			}
-			void Multi(int taskIndex, int d, Plot.PlotAxis a, Plot.Values values, Action<int,int,int,int> plot) {
-				int tasks = values.TaskData[taskIndex].taskCount;
+			private void Multi(int taskIndex, int d, Plot.PlotAxis a, Plot.Values values, Action<int,int,int,int> plot) {
+				var tasks = values.TaskData[taskIndex].taskCount;
 				float subChunkLength = (float)a.length / (_myChunks * tasks), chunkDistance = tasks * subChunkLength, yf = values.TaskData[taskIndex].taskIndex * subChunkLength;
 				var time = Static.Time.ElapsedMilliseconds;
-				var total = 0;// TODO remove debug
+				//var total = 0;//
 				for (var c = 0; c < _myChunks; ++c) {
 					var chd = yf + c * chunkDistance;
 					plot((int)Math.Round(chd), (int)Math.Round(chd + subChunkLength), taskIndex, d);
-					total += (int)Math.Round(chd + subChunkLength) - (int)Math.Round(chd);
+					//total += (int)Math.Round(chd + subChunkLength) - (int)Math.Round(chd);
 				}
-				Console.WriteLine("StartTask"+taskIndex+"."+d+" "+(Static.Time.ElapsedMilliseconds - time)+": SUBL:"+subChunkLength+" CHKDST:"+chunkDistance+" yf:" + yf+" CH:"+_myChunks + " YS: "+total);
+				//Console.WriteLine("StartTask"+taskIndex+"."+d+" "+(Static.Time.ElapsedMilliseconds - time)+": SUBL:"+subChunkLength+" CHKDST:"+chunkDistance+" yf:" + yf+" CH:"+_myChunks + " YS: "+total);
 				Interlocked.Decrement(ref values.V[d].remainingTasks);
 				if(d == values.TaskData[taskIndex].targetDivEnd)
 					_taskArr[taskIndex] = null;
@@ -451,13 +446,13 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					}
 				}
 
-				// TODO remove debug:
-				string s = "";
+				// DEBUG:
+				/*string s = "";
 				var ii = 0;
 				foreach (var v in values.TaskData) {
 					s += ";"+ii+++":"+v.targetDivEnd + "-" + v.targetDivStart + "_" + v.taskIndex + "/" + v.taskCount;
 				}
-				Console.WriteLine("StartTasks "+Static.Time.ElapsedMilliseconds+": "+s);
+				Console.WriteLine("StartTasks "+Static.Time.ElapsedMilliseconds+": "+s);*/
 				
 				if (_taskArr.Length != _myTasks) _taskArr = new Task[_myTasks]; // allocate array if it doesn't exist yet, or has the wrong size
 				// prepare argument data:

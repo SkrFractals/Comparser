@@ -40,12 +40,12 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 			=> new([GpuNeg(term), operand], orEqual ? OpCode.MoreEqual : OpCode.More);
 	}
 	private class Equal() : Operator(OpOrder.Compare) { // x = y (equal)
-		public override ILeaf Op(ILeaf value, ILeaf operand) =>  True(ONeg(value) == operand); 
+		public override ILeaf Op(ILeaf value, ILeaf operand) =>  True(LeafEquals(ONeg(value), operand)); 
 		public override GpuValue Gop(GpuValue term, GpuValue operand)
 			=> new([GpuNeg(term), operand], OpCode.Equal);
 	}
 	private class Exclamation(OpOrder order = OpOrder.Index) : Operator(order,false, order < OpOrder.Index ? 2 : 1) { // x! (factorial) // x != y (not equal)
-		public override ILeaf Op(ILeaf value, ILeaf operand) => True(ONeg(value) != operand);
+		public override ILeaf Op(ILeaf value, ILeaf operand) => True(LeafNotEquals(ONeg(value), operand));
 		public override GpuValue Gop(GpuValue term, GpuValue operand)
 			=> new([GpuNeg(term), operand], OpCode.NotEqual);
 	}

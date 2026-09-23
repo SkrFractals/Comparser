@@ -1,4 +1,5 @@
-﻿using Comparser.Forms.Core;
+﻿using Comparser.Comparser;
+using Comparser.Forms.Core;
 using static Comparser.Forms.Core.IPanel;
 
 namespace Comparser.Forms;
@@ -43,10 +44,10 @@ public partial class MenuPanel : UserControl, IPanel {
 		Plot = new(this, _plotForm = new());
 		//ParentForm[] p = [LogForm, _codeForm, _expForm, _setForm, _plotForm];
 		//foreach (var i in p) i.Show();
-		//_plotForm.Show(); // for some reason I have to do this, otherwise the plotter could have its splitContainer permanently docked wrong
+		_plotForm.Show(); // for some reason I have to do this, otherwise the plotter could have its splitContainer permanently docked wrong
 		//_plotForm.Size = new(640, 480);
 		set.SetDarkMode();
-		//_plotForm.Close();
+		_plotForm.Close();
 		//foreach (var i in p) i.Close();
 		var m = FormStartPosition.Manual;
 		_codeForm?.StartPosition = m;
@@ -71,7 +72,10 @@ public partial class MenuPanel : UserControl, IPanel {
 	private void SetButton_Click(object sender, EventArgs e) => ShowC(_setForm, _var.Form);
 	private void CodeButton_Click(object sender, EventArgs e) => ShowC(_codeForm, _var.Form);
 	private void ExpButton_Click(object sender, EventArgs e) => ShowC(_expForm, _var.Form);
-	private void PlotButton_Click(object sender, EventArgs e) => ShowC(_plotForm, _var.Form);
+	private void PlotButton_Click(object sender, EventArgs e) {
+		ShowC(_plotForm, _var.Form);
+		Plot?.OpenSettings();
+	}
 	public void ShowC(ParentForm? f, ParentForm? p) {
 		if (f == null)
 			return;
@@ -80,4 +84,6 @@ public partial class MenuPanel : UserControl, IPanel {
 			f.Show(this);
 	}
 	#endregion
+	public bool Undo() => true;
+	public bool Redo() => true;
 }

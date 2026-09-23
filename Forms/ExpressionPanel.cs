@@ -203,4 +203,6 @@ public partial class ExpressionPanel : UserControl, IPanel {
 		Width - (RowHeight + Pad << 1),
 		Width - RowHeight - Pad);
 	#endregion
+	public bool Undo() => true;
+	public bool Redo() => true;
 }

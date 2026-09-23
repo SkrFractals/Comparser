@@ -26,7 +26,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		/// <param name="args">arguments</param>
 		/// <param name="allowCache">should be disabled when multitasking as it is not thread safe</param>
 		/// <returns>Evaluated value of this expression</returns>
-		public virtual Value Eval(ushort depth, Value args, bool allowCache = true) {
+		public virtual Value Eval(ushort depth, Value args, bool allowCache = true, bool collapse = true) {
 			if (allowCache && _cache.GetEval(args)) return _cache.Result?.Eval!;
 			Value result = new(new Value[V.Values.Length]);
 			var error = FailReason.Success;
@@ -37,7 +37,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 					result.Values[e] = EvalValue(depth, V.Values[e], args, allowCache);
 			var t = V.Text;
 			if (error == 0) {
-				result = CollapseScalar(result);
+				//if(collapse)
+					result = CollapseScalar(result);
 				result.Text = t;
 			}else result = new(error, t);
 			if(allowCache)
@@ -156,7 +157,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 					// we had a unary operator (the only one I have to far is the unary inverse, so do that)
 					r.Term = new(Context, new(unit)); // unary inverse (pretend we have just successfully read "1/")
 					read.TrimStart(1); // trim white space
-					return true; // then return and go read a second operand
+					return false; // then return and go read a second operand
 				}
 				// no unary - read teh first term like normal: Try parenthesis/function/number/constant/argument:
 				if (ReadTermProperNeedsFailTest() && Fail(r) && F())
@@ -258,6 +259,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			bool SubTerm(out Expression readTo, char req) {
 				var fail = Fail((readTo = new(read, out _, args, 0, 0, parseAs >= ParseAs.Definition ? ParseAs.DefinitionExp : parseAs)).V);
 				read.TrimStart();
+				//readTo.V.Parentheses = true;
 				return (fail || readTo.V.Values.Length == 0 || FailRequiredSymbol(req)) && F();
 			}
 			bool Encapsulate(Expression p) {
@@ -496,7 +498,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 					return false;
 				case ParseAs.Argument:
 					TrimString();
-					read.AddC(startR, read.From, ParseDictionary.Type.Arg); // color as argument
+					if(Fail(r))
+						read.AddC(startR, read.From, ParseDictionary.Type.Arg); // color as argument
 					read.TrimStart(1);
 					if (read.GotoFirstFailed(0, 2, [',', ':'], 1, out s, out _))
 						return false;
@@ -504,6 +507,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 						return true; // found ',', so return false to try read another argument
 					// found ':', so try to read argument default new([..expr]) is to let it reference already read arguments:
 					read.TrimStart(1);
+					r.Term = null;
 					r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
 					CollapseTerm(ref r.Operand);
 					goto default; // after reading the defArd, go try read ',' again, but with ':' not allowed again

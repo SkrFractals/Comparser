@@ -90,7 +90,7 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 			}
 				static bool Match(VmValue self, VmValue a) { // defArguments.Match(callArguments)
 					if (!self.Leaf.IsNaN())
-						return a.Leaf.IsNaN() || self.Leaf == a.Leaf; // callArguments always starts with Values
+						return a.Leaf.IsNaN() || LeafEquals(self.Leaf, a.Leaf); // callArguments always starts with Values
 					if (self.Values.Length == 0) return true;
 					if (self.Values.Length < a.Values.Length) return false;
 					if (self.Values.Length > a.Values.Length) {
@@ -386,7 +386,7 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 				return vals;
 				ILeaf OpLeaf(ILeaf la, ILeaf lb) => opCode switch {
 					OpCode.Less => la.Re() < lb.Re() ? Real.unit : Real.zero, OpCode.LessEqual => la.Re() <= lb.Re() ? Real.unit : Real.zero,
-					OpCode.Equal => la == lb ? Real.unit : Real.zero, OpCode.NotEqual => la != lb ? Real.unit : Real.zero, 
+					OpCode.Equal => LeafEquals(la, lb) ? Real.unit : Real.zero, OpCode.NotEqual => LeafNotEquals(la, lb) ? Real.unit : Real.zero, 
 					OpCode.Add => Add(la, lb), OpCode.Mod => Mod(la, lb), OpCode.CompMod => CompMod(la, lb), OpCode.Mul => Mul(la, lb), OpCode.Pow => Pow(la,lb), OpCode.Max => Max(la, lb),
 					OpCode.SoftMax => SoftMax(la, lb), 
 					_ => nan

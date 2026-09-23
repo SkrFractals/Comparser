@@ -22,4 +22,6 @@ public partial class PlotSettingsPanel : UserControl, IPanel {
 	#endregion
 
 	public readonly PlotSettingsControl S;
+	public bool Undo() => GetVar().Root.Plot?.Undo() ?? true;
+	public bool Redo() => GetVar().Root.Plot?.Redo() ?? true;
 }

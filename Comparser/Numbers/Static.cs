@@ -210,8 +210,8 @@ public static class Static {
 			taskArr = new Task[tasks]; // allocate array if it doesn't exist yet, or has the wrong size
 		// split into 8 chunks, each split into threads, so that easy and hard lines get split evenly
 		for (float t = 0, dr = (float)total / (chunks * tasks); task < tasks; t += dr) { 
-			float tt = t;
-			int tTask = task++;  // run the tasks and give them row chunks to process
+			var tt = t;
+			var tTask = task++;  // run the tasks and give them row chunks to process
 			taskArr[tTask] = Task.Run(() => run(tt,dr,tTask)/*, cancel*/);
 		}
 		// wait for tasks to finish:

@@ -79,7 +79,7 @@ public partial class PlotPanel : UserControl, IPanel {
 			S.Box.Tag = C.Box.Tag = E.Box.Tag = true;
 			(S.Box.Text, C.Box.Text, E.Box.Text, var wasLocked) = sce;
 			if (changeAxis) {
-				_axis.SetSce(Eval(_context, S), Eval(_context, E)); // TODO var ml = locked; locked = 0; start = S; end = E; locked = ml;
+				_axis.SetSce(Eval(_context, S), Eval(_context, E));
 				Lock(-1); //remove previous lock (so that the next call will 100% succeed in locking a specific lock, instead of toggling it off)
 				Lock(wasLocked);
 			}
@@ -153,7 +153,8 @@ public partial class PlotPanel : UserControl, IPanel {
 			p.SetFinished(OnFinished);
 		bool oldState = _myStates.ContainsKey(SettingsPanel.Context);
 		var s = oldState ? _myStates[SettingsPanel.Context] : _myStates[SettingsPanel.Context] = new();
-		s.Suppressed = true;
+		var sup = States.Suppressed;
+		States.Suppressed = true;
 		_s.modeSelect.SelectedIndex = 2;
 		//ModeSelected(_s.modeSelect, EventArgs.Empty);
 		Resized(null, EventArgs.Empty);
@@ -174,11 +175,9 @@ public partial class PlotPanel : UserControl, IPanel {
 		Refresh(_tl, _length.ToString());
 		Refresh(_fy, _fixedY.ToString(CultureInfo.InvariantCulture));
 		//Refresh(tl, _length.ToString());
-		s.Suppressed = false;
+		States.Suppressed = sup;
 		if (oldState)
 			return;
-
-		
 		
 		_inputX?.States = s;
 		_inputY?.States = s;
@@ -209,7 +208,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		_ = new LogLock(_s.yRangeButton, s); // lock 2D input Y / DONE
 		_ = new LogLock(_s.oyRangeButton, s); // lock 1D output Y / DONE
 		_ = new LogLock(_s.lockResButton, s); // resolution lock / DONE
-		_ = new LogAni(_s.itlBox, _s.itfBox, _inputT!, _s.animatedBox, s); // TODO frame length and index + animate (animate should not update index during animation, only the animated flag)
+		_ = new LogAni(_s.itlBox, _s.itfBox, _inputT!, _s.animatedBox, s);
 		
 		Add(null, EventArgs.Empty);
 	}
@@ -226,12 +225,16 @@ public partial class PlotPanel : UserControl, IPanel {
 		ReEval(/*p*/);
 	}
 	public void ReEval(/*IPlot p*/) {
+		var sup = States.Suppressed;
+		States.Suppressed = true;
+		_cancel.Cancel();
 		for (var i = 0; i < Outputs.Count; ++i) {
 			GetPlot()?.SetCode(i, Parse(Outputs[i].Code, false));
 			GetPlot()?.SetRgb(i, Parse(Outputs[i].Rgb, false));
 		}
 		//p.SetDirty();
 		DirtyImage();
+		States.Suppressed = sup;
 	}
 	private void PlotClick(object? sense, EventArgs e) { }
 	#endregion
@@ -253,11 +256,15 @@ public partial class PlotPanel : UserControl, IPanel {
 
 	#region Actions
 	private void ClickBuild(object? sender, EventArgs e) {
-		if (/*_dirtyImage &&*/ _drawing) {
+		if (/*_dirtyImage &&*/ _drawing || _div > 0) {
+			_s.buildButton.Text = "PLOT" ;
 			_cancel.Cancel();
-			_dirtyImage = true;
+			_div = 0;
+			_finished = _drawing = false;
+			_cancelled = _dirtyImage = true;
 			return;
 		}
+		
 		UpdatePlot(true);
 	}
 	private void ClickSave(object? sender, EventArgs e) => savePlot.ShowDialog();
@@ -298,17 +305,27 @@ public partial class PlotPanel : UserControl, IPanel {
 			return;
 		}
 		foreach (var o in Outputs) if (o.Name == _s.outputSelect.Text) { Err(); return; }
+		var sup = States.Suppressed;
+		States.Suppressed = true;
 		Outputs.Add(new(_s.outputSelect.Text, _s.rgbBox, _s.codeBox, RgbChanged, CodeChanged));
 		GetPlot()?.AddOutput(_s.outputSelect.Text, null, null);
 		var c = _s.outputSelect.Items.Count;
 		_s.outputSelect.Items.Add(_s.outputSelect.Text);
-		_s.outputSelect.SelectedIndex = c;//SelectOutput(null, EventArgs.Empty);
-										  //_s.clipSelect.SelectedIndex = 0;
+		_s.outputSelect.SelectedIndex = c;
+		States.Suppressed = sup;
 		LogState(_s.outputSelect, (byte)OutputAction.Add);
 		DirtyImage();
 		return;
 		static void Err() => MessageBox.Show("You must write a unique name to the combo box to the right before adding.", "Error: No name.");
 	}
+	public void DelAll() {
+		_s.outputSelect.Items.Clear();
+		Outputs.Clear();
+		if (GetPlot() is not { } p)
+			return;
+		p.DelAll();
+	}
+
 	public void Del(object? sender, EventArgs e) {
 		if (_s.outputSelect.Text == "") {
 			Err();
@@ -320,9 +337,13 @@ public partial class PlotPanel : UserControl, IPanel {
 			Err();
 			return;
 		}
+		var sup = States.Suppressed;
+		States.Suppressed = true;
 		var at = _s.outputSelect.SelectedIndex;
 		Outputs.RemoveAt(at);
+		RebuildOutputSelect();
 		SelectOutput(null, EventArgs.Empty);
+		States.Suppressed = sup;
 		LogState(_s.outputSelect, (byte)OutputAction.Remove);
 		DirtyImage();
 		if (GetPlot() is not { } p)
@@ -330,6 +351,11 @@ public partial class PlotPanel : UserControl, IPanel {
 		p.DelOutput(at);
 		return;
 		static void Err() => MessageBox.Show("You must have some output selected to delete one.", "Error: No name.");
+	}
+	private void RebuildOutputSelect() {
+		_s.outputSelect.Items.Clear();
+		foreach (var o in Outputs)
+			_s.outputSelect.Items.Add(o.Name);
 	}
 	private void SelectOutput(object? sender, EventArgs e) {
 		var i = _s.outputSelect.SelectedIndex;
@@ -355,6 +381,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		var i = _s.outputSelect.SelectedIndex;
 		if (i < 0 || i >= Outputs.Count)
 			return;
+		_cancel.Cancel();
 		GetPlot()?.SetCode(i, Parse(Outputs[i].Code));
 		LogState(_s.codeBox);
 		DirtyImage();
@@ -363,6 +390,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		var i = _s.outputSelect.SelectedIndex;
 		if (i < 0 || i >= Outputs.Count)
 			return;
+		_cancel.Cancel();
 		GetPlot()?.SetRgb(i, Parse(Outputs[i].Rgb));
 		//GetPlot()?.SetDirty();
 		LogState(_s.rgbBox);
@@ -452,9 +480,27 @@ public partial class PlotPanel : UserControl, IPanel {
 		//s.fyBox.ReadOnly = s.iysLabel.Visible = s.iysButton.Visible = s.iysBox.Visible = s.iycLabel.Visible = s.iycButton.Visible = s.iycBox.Visible = s.iyeLabel.Visible = s.iyeButton.Visible = s.iyeBox.Visible = enabled;
 	}
 	private void FyChanged(object? sender, EventArgs e) => ChangeFy(Eval(this, _fy));
-	private void FysClick(object? sender, EventArgs e) => ChangeFy(/*_inputY?.S.Value*/0.0);
-	private void FycClick(object? sender, EventArgs e) => ChangeFy(/*_inputY?.C.Value*/plotBox.Height / 2.0);
-	private void FyeClick(object? sender, EventArgs e) => ChangeFy(plotBox.Height);
+	private void FysClick(object? sender, EventArgs e) {
+		ChangeFy(/*_inputY?.S.Value*/0.0);
+		if (GetPlot() is not { } p)
+			return;
+		var (s, _, _, _) = p.GetAxis()[1].GetSce();
+		Refresh(_fy, s);
+	}
+	private void FycClick(object? sender, EventArgs e) {
+		ChangeFy( /*_inputY?.C.Value*/plotBox.Height / 2.0);
+		if (GetPlot() is not { } p)
+			return;
+		var (_, c, _, _) = p.GetAxis()[1].GetSce();
+		Refresh(_fy, c);
+	}
+	private void FyeClick(object? sender, EventArgs e) {
+		ChangeFy( plotBox.Height);
+		if (GetPlot() is not { } p)
+			return;
+		var (_, _, end, _) = p.GetAxis()[1].GetSce();
+		Refresh(_fy, end);
+	}
 	private void ChangeFy(object? e) {
 		(_fixedY, var v) = GetPlot()?.SetFixedY(e) ?? (0, "?");
 		_s.fyLabel.Text = "Y: " + v;
@@ -491,26 +537,33 @@ public partial class PlotPanel : UserControl, IPanel {
 			return p.InPlace(_renderAxes);
 		return true;
 	}
-	private void OnFinished(object? x, object? y, Bitmap? bmp, int outDiv, CancellationToken renderToken) {
+	private void OnFinished(object? x, object? y, Bitmap? bmp, int outDiv, CancellationToken renderToken/*, string message = ""*/) {
 		if (IsDisposed || Disposing || !IsHandleCreated) {
 			OnFinUi(x, y, bmp, outDiv, renderToken); 
 			return; 
 		}
-		BeginInvoke((MethodInvoker)(() => OnFinUi(x, y, bmp, outDiv, renderToken)));
+		BeginInvoke((MethodInvoker)(() => OnFinUi(x, y, bmp, outDiv, renderToken/*, message*/)));
 	}
-	private void OnFinUi(object? x, object? y, Bitmap? bmp, int outDiv, CancellationToken renderToken) {
-		_div = outDiv;
-		_drawing = false;
-		if (bmp != null && !renderToken.IsCancellationRequested && renderToken == _cancel.Token) {
+	//private int bmpCount = 0;
+	private void OnFinUi(object? x, object? y, Bitmap? bmp, int outDiv, CancellationToken renderToken/*, string message = ""*/) {
+		if (bmp != null && !renderToken.IsCancellationRequested /*&& renderToken == _cancel.Token*/) {
+			//bmp.Save(@"C:\Temp\debug"+ bmpCount++ +"." + bmp.Width + "." + outDiv + "." + message + "+.bmp");
 			_bmp = bmp;
 			_renderAxes = (x, y);
 			plotBox.Invalidate();
 			plotBox.Update();
 		}
+		if((_div = outDiv) > 0)
+			PerformUpdate();
+		else {
+			_finished = true;
+			_drawing = false;
+			_s.buildButton.Text = "OK";
+		}
 		//Console.WriteLine("FinUi");
 	}
 	private (object?, object?) _renderAxes;
-	private bool _drawing, _forced;
+	private bool _drawing, _forced, _finished;
 	private void UpdatePlot(bool forced = false) {
 		/*if (_finishedImage) {
 			//if(_div <= 0)
@@ -529,12 +582,10 @@ public partial class PlotPanel : UserControl, IPanel {
 			_forced = true;
 		if (_drawing)
 			return;
-		var inplace = InPlace();
-		//Static.notinplace = !inplace;
 		// draw blocks/delays
-		if (SettingsPanel.AutoPlot && _dirtyImage || _forced || _div > 0) {
+		if (!_cancelled && (SettingsPanel.AutoPlot && _dirtyImage || _div > 0) || _forced) {
 
-			if (!(_forced || _s.animatedBox.Checked || _div > 0) && inplace) {
+			if (!(_forced || _s.animatedBox.Checked || _div > 0) && InPlace()) {
 				if (_plotDelay.IsRunning) {
 					if (_plotDelay.ElapsedMilliseconds < SettingsPanel.PlotDelay/* && InPlace()*/)
 						return;
@@ -542,39 +593,33 @@ public partial class PlotPanel : UserControl, IPanel {
 				} else _plotDelay.Restart();
 			}
 		} else return;
+		PerformUpdate();
+	}
+	private void PerformUpdate() {
 		//if (!inplace) Console.WriteLine("NotInplace");
 		
 		//_s.Block();
 		//_newRenderLocation = (new(0, 0), new(plotBox.Width, plotBox.Height));
-		Stopwatch w = Stopwatch.StartNew();
+		//Stopwatch w = Stopwatch.StartNew();
 		
-		if (GetPlot() is { } p && (_drawing = p.Update(plotBox.Width, plotBox.Height, _length, SettingsPanel.PreviewLoad == 0 || _animated || !inplace && SettingsPanel.UseMem, ref _cancel))) {
-			_dirtyImage = _forced = false;
-			//Console.WriteLine("PlotChange");
+		// TODO if the plot Location is entirely outside the view, then consider it non-animated
+		bool mem = false;
+		if (GetPlot() is { } p && (_drawing = p.Update(out mem, plotBox.Width, plotBox.Height, _length, SettingsPanel.PreviewLoad == 0 || _animated || !InPlace() && SettingsPanel.UseMem, ref _cancel))) {
+			_cancelled = _dirtyImage = _forced = false;
 		}
-		w.Stop();
-		//Console.WriteLine("Elapsed ms: " + w.ElapsedMilliseconds);
-
-		//_draw = Task.Run(() => UpdatePlotAsync(plotBox.Width, plotBox.Height));
-
-		//plotBox.Size = plotBox.Image.Size;
-		//_dirty = false;
+		if (mem)
+			return;
+		_finished = false;
+		_s.buildButton.Text = "CANCEL";
+		//Console.WriteLine("PlotChange");
 	}
 	private int _div = 0;
 	private CancellationTokenSource _cancel = new();
-	//private CancellationToken _token;
-	/*private void UpdatePlotAsync(int w, int h) {
-		if (GetPlot() is { } p) {
-			// TODO if the plot Location is entirely outside the view, then consider it non-animated
-			_loadBmp = p.Update(out _div, w, h, _length, !SettingsPanel.PreviewFrames || _animated || !p.InPlace() && SettingsPanel.UseMem, (_cancel = new()).Token);
-		}
-		_finishedImage = true;
-		_draw = null;
-	}*/
 	private void DirtyImage(bool restartTimer = true) {
 		if (restartTimer)
 			_plotDelay.Restart();
 		_dirtyImage = true;
+		_finished = false;
 		_s.buildButton.Text = _drawing ? "CANCEL": "PLOT" ;
 	}
 	private void prevButton_Click(object? sender, EventArgs e) {
@@ -593,24 +638,13 @@ public partial class PlotPanel : UserControl, IPanel {
 
 	#region LogState
 	private void LogState(Control c, byte action = 0) => _myStates[SettingsPanel.Context].Log(c, action);
-	override protected bool ProcessCmdKey(ref Message msg, Keys k) {
-		if (SettingsPanel.Context is not { } c)
-			return base.ProcessCmdKey(ref msg, k);
-		switch (k) {
-			case Keys.Control | Keys.Z:
-				_myStates[c].Undo();
-				return true;
-			case Keys.Control | Keys.Y:
-				_myStates[c].Redo();
-				return true;
-			default:
-				return base.ProcessCmdKey(ref msg, k);
-		}
-	}
+	
+	public bool Undo() => _myStates[SettingsPanel.Context].Undo();
+	public bool Redo() => _myStates[SettingsPanel.Context].Redo();
 	private readonly Dictionary<IComparser, States> _myStates = [];
 	#endregion
 
-	private bool _animated = false;
+	private bool _animated, _cancelled;
 	private void Fps_Tick(object? sender, EventArgs e) {
 		if(_refreshAxes)
 		{
@@ -619,14 +653,14 @@ public partial class PlotPanel : UserControl, IPanel {
 		}
 		//Console.WriteLine("Tick " + Static.Time.ElapsedMilliseconds);
 		_s.percentLabel.Text = (GetPlot()?.GetPercent().ToString() ?? "0") + "%";
-		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0)
+		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0 && _finished)
 			nextButton_Click(_s.nextButton, EventArgs.Empty);
 		UpdatePlot();
 		//Console.WriteLine("TickEnd " + Static.Time.ElapsedMilliseconds);
 	}
 	private void PlotBox_Paint(object sender, PaintEventArgs e) {
 		//Console.WriteLine("PlotBox_Paint " + Static.Time.ElapsedMilliseconds);
-		GetVar().Form.Text = "null" + counter++;
+		//GetVar().Form.Text = "null" + counter++;
 		if (_bmp == null)
 			return;
 		// Faster rendering with crisp pixels
@@ -638,9 +672,7 @@ public partial class PlotPanel : UserControl, IPanel {
 				if (GetPlot() is not { } plot)
 					continue;
 				var (p, s) = plot.GetPlace(_renderAxes);
-
-				 GetVar().Form.Text = p.ToString() + " " + counter++;
-				
+				//GetVar().Form.Text = p.ToString() + " " + counter++;
 				e.Graphics.DrawImage(_bmp, new Rectangle(p.X, p.Y, s.Width, s.Height));
 				attempt = 10;
 			} catch (Exception) {
@@ -650,7 +682,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		}
 		//Console.WriteLine("PlotBox_PaintEnd " + Static.Time.ElapsedMilliseconds);
 	}
-	private int counter = 0;
+	private int _counter = 0;
 	private bool _dragging, _dragged/*, dirtyDrag*/;
 	private Point _lastCursor;
 	//private (Point p, Size s) _plotLocation, _renderLocation, _newRenderLocation;
@@ -663,8 +695,9 @@ public partial class PlotPanel : UserControl, IPanel {
 		_dragging = false;
 		if (_dragged)
 			return;
-		_var.Root.ShowC(_var.Root.PlotSetForm, _var.Form);
+		OpenSettings();
 	}
+	public void OpenSettings() => _var.Root.ShowC(_var.Root.PlotSetForm, _var.Form);
 	private void plotBox_MouseMove(object sender, MouseEventArgs e) {
 		if (!_dragging)
 			return;
@@ -735,14 +768,20 @@ public partial class PlotPanel : UserControl, IPanel {
 		D(_s.modeSelect); // read plot mode
 		D(_s.fyBox); // read fixed y
 		D(_s.outputSelect); // read output codes and selections
-		MessageBox.Show("Plotter file loaded.", "LOADED");
+		//MessageBox.Show("Plotter file loaded.", "LOADED");
+		var sup = States.Suppressed;
+		States.Suppressed = true;
+		CodeChanged(_s.codeBox, EventArgs.Empty);
+		RgbChanged(_s.rgbBox, EventArgs.Empty);
+		States.Suppressed = sup;
+		return;
 		void D(Control c) => s.Deserialize(s.D[c], t, ref read);
 	}
 	private void savePlot_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
 		if (SettingsPanel.Context is not { } c)
 			return;
 		var d = _myStates[c].D;
-		string[] ss = [S(_s.widthBox), // resolution
+		/*string[] ss = [S(_s.widthBox), // resolution
 			S(_s.itfBox), // animation
 			S(_s.tRangeButton), // range time
 			S(_s.xRangeButton), // range x
@@ -751,7 +790,7 @@ public partial class PlotPanel : UserControl, IPanel {
 			S(_s.lockResButton), // res lock
 			S(_s.modeSelect), // mode
 			S(_s.fyBox), // fixed y
-			S(_s.outputSelect)]; // outputs
+			S(_s.outputSelect)]; // outputs*/
 		
 		File.WriteAllText(savePlot.FileName,
 		S(_s.widthBox) // resolution
@@ -764,7 +803,8 @@ public partial class PlotPanel : UserControl, IPanel {
 		+ S(_s.modeSelect) // mode
 		+ S(_s.fyBox) // fixed y
 		+ S(_s.outputSelect)); // outputs
-		MessageBox.Show("Plotter file saved.", "SAVED");
+		return;
+		//MessageBox.Show("Plotter file saved.", "SAVED");
 		string S(Control c) => d[c].Serialize();
 	}
 	private void saveMp4_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {

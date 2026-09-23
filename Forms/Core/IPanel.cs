@@ -51,15 +51,19 @@ public interface IPanel{
 		foreach (var o in c) {
 			if (o is not Control oc)
 				continue;
+			var sup = States.Suppressed;
+			States.Suppressed = true;
 			switch (o) {
 				case Button:
 				case TextBox:
 				case ComboBox:
 				case RichTextBox:
 				case LineNumberControl:
+					
 					oc.BackColor = oc.BackColor == Color.Red ? Color.Red : color.back;
 					oc.ForeColor = color.fore;
 					DarkC(oc.Controls, color);
+					
 					break;
 				case Label:
 					oc.ForeColor = color.back;
@@ -76,6 +80,7 @@ public interface IPanel{
 					DarkC(s.Panel2.Controls, color);
 					break;
 			}
+			States.Suppressed = sup;
 		}
 	}
 	/*private void ParentControl_Load(object sender, EventArgs e) {
@@ -101,11 +106,12 @@ public interface IPanel{
 	}
 	public static object? Parse(IComparser? c, TextField field, bool cachedParse = true, object? args = null, CancellationToken? cancel = null) { 
 		if (c is null || cachedParse && field.Exp != null && field.Text == field.Box.Text)
-			return null;
+			return field.Exp;
 		field.Exp = c.Parse(cancel ?? CancellationToken.None, field.Text = field.Box.Text, 0, out var colors, PrepareArgs(c, field, args));
 		ComparserPanel.ApplyColors(colors, field.Box);
 		return field.Exp;
 	}
 	private static object? PrepareArgs(IComparser? c, TextField field, object? args) => args == null && field.Args.Length > 0 ? (field.ArgsV ??= c?.MakeArgs(field.Args)) : args;
-
+	public bool Undo();
+	public bool Redo();
 }

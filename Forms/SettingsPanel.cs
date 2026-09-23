@@ -147,11 +147,9 @@ public partial class SettingsPanel : UserControl, IPanel {
 
 	public static void ComboBox_MouseWheel(object? sender, MouseEventArgs e) => ((HandledMouseEventArgs)e).Handled = true;
 
-	private void SettingsPanel_Load(object sender, EventArgs e) {
-		PreviewLoad = Math.Max(previewSelect.SelectedIndex, 0);
-	}
+	private void SettingsPanel_Load(object sender, EventArgs e) { }
 
-	private void previewSelect_SelectedIndexChanged(object sender, EventArgs e) {
-
-	}
+	private void previewSelect_SelectedIndexChanged(object sender, EventArgs e) => PreviewLoad = Math.Max(previewSelect.SelectedIndex,0);
+	public bool Undo() => true;
+	public bool Redo() => true;
 }

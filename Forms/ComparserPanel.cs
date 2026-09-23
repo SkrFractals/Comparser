@@ -47,11 +47,13 @@ public partial class ComparserPanel : UserControl, IPanel {
 	private void Init() {
 		bool oldState = _myStates.ContainsKey(SettingsPanel.Context);
 		var s = oldState ? _myStates[SettingsPanel.Context] : _myStates[SettingsPanel.Context] = new();
-		s.Suppressed = true;
+		var sup = States.Suppressed;
+		States.Suppressed = true;
 		// initialize controls here
-		s.Suppressed = false;
+		States.Suppressed = sup;
 		if (oldState)
 			return;
+		_ = new LogText(codeBox, s);
 		// bind state transactions
 	}
 	#endregion
@@ -109,6 +111,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		buildButton.Text = "BUILD";
 		_codeTime.Restart();
 		RefreshLines();
+		LogState(codeBox);
 	}
 	private void OpenLog(object? sender, EventArgs e) {
 		_var.Root.ShowC(_var.Root.LogForm, _var.Form);
@@ -179,6 +182,8 @@ public partial class ComparserPanel : UserControl, IPanel {
 	private void DrawLogsAndColors() {
 		_dirtyResult = false;
 		_freeTime.Stop();
+		var sup = States.Suppressed;
+		States.Suppressed = true;
 		codeBox.TextChanged -= CodeBox_TextChanged;
 		// apply codeBox type colors
 		ApplyColors(_colors, codeBox);
@@ -220,6 +225,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		_var.Root.Exp?.ReEval();
 		_var.Root.Plot?.ReEval(/*SettingsControl.Context?.GetPlot()!*/);
 		codeBox.TextChanged += CodeBox_TextChanged;
+		States.Suppressed = sup;
 	}
 	private void RefreshLines() {
 		if (_lines == null)
@@ -256,9 +262,13 @@ public partial class ComparserPanel : UserControl, IPanel {
 		box.AllowDrop = true;//box.EnableAutoDragDrop = true;
 		box.Font = new("Consolas", 12, FontStyle.Bold, GraphicsUnit.Point, 238);
 		_ = box.Handle;
+		box.KeyDown -= Override_KeyDown;
 		box.KeyDown += Override_KeyDown;
+		box.DragEnter -= Override_DragEnter;
 		box.DragEnter += Override_DragEnter;
+		box.DragDrop -= Override_DragDrop;
 		box.DragDrop += Override_DragDrop;
+		box.TextChanged -= textChanged;
 		box.TextChanged += textChanged;
 	}
 
@@ -327,19 +337,19 @@ public partial class ComparserPanel : UserControl, IPanel {
 		if (SettingsPanel.Context is not { } c)
 			return base.ProcessCmdKey(ref msg, k);
 		switch (k) {
-		case Keys.Control | Keys.Z:
-			_myStates[c].Undo();
-			return true;
-		case Keys.Control | Keys.Y:
-			_myStates[c].Redo();
-			return true;
-		default:
-			return base.ProcessCmdKey(ref msg, k);
+			case Keys.Control | Keys.Z:
+				_myStates[c].Undo();
+				return true;
+			case Keys.Control | Keys.Y:
+				_myStates[c].Redo();
+				return true;
+			default:
+				return base.ProcessCmdKey(ref msg, k);
 		}
 	}
 	private readonly Dictionary<IComparser, States> _myStates = [];
 	#endregion
-	
+
 	private void openCode_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
 		if (SettingsPanel.Context is not { } c)
 			return;
@@ -349,14 +359,17 @@ public partial class ComparserPanel : UserControl, IPanel {
 			return;
 		}
 		var read = 0;
-		_myStates[c].Deserialize(_myStates[c].D[codeBox],File.ReadAllText(file), ref read); // read code
+		_myStates[c].Deserialize(_myStates[c].D[codeBox], File.ReadAllText(file), ref read); // read code
 	}
-
 	private void saveCode_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
 		if (SettingsPanel.Context is not { } c)
 			return;
 		var d = _myStates[c].D;
-		File.WriteAllText(saveCode.FileName,d[codeBox].Serialize()); // outputs
+		File.WriteAllText(saveCode.FileName, d[codeBox].Serialize()); // outputs
 		MessageBox.Show("Code saved.", "SAVED");
 	}
+	private void loadButton_Click(object sender, EventArgs e) => openCode.ShowDialog();
+	private void saveButton_Click(object sender, EventArgs e) => saveCode.ShowDialog();
+	public bool Undo() => _myStates[SettingsPanel.Context].Undo();
+	public bool Redo() => _myStates[SettingsPanel.Context].Redo();
 }

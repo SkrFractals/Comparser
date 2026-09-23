@@ -2,6 +2,7 @@
 namespace Comparser.Comparser;
 public /*abstract*/  partial class Comparser/*<T>*/{
 	public class Value {
+		//public bool Parentheses;
 		// simple value if it is only a number not containing an expression term (can remain present even if it is replaced with a term)
 		public ILeaf/*<T>*/ Leaf = nan;
 		// Vector elements (nestable)
@@ -87,7 +88,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		public bool Match(Value a) => MatchP(UnCollapseScalar(a));
 		private bool MatchP(Value a) { // defArguments.Match(callArguments)
 			if (!Leaf.IsNaN())
-				return Leaf.IsNaN() || Leaf == a.Leaf; 
+				return Leaf.IsNaN() || ILeaf.LeafEquals(Leaf, a.Leaf); 
 			if (Values.Length == 0) return true; // callArguments always starts with Values
 			if (Values.Length < a.Values.Length) return false;
 			if (Values.Length > a.Values.Length) {
@@ -108,10 +109,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		}
 		public bool SameArg(Value a) => SameArgP(UnCollapseScalar(a));
 		private bool SameArgP(Value a) { // defArguments.SameArg(callArguments)
-			if (!Leaf.IsNaN())
-				return Leaf == a.Leaf; 
-			if (Values.Length == 0) return true; // callArguments always starts with Values
-			if (Values.Length != a.Values.Length) return false;
+			if (Values.Length != a.Values.Length)
+				return false;
+			if (Values.Length == 0) 
+				return ILeaf.LeafEquals(Leaf, a.Leaf);
 			var m = true;
 			for (var i = 0; i < Values.Length; ++i)
 				m &= Values[i].SameArgP(a.Values[i]);
@@ -126,6 +127,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				vals.Values[a] = (an = (vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 
 					? o(depth, vA[a].String) 
 					: OperateString(depth, an == 0 ? new([new(vA[a].Leaf, vA[a].Error)]) : vA[a], o);
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			vals.Leaf = CollapseScalar(o(depth, av.String)).Leaf;
@@ -142,6 +144,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				vals.Values[a] = ( /*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? o(vA[a], data) : OperateValue(vA[a], o, data);
 				Expression.Err(ref vals.Values[a].Error, vA[a]);
 			}
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			vals.Values = [o(av, data)];
@@ -156,6 +159,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
 			for (int a = 0; a < s; ++a)
 				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? new(o(vA[a].Leaf, data), vA[a].Error) : OperateData(vA[a], o, data);
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			vals.Leaf = o(av.Leaf, data);
@@ -170,6 +174,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			if (vA.Length == 0) vA = [new(av.Leaf, av.Error, av.String)];
 			for (int a = 0; a < s; ++a)
 				vals.Values[a] = (/*an = */(vA[a] = CollapseScalar(vA[a])).Values.Length) == 0 ? new(o(vA[a].Leaf), vA[a].Error) : Operate(vA[a], o);
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			vals.Leaf = o(av.Leaf);
@@ -208,6 +213,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				a = (a + 1) % vA.Length;
 				b = (b + 1) % vB.Length;
 			}
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			if (Virtual(av) is { } ff)
@@ -248,6 +254,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				b = (b + 1) % vB.Length;
 				c = (c + 1) % vC.Length;
 			}
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			vals.Leaf = o(av.Leaf, bv.Leaf, cv.Leaf);
@@ -283,6 +290,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				c = (c + 1) % vC.Length;
 				d = (d + 1) % vD.Length;
 			}
+			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
 			vals.Leaf = o(av.Leaf, bv.Leaf, cv.Leaf, dv.Leaf);
