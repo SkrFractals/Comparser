@@ -8,16 +8,16 @@ Comparser has two distinct stages:
   
 ### Parser stage (COMMANDS)  
 Read sequentially. Definitions, constants, if, while, do, etc. are processed here. Names may be redefined during this stage. 
-This language half is imperative.  
+This half of the language is imperative.  
   
 ### Evaluation stage (EXPRESSIONS)  
 After parsing is complete, expressions are pure. Calling an expression cannot modify definitions, constants, or functions.  
-Case-sensitivity optional - if you choose insensitive, all uppercase letters are internally converted to lowercase.  
-This language half is functional.  
+Case-sensitivity is optional - if you choose insensitive, all uppercase letters are internally converted to lowercase.  
+This half of the language is functional.  
   
 ## COMMANDS:  
 Parser stage, the "code". This one is read sequentially line by line, and works more like your typical procedural/imperative code.  
-You can and re-define functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
+You can redefine functions and constants (so they can be mutated while this code is being read, but then stay at their final value for the evaluation stage)  
   
 ### <img width="17" height="15" alt="image" src="https://github.com/user-attachments/assets/ffc897ab-2858-4e47-98ad-ac34348366c9" />Function definition:  
 (_\<expressionCacheSize\>_)functionName(_\<expressionArguments\>_) : _\<expressionDefinition\>_  
@@ -113,19 +113,52 @@ Example: a:0;if:1{while:a<2{a:a+1;printvalue:a;while:1{if:1{continue:2;printvalu
   
 ### Print:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as expression equations.  
-Example: f(0) : 1; f(x) : xf(x-1); print : f(5); /* Prints f(5) = 120  
+Example: f(x): "returnedString", x + 1; print: f(2); /* Prints: f(2) = "returnedString", 3  
   
 ### PrintValue:  
 Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
 It will trigger a Bad Expression error if the value is NaN.  
-Example: f(0) : 1; f(x) : xf(x-1); printvalue : f(5); /* Prints 120  
+Example: f(x): "returnedString", x + 1; print: f(2); /* Prints: returnedString, 3  
+  
+### PrintNumber:  
+Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
+It will trigger a Bad Expression error if the value is NaN.  
+Example: f(x): "returnedString", x + 1; print: f(2); /* Prints: NaN + NaNi, 2  
+  
+### PrintString:  
+Takes all the elements in the evaluated vector from the expression and prints them into the log as pure values.  
+It will trigger a Bad Expression error if the value is NaN.  
+Example: f(x): "returnedString", x + 1; print: f(2); /* Prints returnedString, '1+1'  
   
 ### Do:  
-do : _\<expressionArgument\>_  
-Takes all the string-type elements in the evaluated vector from the expression, and puts them in from the program counter to be parsed like the following commands.  
+do: _\<expressionArgument\>_  
+Takes all the string-type elements in the evaluated vector from the expression and puts them in front of the program counter to be parsed like the following commands.  
 Basically dynamically inserts dynamically generated code, as long as the syntax is valid.  
 It can trigger a stack overflow if it unpacks too many strings recursively.  
   
+### Include:  
+include: _\<expressionArgument\>_  
+Just like "do", but instead of parsing the expression string directly, it attempts to use that expression string as a file path, and perform "do" on that file's contents.  
+  
+### StackOverflow:  
+stackoverflow: _\<expressionArgument\>_  
+Changes the limit for function calling stack overflow. For example, if your recursion is deeper than the default 499, you could extend it.  
+  
+### IteratorOverflow:  
+iteratoroverflow: _\<expressionArgument\>_  
+Changes the limit for iterator overflow. For example, if your iterator calls like vec, sum pr prod have a wider range than the default 499, you could extend it.  
+  
+### WhileOverflow:  
+whileoverflow: _\<expressionArgument\>_  
+Changes the limit for while loop overflow. For example, if your while loop repeats more than the default 499 times, you could extend it.  
+  
+### DoOverflow:  
+dooverflow: _\<expressionArgument\>_  
+Changes the limit for nested do and include expansions.  
+
+### CaseSensitive:  
+casesensitive: _\<expressionBooleanArgument\>_  
+Changes the case sensitivity from now on. 0 disabled (default), or 1 enabled.  
   
 ------------------------------------------------------------------------------------------------------------------------------------------------------------
   
@@ -343,6 +376,7 @@ There could be other ways, like with eval, etc.
 ------------------------------------------------------------------------------------------------------------------------------------------------------------  
   
 ## <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/8157451f-687a-4c7e-b073-6a1cd949ea0b" />Full default function list:  
+(If obsolete, you can find the whole list in Comparser.cs in FillDefault, that is the complete list of functions and constants, including all naming variants)  
 
 ### Vector/Meta functions:  
 eval(_\<string\>_) ...parses a string as an expression and evaluates it (might not work properly yet). Example: eval("1+1") = 2  
