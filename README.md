@@ -344,12 +344,12 @@ There could be other ways, like with eval, etc.
   
 ## <img width="16" height="16" alt="image" src="https://github.com/user-attachments/assets/8157451f-687a-4c7e-b073-6a1cd949ea0b" />Full default function list:  
 
-### Vector/Meta functions:
+### Vector/Meta functions:  
 eval(_\<string\>_) ...parses a string as an expression and evaluates it (might not work properly yet). Example: eval("1+1") = 2  
 count(_\<vector\>_) ...counts the number of vector elements in the top layer. Example: count((1,2,3,4),5,6) = 3  
 cat/concat(_\<vector\>_) ...unpacks the nesting of the vector, puts all the elements to one top layer. Example: cat((1,2,(3,4)),5,6) = 1,2,3,4,5,6  
   
-### Binary operations (chainable/nestable):
+### Binary operations (chainable/nestable):  
 min/minimum(_\<vector\>_,_\<vector\>_,...) ...component-wise minimum.  
 max/maximum(_\<vector\>_,_\<vector\>_,...) ...component-wise maximum.  
 softmin(_\<vector\>_,_\<vector\>_,...) ...component-wise soft minimum. Equals to  ln(e^a+e^b)  
@@ -418,29 +418,41 @@ ncosc/coscpi(_\<vector\>_) ...Also equals to cosc(pi*_\<vector\>_).
 coshc/cosch(_\<vector\>_) ...Also equals to (1-cosh(_\<vector\>_))/_\<vector\>_.  
 ncoshc/ncosch/coshcpi/coschpi(_\<vector\>_) ...Also equals to cosh(pi*_\<vector\>_).  
   
+### Color operations (used in the plotter to convert color spaces and values to other color spaces):  
+rgb2hsv/RgbToHsv(_\<vector\>_) ... takes 3 arguments for normalized RGB values, and returns normalized HSV values.  
+hsv2rgb/HsvToRgb(_\<vector\>_) ... takes 3 arguments for normalized HSV values, and returns normalized RGB values.  
+log2hsv/LogToHsv(_\<vector\>_) ... converts each argument into 3-vectors of normalized HSV values, argument to hue, and logarithmic magnitude to saturation and value.  
+lin2hsv/LogToHsv(_\<vector\>_) ... converts each argument into 3-vectors of normalized HSV values, argument to hue, and linear magnitude to saturation and value.  
+log2hsvc/LogToHsvC(_\<vector\>_) ... log2hsv, but the brightness component is looped instead of clamped. Also equals (1,1,cyc)log2hsv(_\<vector\>_).  
+lin2hsvc/LinToHsvC(_\<vector\>_) ... lin2hsv, but the brightness component is looped instead of clamped. Also equals (1,1,cyc)lin2hsv(_\<vector\>_).  
+log2rgb/LogToRgb(_\<vector\>_) ... Equals hsv2rgb(log2hsv(_\<vector\>_))  
+lin2rgb/LinToRgb(_\<vector\>_) ... Equals hsv2rgb(lin2hsv(_\<vector\>_))  
+log2rgbc/LogToRgbC(_\<vector\>_) ... Equals hsv2rgb(log2hsvc(_\<vector\>_))  
+lin2rgbc/LinToRgbC(_\<vector\>_) ... Equals hsv2rgb(lin2hsvc(_\<vector\>_))  
+  
   
 ## PLOTTER:  
 The app comes with a plotter component.   
 You can choose any coordinate bases you want, and process the RGB values any way you want. It's basically like a programmable shader.  
-LOAD/SAVE/PLOT - you can load or save your settings you have filled in (not ready yet), and clicking PLOT will render the plot (if it didn't render automatically yet).  
-Then i the animation row. The first text box is the animation length, then a previous frame button, then select frame box, then next frame button, and the animate toggle that can animate the frames automatically.  
-Then is the size, you can type in the picture width and height. It also automatically adjusts if you resize the window. And if you lock the lock button, the picture size will stay pinned evne if you resize the window.  
-The is the axis control of the time dimension. Axis controls have 3 textboxes and 3 locks.  
-For Start, Center and End. Locks can pin one of these, and then adjusting another one will automatically adjust the third unlocked one to keep the center in center.  
+LOAD/SAVE/PLOT - you can load or save the settings you have filled in (not ready yet), and clicking PLOT will render the plot (if it didn't render automatically yet).  
+Then is the animation row. The first text box is the animation length, then a previous frame button, then a select frame box, then a next frame button, and the animate toggle that can animate the frames automatically.  
+Then there is the size. You can type in the picture width and height. It also automatically adjusts if you resize the window. And if you lock the lock button, the picture size will stay pinned even if you resize the window.  
+Then there is the axis control of the time dimension. Axis controls have 3 text boxes and 3 locks.  
+For Start, Center, and End. Locks can pin one of these, and then adjusting another one will automatically adjust the third unlocked one to keep the center in the center.  
 The big lock button will pin the entire range.  
-Then is the selection of plotting mode.  
-There is Area X, which plots the function only in X range, and the Y will be the output, with OuY range.  
-Then is Line X, which is similar, but only draws the outlines of the curve, not the areas below the curve.  
-And finally RGB XY, which plots the function in 2D both the X and Y range (OuY is unused here).  
-The final textbox is the FixedY textbox, that is onyl used for the 1D modes, and selects which Y range slice you want to render.  
+Then there is the selection of plotting mode.  
+There is Area X, which plots the function only in X range, and the Y will be the output, with OutY range.  
+Then there is Line X, which is similar, but only draws the outline of the curve, not the area below the curve.  
+And finally, RGB XY, which plots the function in 2D for both the X and Y range (OuY is unused here).  
+The final textbox is the FixedY textbox, which is only used for the 1D modes, and selects which Y range slice you want to render.  
 And finally, there's the output editor. Name your output in the selector on the right, and click the plus button to create it.  
-On the left these is a selection about what to do if the values are out of 0-1 range, it can be clamped or looped, or you can overflow, which lets it go outside the range.  
-then each output has the 2 big codeboxes at the bottom. the bottom one is the evaluation stage, it gets these arguments:  
+On the left these is a selection about what to do if the values are out of 0-1 range: it can be clamped or looped, or you can overflow, which lets it go outside the range.  
+Then each output has the 2 big code boxes at the bottom. The bottom one is the evaluation stage. It gets these arguments:  
 z = the sample of the coordinate bases X and Y for that particular pixel.  
-t = the sample in time coordinate. For example, if you time range is 1-2-3, then the first frame will have t=1, and the last frame will have t=3.  
-the coebox above is the shader codebox. It receives the value of the evaluation box,and also a bunch of other values you coudl work with. And then expects that to evaluate into a vector of 3 normalized RGB values.  
-If you just type 0,0,0 in that box you will get a black square, if 1,1,1, you get white.  
-values you can use in the shader box:  
+t = the sample in the time coordinate. For example, if your time range is 1-2-3, then the first frame will have t=1, and the last frame will have t=3.  
+The code box above is the shader code box. It receives the value of the evaluation box, and also a bunch of other values you could work with. And then expects that to evaluate into a vector of 3 normalized RGB values.  
+If you just type 0,0,0 in that box, you will get a black square. If 1,1,1 - you get white.  
+Values you can use in the shader box:  
 v = the output value of the eval box below.  
 z = the same z input coordinate value the codeBox received  
 t = the same time value  
