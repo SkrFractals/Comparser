@@ -100,4 +100,5 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 	
 	// Implemented as encapsulated function, these Ops are just for parsing:
 	private class Index() : Operator(OpOrder.Index) { public override ILeaf Op(ILeaf value, ILeaf operand) => nan; }
+	private class DoNotEval : Operator { } // used for argument names (and perhaps later for definition names)
 }

@@ -1,5 +1,4 @@
-﻿#define NOCACHE
-using Comparser.Comparser.Numbers;
+﻿using Comparser.Comparser.Numbers;
 namespace Comparser.Comparser;
 public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T>*/ {
 	#region Call Functions
@@ -11,11 +10,11 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		public abstract Expression Call(Reader read, Value args);
 		// how to use: e.Insert(args, e.GetEval(args) ? e.result.Eval : base.Eval([], args).v); 
 		public class EvalCache(int size = 0) {
-			#if NOCACHE
-			private readonly int _size =  0;
-			#else
-			private readonly int _size =  size;
-			#endif
+			//#if NOCACHE
+			//private readonly int _size =  0;
+			//#else
+			private readonly int _size = size;
+			//#endif
 			//private List<(Value args, Value eval)> Debug = [];
 			private int _filled;
 			private Evaluated? _cache;
@@ -90,9 +89,9 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 	private class FuncTextOperator(Reader read, CallFunction parent, Func<ushort, string, Value> del, Value args)
 		: FunctionExpression(read, parent, OpCode.NotAvailable, args) {
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => Value.OperateString(depth, v, del);
-	}
-	private class FuncEval(Reader read, CallFunction parent, Value args, int cache = 0) : FuncTextOperator(read, parent, 
-			(d, x) => d > read.Context._stackOverflow ? StackOverflow : new Expression(new(read.Context, x, read.Cancel), out _, args, cache).Eval((ushort)(1 + d), args, false), args) { }
+	} // type, read, this, args
+	private class FuncEval(Reader read, CallFunction parent, Value args) : FuncTextOperator(read, parent, 
+			(d, x) => d > read.Context._stackOverflow ? StackOverflow : new Expression(new(read.Context, x, read.Cancel), out _, args).Eval((ushort)(1 + d), args, false), args) { }
 	private class FuncOperator : FunctionExpression {
 		private readonly Func<ILeaf, ILeaf> _del;
 		public FuncOperator(Reader read, CallFunction parent, Func<ILeaf, ILeaf> del, OpCode op, Value args) : base(read, parent, op, args) => _del = del;
@@ -203,6 +202,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 	// "to" can be smaller than "from", works both ways (does not return additive/multiplicative identity when in the wrong order, just iterates backwards)
 	private abstract class Iterator : FunctionExpression {
 		protected Iterator(Reader read, CallFunction parent, OpCode op, Value args) : base(read, parent, op, args) {
+			_preEvaluatable = false;
 			var iteratorIndex = args.Values.Length;
 			if (V.Values.Length != 4) {
 				_expr = new(new(read.Context, "", read.Cancel), out _, _args = None);
@@ -224,13 +224,14 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 				return new(nan); // iteration range over limit, perhaps accidental huge/infinity value in the range?
 			var iteratorIndex = args.Values.Length;
 			//_args = new(new Value[iteratorIndex + 1]);
-			Array.Copy(args.Values, _args.Values, iteratorIndex);
-			_args.Values[iteratorIndex] = new(nan, v.Error, v.Values[0].String);
+			var argsCopy = _args.Copy();
+			Array.Copy(args.Values, argsCopy.Values, iteratorIndex);//Array.Copy(args.Values, _args.Values, iteratorIndex);
+			argsCopy.Values[iteratorIndex] = new(nan, v.Error, v.Values[0].String);//_args.Values[iteratorIndex] = new(nan, v.Error, v.Values[0].String);
 			//var exp = new Expression(Context, v.Values[3].Text, ni);
 			return Result(EvalK, from, to, allowCache);
 			Value EvalK(int f) {
-				_args.Values[iteratorIndex].Leaf = (Real)f;
-				return depth < Context._stackOverflow ? _expr.Eval/*Copy*/((ushort)(1 + depth), _args, allowCache) : None;
+				argsCopy.Values[iteratorIndex].Leaf = (Real)f;//_args.Values[iteratorIndex].Leaf = (Real)f;
+				return depth < Context._stackOverflow ? _expr.Eval/*Copy*/((ushort)(1 + depth), argsCopy, allowCache) : None;//return depth < Context._stackOverflow ? _expr.Eval/*Copy*/((ushort)(1 + depth), _args, allowCache) : None;
 			}
 		}
 		virtual protected void Op(ref Value result, Value iteration, bool allowCache) => result = iteration;
@@ -296,13 +297,23 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) {
 			if (depth > Context._stackOverflow)
 				return StackOverflow;
-			var match = -1; for (var m = 0; m < parent.Def.Length; ++m)
+			//var uncollapse = v.Values.Length > 1;
+			var av = UnCollapseVector(v);
+			var match = -1;
+			for (var m = 0; m < parent.Def.Length; ++m) {
 				if (parent.Def[m].input.Match(v) && Cond((ushort)(1 + depth), parent.Def[m].condition, v, allowCache)) {
 					match = m;
 					break;
 				}
-				//var ok = true; for (var id = 0; id < parent.Def[m].input.Values.Length; ++id) ok &= parent.Def[m].input[id].Match(v[id]);if (ok) { match = m; break; }
-				return match == -1 ? None : parent.Def[match].def.EvalCopy((ushort)(1 + depth), v, allowCache); // failed to match any available argument list ? else eval.
+				if (!(/*uncollapse && */parent.Def[m].input.Match(av) && Cond((ushort)(1 + depth), parent.Def[m].condition, av, allowCache))) {
+					continue;
+				}
+				match = m;
+				v = av;
+				break;
+			}
+			//var ok = true; for (var id = 0; id < parent.Def[m].input.Values.Length; ++id) ok &= parent.Def[m].input[id].Match(v[id]);if (ok) { match = m; break; }
+			return match == -1 ? None : parent.Def[match].def.EvalCopy((ushort)(1 + depth), v, allowCache); // failed to match any available argument list ? else eval.
 		}
 		private static bool Cond(ushort depth, Expression? e, Value v, bool allowCache) {
 			if (e == null)

@@ -56,7 +56,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		private string PrintError() => Static.Errors[(byte)Error];// (Error & 1) > 0 ? "Stack Overflow." :(Error & 2) > 0 ? "Bad Expression" : "";
 		private string Tl() {
 			if (Values.Length <= 0)
-				return Text;
+				return String;
 			var s = "";
 			for (var i = 0; i < Values.Length; ++i)
 				s += (Values[i] = CollapseScalar(Values[i])).Tl() + "\n";
@@ -220,7 +220,9 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				vals = CallVirtual(ff, bv);
 			else {
 				vals.Leaf = o(av.Leaf, bv.Leaf);
-				vals.String = av.Leaf.IsNaN() && bv.Leaf.IsNaN() ? so(av.String, bv.String) : av.String;
+				vals.String = av.Leaf.IsNaN() || bv.Leaf.IsNaN() ? so(
+					av.Leaf.IsNaN() ? av.String : context.ToString(av, context.Decimals,true),
+					bv.Leaf.IsNaN() ? bv.String : context.ToString(bv, context.Decimals,true)) : av.String;
 				Expression.Err(ref vals.Error, av);
 				Expression.Err(ref vals.Error, bv);
 			}

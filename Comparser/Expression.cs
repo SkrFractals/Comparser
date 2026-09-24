@@ -9,6 +9,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 
 		
 		#region Content
+
+		protected bool _preEvaluatable = true;
 		// Contains user-defined custom function
 		protected readonly Comparser/*<T>*/ Context;
 		// Parsed and evaluated data
@@ -17,7 +19,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		private readonly CallFunction.EvalCache _cache;
 		//public readonly List<(int start, ParseDictionary.Type color)> Colors = [];
 		#endregion
-		
+
+		//public virtual Value Eval(ushort depth, Value args, bool allowCache = true, bool collapse = true) => new Expression(Context, V, _cache).EvalC(depth, args, allowCache, collapse); // DEBUG
 		#region Evaluations
 		/// <summary>
 		/// Evaluates the expression
@@ -49,10 +52,12 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		protected Value EvalValue(ushort depth, Value v, Value args/*, bool allowArg = false*/, bool allowCache) {
 			var a = args.Values;
 			if (v.Values.Length == 0) {
+				if (v.Op.GetType() == typeof(DoNotEval))
+					return v;
 				var eval =  Value.Operate2(
 					v.Term?.Eval(depth, args, allowCache) ?? new([v.Arg.Length == 0 ? v : GetArg(v.Arg, a)], v.Error, v.Text, v.String),
 					v.Operand?.Eval(depth, args, allowCache) ?? None, v.Op.Op, v.Op.SOp, depth, Context, args, allowCache, v.Op is Mul);
-				eval.Operand = v.Operand; // copy possible default argument
+				//eval.Operand = v.Operand; // copy possible default argument
 				if(eval.Text == "") eval.Text = v.Text;
 				return eval;
 			}
@@ -71,7 +76,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			}
 		}
 		private Value EvalArg(ushort depth, Value arg, Value args, bool allowCache) => depth > Context._stackOverflow ? StackOverflow 
-			: arg.Leaf.IsNaN() && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args, allowCache) ?? arg : arg;
+			: arg.Leaf.IsNaN() && arg.Values.Length == 0 && arg.Operand != null ? arg.Operand?.Eval((ushort)(1 + depth), args, allowCache) ?? arg : arg;
 		
 		#endregion
 		
@@ -375,7 +380,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			}
 			bool ReadString(out Expression readTo) {
 				var before = read.From;
-				if (read.GotoFirstFailed(1, 2, [], 0, out _, out _, false, 0, true)) {
+				if (read.GotoFirstFailed(0, 2, [], 0, out _, out _, false, 0, true)) {
 					readTo = new(Context, None);
 					return !F();
 				}
@@ -385,9 +390,10 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 					if (i + 1 < s.Length)
 						switch (s[i + 1]) {
 						case '\\': s = s.Remove(++i, 1); break; // intentional backslash in string
-						case 'n': R("\n"); break; // intentional newline in string
-						case 't': R("\t"); break; // intentional newline in string
-						case 'r': R("\r"); break; // intentional newline in string
+						case 'n': R("\n"); break; // intentional \n in string
+						case 't': R("\t"); break; // intentional \t in string
+						case 'r': R("\r"); break; // intentional \r in string
+						case '"': R("\""); break; // intentional " in string
 						default:
 							++i;
 							break;
@@ -508,9 +514,10 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 					// found ':', so try to read argument default new([..expr]) is to let it reference already read arguments:
 					read.TrimStart(1);
 					r.Term = null;
+					r.Op = new DoNotEval(); // marks it for non-evaluations
 					r.Operand = new(read, out _, new([..expr]), 1, OpOrder.SubExpression); // cache=1 for recalling evaluated defArgs
 					CollapseTerm(ref r.Operand);
-					goto default; // after reading the defArd, go try read ',' again, but with ':' not allowed again
+					goto default; // after reading the defArg, go try read ',' again, but with ':' not allowed again
 				default:
 					return !read.GotoFirstFailed(0, 2, [','], 1, out s, out _);
 					void TrimString() => r.String = TrimEnd(read.Uncomment(startR, read.From), 1); // remember string before ':'
@@ -518,8 +525,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			}
 			// experimental - pre-evaluate parts of expressions that are not dependent on any arguments:
 			bool CollapseTerm(ref Expression exp) {
-				if (Context.PreEvaluate && !CollapseValue(exp.V))
-					exp = new(Context, exp.Eval(0, None, false));
+				if (exp._preEvaluatable && Context.PreEvaluate && !CollapseValue(exp.V))
+					exp = new(Context, exp.Eval(0, args, false));
 				return false;
 			}
             bool CollapseValue(Value v) => !Context.PreEvaluate || (v.Values.Length > 0

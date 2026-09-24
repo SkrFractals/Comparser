@@ -35,7 +35,7 @@ public interface IPlot {
 	public int GetPercent();
 	public bool InPlace((object? x, object? y) a);
 	public (Point p, Size s) GetPlace((object? x, object? y) a);
-	public void SetFinished(Action<object?, object?, Bitmap?, int, CancellationToken/*, string*/> finishedImage);
+	public void SetFinished(Action<object?, object?, Comparser.Plot.BitmapReady, int, CancellationToken/*, string*/> finishedImage);
 	public void SoftCancel(CancellationTokenSource cancel);
 }
 public /*abstract*/  partial class Comparser/*<T>*/{
@@ -307,9 +307,9 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			if (OutputY.Shift(dx) && Mode == PlotMode.Xy)
 				_dirtyXy = true;*/
 		}
-		public class BitmapReady(Bitmap? bmp = null, bool finished = false) {
+		public class BitmapReady(Bitmap? bmp = null, int finished = 0) {
 			public Bitmap? D = bmp;
-			public bool F = finished;
+			public int F = finished;
 		}
 		public class Renders {
 			private readonly List<(Expression? e, PlotEval? v, int c)> _outs = [];
@@ -339,7 +339,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						//wb = _pwBmp[_previewBitmap];
 						RenderDiv = _previews - _previewBitmap;
 						//if (b == null/* || wb == null*/) {
-						bmp = new(_pBmp[_previewBitmap] = new(w >> RenderDiv, h >> RenderDiv), true);
+						bmp = new(_pBmp[_previewBitmap] = new(w >> RenderDiv, h >> RenderDiv), 0/*1*/);
 						//workMap = _pwBmp[_previewBitmap] = new Bitmap(w >> RenderDiv, h >> RenderDiv);
 						return memory = false;// false;
 						//}
@@ -347,10 +347,15 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						//workMap = wb;
 						//return false;
 					}
-					RenderDiv = 0;
 					var b = _bitmaps[frame]; // = pBmp[previews-1];
+					RenderDiv = 0;
+					if (b?.F >= 2) {
+						bmp = b;
+						return memory = true;
+					}
+					
 					//wb = WorkMaps[frame];//= pwBmp[previews-1];
-					if (b?.D == null || b.D.Width != w || b.D.Height != h/*|| wb == null*/) {
+					if ((b?.D == null || b.D.Width != w || b.D.Height != h/*|| wb == null*/)) {
 						bmp = _bitmaps[frame] = new(new(w, h));
 						//workMap = WorkMaps[frame] = new(w, h);
 						return memory = false;// false;
@@ -362,7 +367,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				if (length != _length) 
 					_bitmaps = new BitmapReady?[length];
 				//if(_bitmaps[frame] != null)
-				_bitmaps[frame]?.F = false;
+				_bitmaps[frame]?.F = 0;
 				memory = false;
 				_mode = mode; _w = w;_h = h;
 				_length = length;
@@ -573,11 +578,11 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				//if(Static.notinplace)Console.WriteLine("notReady");
 				return false;
 			}
-			if (memory && bmp.F) {
+			if (memory && bmp.F >= 1) {
 				FinishedImage?.Invoke(
 					_renderIx != null ? new PlotAxis(_renderIx) : null,
 					new PlotAxis(Mode == PlotMode.Xy ? InputY : OutputY),
-					bmp.D, 0, CancellationToken.None/*, "MEM"*/);
+					bmp, 0, CancellationToken.None/*, "MEM"*/);
 				return false;
 			}
 			/*++_done;
@@ -696,15 +701,15 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					Static.TaskManager(ref _taskArr, tasks, chunks, bh, renderToken, del);
 					
 					renderBitmap.D.UnlockBits(lb);
-					var rbmp = renderBitmap.D;
+					var rbmp = renderBitmap;
 					if (renderToken.IsCancellationRequested) {
-						rbmp = null;
+						rbmp.D = null;
 						_dirty = true;
 						_drawn = 0;
 						_r.Cancel();
 						//Console.WriteLine("FinishCancel " + Static.Time.ElapsedMilliseconds);
 					} else {
-						renderBitmap.F = true; // mark is as finished, so that it is safe to just pick it from the memory and return it without drawing it again
+						renderBitmap.F = 1; // mark is as finished, so that it is safe to just pick it from the memory and return it without drawing it again
 						//Console.WriteLine("Finish W" + renderBitmap.d.Width + " T" + Static.Time.ElapsedMilliseconds);
 						++_drawn;
 						//if (OutputR[0].Values.X?.start != _renderIx?.start)throw new("inconsistent axis!");
@@ -722,7 +727,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		public static int ValueToScreenLog(ILeaf value, ILeaf start, ILeaf d) => ValueToScreenLin(D1(value, Math.Log), start, d);//length * ((ILeaf.D1(value, Math.Log) - start) / (end - start));
 		public static ILeaf ScreenToValueLog(int x, ILeaf start, ILeaf d) => D1(ScreenToValueLin(x, start, d),Math.Exp); //ILeaf.D1(ScreenToValueLin(length, x, start, end), Math.Exp);
 
-		public void SetFinished( Action<object?, object?, Bitmap?, int, CancellationToken/*, string*/> finishedImage) => FinishedImage = finishedImage;
-		public Action<object?, object?, Bitmap?, int, CancellationToken/*, string*/>? FinishedImage;
+		public void SetFinished( Action<object?, object?, BitmapReady, int, CancellationToken/*, string*/> finishedImage) => FinishedImage = finishedImage;
+		public Action<object?, object?, BitmapReady, int, CancellationToken/*, string*/>? FinishedImage;
 	}
 }

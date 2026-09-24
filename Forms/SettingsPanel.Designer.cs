@@ -41,6 +41,7 @@ partial class SettingsPanel {
 		chunkBox = new TextBox();
 		drawTasksLabel = new Label();
 		drawTaskBox = new TextBox();
+		mp4TaskBox = new TextBox();
 		drawChunkBox = new TextBox();
 		drawChunksLabel = new Label();
 		plotChunksLabel = new Label();
@@ -270,6 +271,16 @@ partial class SettingsPanel {
 		drawTaskBox.Text = "1";
 		drawTaskBox.TextChanged += drawTaskBox_TextChanged;
 		// 
+		// mp4TaskBox
+		// 
+		mp4TaskBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
+		mp4TaskBox.Location = new Point(250, 257);
+		mp4TaskBox.Name = "mp4TaskBox";
+		mp4TaskBox.Size = new Size(67, 23);
+		mp4TaskBox.TabIndex = 21;
+		mp4TaskBox.Text = "1";
+		mp4TaskBox.TextChanged += mp4TaskBox_TextChanged;
+		// 
 		// drawChunkBox
 		// 
 		drawChunkBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
@@ -383,6 +394,7 @@ partial class SettingsPanel {
 	private TextBox chunkBox;
 	private Label drawTasksLabel;
 	private TextBox drawTaskBox;
+	private TextBox mp4TaskBox;
 	private TextBox drawChunkBox;
 	private Label drawChunksLabel;
 	private Label plotChunksLabel;

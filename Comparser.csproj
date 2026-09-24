@@ -13,6 +13,9 @@
 
   <ItemGroup>
     <None Include="Comparser\Numbers\Dual.cs" />
+    <None Update="ffmpeg.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

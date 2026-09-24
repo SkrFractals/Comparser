@@ -366,7 +366,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 			return;
 		var d = _myStates[c].D;
 		File.WriteAllText(saveCode.FileName, d[codeBox].Serialize()); // outputs
-		MessageBox.Show("Code saved.", "SAVED");
+		//MessageBox.Show("Code saved.", "SAVED");
 	}
 	private void loadButton_Click(object sender, EventArgs e) => openCode.ShowDialog();
 	private void saveButton_Click(object sender, EventArgs e) => saveCode.ShowDialog();

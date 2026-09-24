@@ -303,7 +303,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 								var newRead = _currentReader = new(this, expand, cancel);
 								ReadLines(pref + (read.Line + 1) + "/", newRead);
 								_currentReader = read;
-								read.AppendC(newRead.Colors);
+								//read.AppendC(newRead.Colors); // no not color Do strings, they might not even be in the code
 							}
 						}
 						if (doContinue)
@@ -485,7 +485,13 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 				}
 				bool FailEval(out Value evaluated, Expression.ParseAs parseAs = Expression.ParseAs.Expression) {
 					var expression = new Expression(read, out _, None, 0, 0, parseAs);
-					evaluated = UnCollapseScalar(expression.Eval(0, None, false));
+
+					var ee = expression.Eval(0, None, false);
+					evaluated = UnCollapseScalar(ee);
+					
+					//evaluated = UnCollapseScalar(expression.Eval(0, None, false));
+					
+					
 					return false;
 				}
 				bool FailEvalClose(out Value evaluated, Expression.ParseAs parseAs = Expression.ParseAs.Expression) 
@@ -934,7 +940,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 					case '"': // string
 						if (otherMustBeNext && Text[From] != '"' && skip == 0 && !comment && !str)
 							return true;
-						Eat();
+						Eat(false);
 						GetChar('"', out strMark);
 						if (comment)
 							break; // inside a comment, doesn't count
@@ -952,7 +958,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 						if (otherMustBeNext && Text[From] != '/' && skip == 0 && !comment && !str)
 							return true;
 						bool endComment = next > 0 && Text[next - 1] == '*', newComment = next < Text.Length - 1 && Text[next + 1] == '*';
-						Eat();
+						Eat(false);
 						GetChar('/', out commDash);
 						if (str)
 							break; // inside a string, doesn't count
@@ -997,11 +1003,12 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 				}
 				return true; // didn't find it
 
-				void Eat() {
+				void Eat(bool trim = true) {
 					if (ln < next) 
 						++Line;
 					From = next + 1;
-					TrimStart(separators/*, real*/);
+					if(trim)
+						TrimStart(separators/*, real*/);
 				}
 			}
 		}
@@ -1052,6 +1059,11 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		if (i.Values.Length == 0)
 			i.Values = [new(i.Leaf, i.Error, i.String) {Operand = i.Operand}];
 		return i;
+	}
+	private static Value UnCollapseVector(Value i) {
+		return i.Values.Length > 1 ? new([i.Copy() /*{ Operand = i.Operand }*/], FailReason.Success, i.Text, i.String) { Operand = i.Operand } : i;
+		//	i.Values = [new(i.Leaf, i.Error, i.String) {Operand = i.Operand}];
+		//return i;
 	}
 	[GeneratedRegex(@"^[a-zA-Z0-9\s,]*$")]
 	private static partial Regex MyRegex();

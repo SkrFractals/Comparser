@@ -20,7 +20,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public static int Decimals = 3;
 	//public static int Algebra = 1;
 	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
-	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1;
+	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1, Mp4Tasks = 1;
 	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	private bool  _preEvaluate = true, _darkMode = true;
 	public static readonly IComparser Context = new Comparser.Comparser();
@@ -49,6 +49,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		var initTasks = Math.Max(MaxTasks / 2, 1);
 		taskBox.Text = initTasks.ToString();
 		drawTaskBox.Text = initTasks.ToString();
+		mp4TaskBox.Text = initTasks.ToString();
 		previewSelect.SelectedIndex = 2;
 		plotLabel.Text = "Auto Plot";
 		autoLabel.Text = "Auto Build:";
@@ -105,6 +106,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 	private void drawTaskBox_TextChanged(object sender, EventArgs e) {
 		if (!int.TryParse(drawTaskBox.Text, out DrawTasks) || DrawTasks < 1) DrawTasks = 1;
 		if (DrawTasks > MaxTasks) DrawTasks = MaxTasks;
+	}
+	private void mp4TaskBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(mp4TaskBox.Text, out Mp4Tasks) || Mp4Tasks < 1) Mp4Tasks = 1;
+		if (Mp4Tasks > MaxTasks) Mp4Tasks = MaxTasks;
 	}
 
 	private void drawChunkBox_TextChanged(object sender, EventArgs e) {
