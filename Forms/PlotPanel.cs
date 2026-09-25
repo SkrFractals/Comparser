@@ -4,6 +4,7 @@ using Comparser.Forms.Controls;
 using Comparser.Forms.Core;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Text.RegularExpressions;
 using static Comparser.Forms.Core.IPanel;
 namespace Comparser.Forms;
@@ -111,6 +112,16 @@ public partial class PlotPanel : UserControl, IPanel {
 		InitializeComponent();
 		_s = new();
 	}
+	private enum SaveType : byte {
+		Plotter,
+		Png,
+		Pngs,
+		Mp4
+	}
+	private SaveType saveType = SaveType.Plotter;
+	private void saveSelect_SelectedIndexChanged(object? sender, EventArgs e) {
+		saveType = (SaveType)Math.Max(saveSelect.SelectedIndex, 0);
+	}
 	public PlotPanel(MenuPanel root, ParentForm parent) : this() {
 		InitVar(ref _var, this, root, parent, "Comparser - Plotter");
 		_s = _var.Root.PlotSet!.S;
@@ -139,7 +150,9 @@ public partial class PlotPanel : UserControl, IPanel {
 		_s.outputSelect.SelectedIndexChanged += SelectOutput;
 		_s.clipSelect.SelectedIndexChanged += SelectClip;
 		_s.buildButton.Click += ClickBuild;
-		_s.saveMp4.Click += ClickMp4;
+		//_s.saveMp4.Click += ClickMp4;
+		_s.saveSelect.SelectedIndexChanged += saveSelect_SelectedIndexChanged;
+
 		_s.saveButton.Click += ClickSave;
 		_s.loadButton.Click += ClickLoad;
 		_s.fysButton.Click += FysClick;
@@ -269,8 +282,14 @@ public partial class PlotPanel : UserControl, IPanel {
 		
 		UpdatePlot(true);
 	}
-	private void ClickMp4(object? sender, EventArgs e) => saveMp4.ShowDialog();
-	private void ClickSave(object? sender, EventArgs e) => savePlot.ShowDialog();
+	private void ClickSave(object? sender, EventArgs e) {
+		switch (saveType) {
+			case SaveType.Plotter: savePlot.ShowDialog(); return;
+			case SaveType.Png: savePng.ShowDialog(); return;
+			case SaveType.Pngs: savePngs.ShowDialog(); return;
+			case SaveType.Mp4: saveMp4.ShowDialog(); return;
+		}
+	}
 	private void ClickLoad(object? sender, EventArgs e) => openPlot.ShowDialog();
 	#endregion
 
@@ -526,14 +545,14 @@ public partial class PlotPanel : UserControl, IPanel {
 		GetPlot().SetFrame(Math.Min(_length - 1, _frame = Math.Clamp((int)SettingsPanel.Context.AsDouble(Eval(this, _tf)), 0, _length - 1)));
 		DirtyImage();
 		UpdatePlot(true);
-		if (_s.animatedBox.Checked || _mp4Cancel != null)
+		if (_s.animatedBox.Checked || _exportCancel != null)
 			return; // do not log undo for automatic animation frame advances
 		LogState(_s.itfBox);
 
 	}
 	private void TlChanged(object? sender, EventArgs e) {
 		/*InputT?.SetLength(*/
-		_length = Math.Max(1, (int)(SettingsPanel.Context.AsDouble(Eval(this, _tl))))/*)*/;
+		_length = Math.Max(1, (int)SettingsPanel.Context.AsDouble(Eval(this, _tl)))/*)*/;
 		if (GetPlot() is not { } p || _inputT == null)
 			return;
 		p.Resize(plotBox.Width, plotBox.Height, _length);//UpdatePlot();
@@ -543,11 +562,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		DirtyImage();
 	}
 	private void AniChanged(object? sender, EventArgs e) => LogState(_s.animatedBox);
-	private bool InPlace() {
-		if (GetPlot() is { } p)
-			return p.InPlace(_renderAxes);
-		return true;
-	}
+	private bool InPlace() => !(GetPlot() is { } p) || p.InPlace(_renderAxes);
 	private void OnFinished(object? x, object? y, Comparser.Comparser.Plot.BitmapReady bmp, int outDiv, CancellationToken renderToken/*, string message = ""*/) {
 		if (IsDisposed || Disposing || !IsHandleCreated) {
 			OnFinUi(x, y, bmp, outDiv, renderToken); 
@@ -571,7 +586,8 @@ public partial class PlotPanel : UserControl, IPanel {
 				_exportBmps = new Bitmap[_length];
 			_exportBmps[_frame] = bmp.D;*/
 			bmp.F = 2;
-			if (_mp4Cancel != null && _encodedPng.Length > _frame && _encodedPng[_frame] < 3 && bmp.D != null) {
+			_exportBmp = bmp.D;
+			if (_exportCancel != null && _encodedPng.Length > _frame && _encodedPng[_frame] < 3 && bmp.D != null) {
 				_encodedPng[_frame] = 1;
 				try {
 					_ = MakeTemp();
@@ -612,7 +628,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		// draw blocks/delays
 		if (!_cancelled && (SettingsPanel.AutoPlot && _dirtyImage || _div > 0) || _forced) {
 
-			if (!(_forced || _s.animatedBox.Checked || _mp4Cancel != null || _div > 0) && InPlace()) {
+			if (!(_forced || _s.animatedBox.Checked || _exportCancel != null || _div > 0) && InPlace()) {
 				if (_plotDelay.IsRunning) {
 					if (_plotDelay.ElapsedMilliseconds < SettingsPanel.PlotDelay/* && InPlace()*/)
 						return;
@@ -631,7 +647,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		
 		// TODO if the plot Location is entirely outside the view, then consider it non-animated
 		bool mem = false;
-		if (GetPlot() is { } p && (_drawing = p.Update(out mem, plotBox.Width, plotBox.Height, _length, SettingsPanel.PreviewLoad == 0 || _animated || _mp4Cancel != null || !InPlace() && SettingsPanel.UseMem, ref _cancel))) {
+		if (GetPlot() is { } p && (_drawing = p.Update(out mem, plotBox.Width, plotBox.Height, _length, SettingsPanel.PreviewLoad == 0 || _animated || _exportCancel != null || !InPlace() && SettingsPanel.UseMem, ref _cancel))) {
 			_cancelled = _dirtyImage = _forced = false;
 		}
 		if (mem)
@@ -845,30 +861,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		string S(Control control) => d[control].Serialize();
 	}
 	
-	#region MP4
-
-	/*private int SavePng() {
-		if (_exportBmps.Length <= _frame)
-			_exportBmps = new Bitmap?[_length];
-		//if (_frame < 0 || encodedPng[_frame] >= 2 || ExportBmps[_frame] != null)
-		//	return false;
-		if (_exportBmps[_frame] == null)
-			return _encodedPng[_frame];//true;
-		_encodedPng[_frame] = 1;
-		try {
-			_ = MakeTemp();
-			// new memoryStream solution
-			var m = _msPngs[_frame] ??= new();
-			_exportBmps[_frame]?.Save(m, System.Drawing.Imaging.ImageFormat.Png);
-			_msPngs[_frame]?.Flush();
-
-			_encodedPng[_frame] = 3;
-			return _encodedPng[_frame];//false;
-		} catch (Exception) {
-			_encodedPng[_frame] = 0;
-			return _encodedPng[_frame];//true;
-		}
-	}*/
+	#region Export
 	internal static string GetRootSaveDir() {
 		string baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Comparser");
 		//if (!DisableSaving)
@@ -887,146 +880,97 @@ public partial class PlotPanel : UserControl, IPanel {
 			_ = Directory.CreateDirectory(path);
 		return path;
 	}
-	private int SavePngs() {
-		//allocPngType = PngType.Yes; // ensures FinishTasks will want to start threads exporting PNGs
-		_pngFailed = 0; // reset failure attempt counter, every png write fail will increment it, and if it reaches 1000 it will cancel the FinishTasks
-		//tryPng = previewFrames;
-
-		for (int enc = 0; ! _mp4CancelToken.IsCancellationRequested && enc < _length; Thread.Sleep(100))
-			while (enc < _length && _encodedPng[enc] >= 2)
-				++enc;
-		//FinishTasks(true, true, (short _) => false); // FinishTasks will keep writing PNGs in parallel, until they are all finished (or cancel requested)
-
-		return _pngFailed >= MaxPngFails ? 2 : _mp4CancelToken.IsCancellationRequested ? 1 : 0; // If the export was canceled from outside - terminate the ffmpeg process
-	}
 	private (int, int, string) GetPngFormat() {
 		int n = 1, nf = _length;
 		for (var number = nf; number >= 10; number /= 10)
 			++n;
 		return (n, nf, "D" + n);
 	}
-	internal string SavePngs(string pngPath) {
-		//exportType = ScheduledTask.Pngs;
-		//FinishTasks(true, true, _ => false); // Make sure there are no bitmap generation tasks still running
-		if (SavePngs() == 2) 
-			return Fail("PNG saving failed"); // failed to save
-		if (_mp4CancelToken.IsCancellationRequested)
-			return ""; // just canceled, return with no error
-		pngPath = pngPath[..^4]; // remove the ".png"
-		var (n, nf, d) = GetPngFormat();
-		var maxGenerationTasks = Math.Max(1, SettingsPanel.Mp4Tasks - 1); // task count
-		if (maxGenerationTasks <= 1) {
-			for (int i = 0; i < _length; ++i) 
-				MakePng(i);
-			return ""; // finished
-		}
-		/*var po = new ParallelOptions {
-			MaxDegreeOfParallelism = SettingsPanel.Mp4Tasks,
-			CancellationToken = _mp4CancelToken
-		};*/
-		var fail = "";
-		var result = Parallel.For(0, _length, (i, state) => { MakePng(i); });
-		void MakePng(int i) {
-			var fileTo = $"{pngPath}_{i.ToString(d)}.png";
-			for (var attempt = 0; attempt < 10; ++attempt) {
-				try {
-					// new memory stream solution
-					using FileStream fs = new FileStream(fileTo, FileMode.OpenOrCreate, FileAccess.Write);
-					if (_msPngs[i] is { } ms) {
-						ms.Position = 0;
-						ms.CopyTo(fs);
-					}
-					fs.Flush();
-					fs.Close();
-					break;
-				} catch (Exception) {
-					Thread.Sleep(10 + 10 * attempt * attempt); // wait and try again 10 times if failed
-				}
-			}
-		}
-		while (!result.IsCompleted)
-			Thread.Sleep(100); // Wait until p.for is finished
-		return fail; // finished
-	}
-	private int /*_encodedMp4,*/ _pngFailed, _encMp4;
+	private Bitmap? _exportBmp;
+	private int /*_encodedMp4,*/ _pngFailed, _encExport;
 	public int SelectedFps = 60;
-	private CancellationTokenSource? _mp4Cancel;
-	private CancellationToken _mp4CancelToken;
+	private CancellationTokenSource? _exportCancel;
+	private CancellationToken _exportCancelToken;
 	private byte[] _encodedPng = [];
 	private MemoryStream?[] _msPngs = [];
 	private const int MaxPngFails = 10;
-	//private Bitmap?[] _exportBmps = [];
-
-	private void saveMp4_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
-		_mp4Cancel?.Cancel();
-		_mp4CancelToken = (_mp4Cancel = new()).Token;
+	private void savePngs_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
+		=> StartExport(() => SavePngs(savePngs.FileName));
+	private void saveMp4_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
+		=> StartExport(() => PngsToMp4(saveMp4.FileName));
+	private void savePng_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
+		if (_exportBmp == null)
+			return;
+		using var myStream = savePng.OpenFile();
+		_exportBmp.Save(myStream, System.Drawing.Imaging.ImageFormat.Png);
+		myStream.Close();
+	}
+	private void StartExport(Action del) {
+		_exportCancel?.Cancel();
+		_exportCancelToken = (_exportCancel = new()).Token;
 		_encodedPng = new byte[_length];
 		for (var i = 0; i < _msPngs.Length; ++i) {
 			_msPngs[i]?.Dispose();
 			_msPngs[i] = null;
 		}
 		_msPngs = new MemoryStream[_length];
-		for (var i = 0; i < _msPngs.Length; ++i) 
+		for (var i = 0; i < _msPngs.Length; ++i)
 			_encodedPng[i] = 0;
 		_ = MakeTemp();
 		//_encodedMp4 = 0;
 		_s.animatedBox.Checked = true;
 		//_s.animatedBox.Checked = false;
 		//_exportBmps = [];
-		_s.itfBox.Text = "0"; 
+		_s.itfBox.Text = "0";
 		DirtyImage();
 		//_s.animatedBox.Checked = true;
 		//_s.Block();
-		Task.Run(() =>
-		{
-			 PngsToMp4(saveMp4.FileName);
+		_ = Task.Run(() => {
+			del();
 			// _s.Unblock();
-			_mp4Cancel = null;
-			BeginInvoke(StopMp4);
+			_exportCancel = null;
+			_ = BeginInvoke(StopExport);
 		});
 	}
-	private void StopMp4() {
+	private void StopExport() {
 		//_s.Unblock();
 		_s.animatedBox.Checked = false;
 	}
+	internal string SavePngs(string pngPath) {
 
-	/*bool TryPngBitmaps(FractalTask task) {
-		if (mp4CancelToken.IsCancellationRequested || bitmapsFinished < previewFrames) // Do not write when canceled
-			return false;
-		// Png is starting from scratch - cleanup the temp files and start png index from after the preview
-		if (tryPng < 0) {
-			tryPng = previewFrames;
-			CleanupTempFiles();
+		string fail = ""; // setup error listener
+		pngPath = pngPath[..^4]; // remove the ".png"
+		var (n, nf, d) = GetPngFormat();
+		try {
+			_pngFailed = 0;
+			// will check if that other parallel thread elsewhere finished exporting all the pngs into the memory streams, and will dump these streams sequentially into the ffmpeg's input
+			for (_encExport = 0; !_exportCancelToken.IsCancellationRequested && _encExport < _length; Thread.Sleep(100)) { // TODO shorten sleep
+				while (_encExport < _length && /*_frame < _exportBmps.Length && _exportBmps[_frame] != null && SavePng()*/ _encodedPng[_encExport] >= 2 && _msPngs[_encExport] is { } ms) {
+					var fileTo = $"{pngPath}_{_encExport.ToString(d)}.png";
+					for (var attempt = 0; attempt < 10; ++attempt) {
+						try {
+							// new memory stream solution
+							using FileStream fs = new FileStream(fileTo, FileMode.OpenOrCreate, FileAccess.Write);
+							ms.Position = 0;
+							ms.CopyTo(fs);
+							fs.Flush();
+							fs.Close();
+							//++_encExport;
+							break;
+						} catch (Exception) {
+							Thread.Sleep(10 + 10 * attempt * attempt); // wait and try again 10 times if failed
+						}
+					}
+					++_encExport;
+				}
+			}
+		} catch (Exception ex) {
+			return Fail("Exception: " + ex.Message); // return exception error
 		}
-		if (allocPngType == PngType.No) {
-			//tryPng = bitmapsFinished;
-			return false;
-		}
-		// Increment png index to the first one that hasn;t been encoded yet
-		while (tryPng < _length && encodedPng[tryPng] >= 2)
-			++tryPng;
-		// are all pngs encoded? If so abort thes attempt as finished
-		if (tryPng >= _length)
-			return false;
-		// find an image avaiable to encode png from the first one thet needs to be encoded to that + maxTasks:
-		var bitmapIndex = tryPng;
-		for (var mx = Math.Min(_length, tryPng + allocMaxTasks); bitmapIndex < mx && encodedPng[bitmapIndex] >= 1; ++bitmapIndex) { }
-		if (bitmapIndex >= _length || encodedPng[bitmapIndex] >= 1 || bitmapIndex >= _length || bitmapState[bitmapIndex] < BitmapState.Unlocked)
-			return false;
-		// this one is avaiable, so do it:
-		encodedPng[bitmapIndex] = 1;
-		if (IsCancelRequested())
-			return false; // Do not write gif frames when cancelled
-		task.Start(-3, () => TryPngBitmap(task.TaskIndex, bitmapIndex));
-		return true;
+		if (_pngFailed >= MaxPngFails)
+			fail += ";Failed to save PNGs";
+		return fail != "" ? Fail("Ffmpeg errors: " + fail) : ""; // return fail or success
 	}
-	void TryPngBitmap(short taskIndex, int bitmapIndex) {
-		var stop = BeginTask();
-		//  try to save png, if it failed, decrease the png index to this one so it can be tried again later
-		if (SavePng(bitmapIndex - previewFrames))
-			tryPng = Math.Min(tryPng, (short)bitmapIndex);
-		FinishTask(tasks[taskIndex], stop, "PNG:" + bitmapIndex);
-	}*/
 	private string PngsToMp4(string mp4Path) {
 		var ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
 		if (!File.Exists(ffmpegPath))
@@ -1039,8 +983,8 @@ public partial class PlotPanel : UserControl, IPanel {
 		// Start FFmpeg in a parallel process to encode the PNG sequence
 		using var ffmpegProcess = new Process();
 		ffmpegProcess.StartInfo = new() {
-			FileName = ffmpegPath,
-			Arguments = $"-y -framerate {SelectedFps} -f image2pipe -c:v png -i pipe:0 -movflags +faststart -c:v libx264 -crf 18 -pix_fmt yuv420p \"{mp4Path}\"",
+			FileName = ffmpegPath, // TODO alos put SettingsPanel.FrameRate to fps.Interval
+			Arguments = $"-y -framerate {SettingsPanel.FrameRate} -f image2pipe -c:v png -i pipe:0 -movflags +faststart -c:v libx264 -crf 18 -pix_fmt yuv420p \"{mp4Path}\"",
 			UseShellExecute = false,
 			RedirectStandardInput = true,
 			RedirectStandardError = true, // will get progress from this
@@ -1067,21 +1011,18 @@ public partial class PlotPanel : UserControl, IPanel {
 			ffmpegProcess.BeginErrorReadLine();
 			using (var inputStream = ffmpegProcess.StandardInput.BaseStream) {
 				// will check if that other parallel thread elsewhere finished exporting all the pngs into the memory streams, and will dump these streams sequentially into the ffmpeg's input
-				for (_encMp4 = 0; !_mp4CancelToken.IsCancellationRequested && _encMp4 < _length; Thread.Sleep(100)) { // TODO shorten sleep
-					while (_encMp4 < _length && /*_frame < _exportBmps.Length && _exportBmps[_frame] != null && SavePng()*/ _encodedPng[_encMp4] >= 2 && _msPngs[_encMp4] is { } ms) {
+				for (_encExport = 0; !_exportCancelToken.IsCancellationRequested && _encExport < _length; Thread.Sleep(100)) { // TODO shorten sleep
+					while (_encExport < _length && /*_frame < _exportBmps.Length && _exportBmps[_frame] != null && SavePng()*/ _encodedPng[_encExport] >= 2 && _msPngs[_encExport] is { } ms) {
 						// SavePng now returns encodedPng[encmp4]
 						ms.Position = 0;
 						ms.CopyTo(inputStream /*allPngs*/); // Write memory stream directly to FFmpeg's input stream
-						Console.WriteLine("Exported frame: " + _encMp4);
-						++_encMp4;
+						//Console.WriteLine("Exported frame: " + _encMp4);
+						++_encExport;
 					}
 				}
-
-				/*	allPngs.Position = 0;
-					allPngs.CopyTo(inputStream);*/
 			}
 
-			if (_pngFailed >= MaxPngFails || _mp4CancelToken.IsCancellationRequested) { // If the export was canceled from outside - terminate the ffmpeg process
+			if (_pngFailed >= MaxPngFails || _exportCancelToken.IsCancellationRequested) { // If the export was canceled from outside - terminate the ffmpeg process
 				if (ffmpegProcess.StandardInput.BaseStream.CanWrite) {
 					ffmpegProcess.StandardInput.Write("q");  // Send 'q' to FFmpeg to terminate gracefully
 					ffmpegProcess.StandardInput.Flush();     // Ensure the command is sent

@@ -24,7 +24,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	private bool _preEvaluate = true, _darkMode = true, _allowStrings = true;
 	public static readonly IComparser Context = new Comparser.Comparser();
-	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000, PreviewLoad = 3;
+	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000, PreviewLoad = 3, FrameRate = 30;
 	public static Reporting ReportingMode = Reporting.Report;
 	public static bool AutoBuild = true, AutoPlot = true;
 	public enum Reporting : byte { Silent = 0, Timer = 1, Report = 2 }
@@ -111,6 +111,9 @@ public partial class SettingsPanel : UserControl, IPanel {
 		if (!int.TryParse(mp4TaskBox.Text, out Mp4Tasks) || Mp4Tasks < 1) Mp4Tasks = 1;
 		if (Mp4Tasks > MaxTasks) Mp4Tasks = MaxTasks;
 	}
+	private void frameRateBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(frameRateBox.Text, out FrameRate) || FrameRate < 1) FrameRate = 1;
+	}
 
 	private void drawChunkBox_TextChanged(object sender, EventArgs e) {
 		if (!int.TryParse(drawChunkBox.Text, out DrawChunks) || DrawChunks < 1) DrawChunks = 1;
@@ -159,7 +162,9 @@ public partial class SettingsPanel : UserControl, IPanel {
 
 	private void SettingsPanel_Load(object sender, EventArgs e) { }
 
-	private void previewSelect_SelectedIndexChanged(object sender, EventArgs e) => PreviewLoad = Math.Max(previewSelect.SelectedIndex,0);
+	private void previewSelect_SelectedIndexChanged(object sender, EventArgs e) => PreviewLoad = Math.Max(previewSelect.SelectedIndex, 0);
 	public bool Undo() => true;
 	public bool Redo() => true;
+
+
 }

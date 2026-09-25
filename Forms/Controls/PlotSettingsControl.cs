@@ -6,7 +6,7 @@ public partial class PlotSettingsControl : UserControl {
 	public void Block() { SetBlock(true); buildButton.Text = "CANCEL"; }
 	public void Unblock() { SetBlock(false); buildButton.Text = "OK"; }
 	private void SetBlock(bool b) {
-		prevButton.Enabled = nextButton.Enabled = loadButton.Enabled = saveButton.Enabled = !b;
+		animatedBox.Enabled = prevButton.Enabled = nextButton.Enabled = loadButton.Enabled = saveButton.Enabled = !b;
 		SetBlock(panel, itfBox.ReadOnly = itlBox.ReadOnly = b);
 	}
 	private void SetBlock(object c, bool r) {
@@ -15,9 +15,5 @@ public partial class PlotSettingsControl : UserControl {
 		cr.Tag = r;
 		foreach (var ch in cr.Controls)
 			SetBlock(ch, r);
-	}
-
-	private void saveMp4_Click(object sender, EventArgs e) {
-
 	}
 }

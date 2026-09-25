@@ -92,7 +92,7 @@ partial class PlotSettingsControl {
 		itfBox = new RichTextBox();
 		animatedBox = new CheckBox();
 		saveButton = new Button();
-		saveMp4 = new Button();
+		saveSelect = new ComboBox();
 		panel.SuspendLayout();
 		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
@@ -883,23 +883,22 @@ partial class PlotSettingsControl {
 		saveButton.Text = "Save";
 		saveButton.UseVisualStyleBackColor = true;
 		// 
-		// saveMp4
+		// saveSelect
 		// 
-		saveMp4.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-		saveMp4.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		saveMp4.Location = new Point(175, 3);
-		saveMp4.Name = "saveMp4";
-		saveMp4.Size = new Size(142, 27);
-		saveMp4.TabIndex = 87;
-		saveMp4.Text = "Save MP4";
-		saveMp4.UseVisualStyleBackColor = true;
-		saveMp4.Click += saveMp4_Click;
+		saveSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+		saveSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
+		saveSelect.FormattingEnabled = true;
+		saveSelect.Items.AddRange(new object[] { "Plotter", "This Image", "Pngs Anim", "Mp4 Anim" });
+		saveSelect.Location = new Point(178, 4);
+		saveSelect.Name = "saveSelect";
+		saveSelect.Size = new Size(139, 27);
+		saveSelect.TabIndex = 89;
 		// 
 		// PlotSettingsControl
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
-		Controls.Add(saveMp4);
+		Controls.Add(saveSelect);
 		Controls.Add(loadButton);
 		Controls.Add(panel);
 		Controls.Add(saveButton);
@@ -991,5 +990,5 @@ partial class PlotSettingsControl {
     public Button fycButton;
     public Button fyeButton;
 	public Button saveButton;
-	public Button saveMp4;
+	public ComboBox saveSelect;
 }

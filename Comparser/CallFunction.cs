@@ -297,17 +297,18 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) {
 			if (depth > Context._stackOverflow)
 				return StackOverflow;
-			//var uncollapse = v.Values.Length > 1;
 			var av = UnCollapseVector(v);
 			var match = -1;
 			for (var m = 0; m < parent.Def.Length; ++m) {
-				if (parent.Def[m].input.Match(v) && Cond((ushort)(1 + depth), parent.Def[m].condition, v, allowCache)) {
-					match = m;
-					break;
-				}
-				if (!(/*uncollapse && */parent.Def[m].input.Match(av) && Cond((ushort)(1 + depth), parent.Def[m].condition, av, allowCache))) {
+				if (parent.Def[m].input.Match(v)) {
+					if(Cond((ushort)(1 + depth), parent.Def[m].condition, v, allowCache)) {
+						match = m;
+						break;
+					}
 					continue;
 				}
+				if (!(parent.Def[m].input.Match(av) && Cond((ushort)(1 + depth), parent.Def[m].condition, av, allowCache)))
+					continue;
 				match = m;
 				v = av;
 				break;
@@ -316,12 +317,13 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			return match == -1 ? None : parent.Def[match].def.EvalCopy((ushort)(1 + depth), v, allowCache); // failed to match any available argument list ? else eval.
 		}
 		private static bool Cond(ushort depth, Expression? e, Value v, bool allowCache) {
-			if (e == null)
+			if (e == null) 
 				return true;
+			
 			var l = e.Eval(depth, v, allowCache);
 			while (l.Values.Length > 0)
 				l = l.Values[0];
-			return l.Leaf.IsTrue();
+			return  l.Leaf.IsTrue();
 		}
 		public override GpuValue GpuParse(ushort depth) => depth > Context._stackOverflow ? new() : new(OpCode.Call, base.GpuParse((ushort)(1 + depth)), parent);
 	}

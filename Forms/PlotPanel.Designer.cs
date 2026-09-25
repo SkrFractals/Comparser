@@ -27,6 +27,8 @@ partial class PlotPanel {
 		openPlot = new OpenFileDialog();
 		savePlot = new SaveFileDialog();
 		saveMp4 = new SaveFileDialog();
+		savePngs = new SaveFileDialog();
+		savePng = new SaveFileDialog();
 		((ISupportInitialize)plotBox).BeginInit();
 		SuspendLayout();
 		// 
@@ -70,6 +72,18 @@ partial class PlotPanel {
 		saveMp4.Filter = "MP4 video (*.mp4)|*.mp4";
 		saveMp4.FileOk += saveMp4_FileOk;
 		// 
+		// savePngs
+		// 
+		savePngs.FileName = "savePngs";
+		savePngs.Filter = "PNG series (*.png)|*.png";
+		savePngs.FileOk += savePngs_FileOk;
+		// 
+		// savePng
+		// 
+		savePng.FileName = "savePng";
+		savePng.Filter = "PNG image (*.png)|*.png";
+		savePng.FileOk += savePng_FileOk;
+		// 
 		// PlotPanel
 		// 
 		AutoScaleMode = AutoScaleMode.None;
@@ -87,4 +101,6 @@ partial class PlotPanel {
 	private OpenFileDialog openPlot;
 	private SaveFileDialog savePlot;
 	private SaveFileDialog saveMp4;
+	private SaveFileDialog savePngs;
+	private SaveFileDialog savePng;
 }

@@ -196,7 +196,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			var i = Complex.one - (Complex)1;
 			_axis = [InputX = new(context, -10 * unit, 20 * unit, 1),
 				InputY = new(context, 10 * i, -20 * i, 1),
-				InputT = new(context, -10 * unit, 20 * unit, 1),
+				InputT = new(context, zero, unit, 1),
 				OutputY = new(context, -10 * unit, 20 * unit, 1)];
 			OutputR = [];
 			Context = context;

@@ -48,6 +48,9 @@ partial class SettingsPanel {
 		plotChunksLabel = new Label();
 		previewSelect = new ComboBox();
 		previewLabel = new Label();
+		mp4Label = new Label();
+		frameRateBox = new TextBox();
+		framerateLabel = new Label();
 		SuspendLayout();
 		// 
 		// darkButton
@@ -288,7 +291,7 @@ partial class SettingsPanel {
 		// mp4TaskBox
 		// 
 		mp4TaskBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
-		mp4TaskBox.Location = new Point(250, 257);
+		mp4TaskBox.Location = new Point(250, 265);
 		mp4TaskBox.Name = "mp4TaskBox";
 		mp4TaskBox.Size = new Size(67, 23);
 		mp4TaskBox.TabIndex = 21;
@@ -351,10 +354,45 @@ partial class SettingsPanel {
 		previewLabel.Text = "Preview Sequences:";
 		previewLabel.UseMnemonic = false;
 		// 
+		// mp4Label
+		// 
+		mp4Label.AutoSize = true;
+		mp4Label.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		mp4Label.Location = new Point(146, 268);
+		mp4Label.Name = "mp4Label";
+		mp4Label.Size = new Size(98, 15);
+		mp4Label.TabIndex = 27;
+		mp4Label.Text = "Export Tasks:";
+		mp4Label.UseMnemonic = false;
+		// 
+		// frameRateBox
+		// 
+		frameRateBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
+		frameRateBox.Location = new Point(250, 294);
+		frameRateBox.Name = "frameRateBox";
+		frameRateBox.Size = new Size(67, 23);
+		frameRateBox.TabIndex = 28;
+		frameRateBox.Text = "30";
+		frameRateBox.TextChanged += frameRateBox_TextChanged;
+		// 
+		// framerateLabel
+		// 
+		framerateLabel.AutoSize = true;
+		framerateLabel.Font = new Font("Consolas", 9.75F, FontStyle.Bold, GraphicsUnit.Point, 238);
+		framerateLabel.Location = new Point(62, 297);
+		framerateLabel.Name = "framerateLabel";
+		framerateLabel.Size = new Size(182, 15);
+		framerateLabel.TabIndex = 29;
+		framerateLabel.Text = "Frame Rate (Mp4+preview):";
+		framerateLabel.UseMnemonic = false;
+		// 
 		// SettingsPanel
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
+		Controls.Add(framerateLabel);
+		Controls.Add(frameRateBox);
+		Controls.Add(mp4Label);
 		Controls.Add(previewLabel);
 		Controls.Add(previewSelect);
 		Controls.Add(plotChunksLabel);
@@ -380,6 +418,8 @@ partial class SettingsPanel {
 		Controls.Add(decimalBox);
 		Controls.Add(algebraBox);
 		Controls.Add(darkButton);
+		Controls.Add(allowStringsBox);
+		Controls.Add(mp4TaskBox);
 		Location = new Point(15, 15);
 		Name = "SettingsPanel";
 		Size = new Size(320, 320);
@@ -415,4 +455,7 @@ partial class SettingsPanel {
 	private Label plotChunksLabel;
 	private ComboBox previewSelect;
 	private Label previewLabel;
+	private Label mp4Label;
+	private TextBox frameRateBox;
+	private Label framerateLabel;
 }
