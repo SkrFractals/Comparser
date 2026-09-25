@@ -47,15 +47,15 @@ public interface ILeaf/*<T> where T : unmanaged, IScalar<T>*/ {
 		NumericKind k;
 		if (a.kind > b.kind) {
 			if (c.kind > a.kind) 
-				a = a.Cast(k = b.kind);
+				a = a.Cast(k = c.kind);
 			else 
 				c = c.Cast(k = a.kind);
 			b = b.Cast(k);
 		} else {
 			if (c.kind > b.kind) {
-				c = c.Cast(k = c.kind);
+				b = b.Cast(k = c.kind);
 			} else {
-				b = b.Cast(k = b.kind);
+				c = c.Cast(k = b.kind);
 			}
 			a = a.Cast(k);
 		}
@@ -231,6 +231,12 @@ public interface ILeaf/*<T> where T : unmanaged, IScalar<T>*/ {
 		(NumericKind.Quaternion, NumericKind.Real) =>  ((Real)b).R * alpha + (Quaternion)a * (1 - alpha),
 		(NumericKind.Quaternion, NumericKind.Complex) =>  AddCq((Complex)b * alpha, (Quaternion)a * (1 - alpha)),
 		(NumericKind.Quaternion, NumericKind.Quaternion) => (Quaternion)b * alpha + (Quaternion)a * (1 - alpha),
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Lerp(ILeaf/*<T>*/ a, ILeaf/*<T>*/ b,ILeaf/*<T>*/ c) => Promote3(ref a, ref b, ref c) switch {
+		NumericKind.Real => INumber<Real/*<T>,T*/>.Lerp((Real/*<T>*/)a, (Real/*<T>*/)b, (Real/*<T>*/)c),
+		NumericKind.Complex => INumber<Complex/*<T>,T*/>.Lerp((Complex/*<T>*/)a, (Complex/*<T>*/)b, (Complex/*<T>*/)c),
+		NumericKind.Quaternion => INumber<Quaternion/*<T>,T*/>.Lerp((Quaternion/*<T>*/)a, (Quaternion/*<T>*/)b, (Quaternion/*<T>*/)c),
 		_ => Real/*<T>*/.nan
 	};
 	#endregion

@@ -109,12 +109,14 @@ internal class LogSce : LogSet<SceState> { // triple textbox pinnable range
 }
 record PlotSizeState(string w, string h, SceState ix, SceState iy, SceState oy);
 internal class LogPlotSize : LogSet<PlotSizeState> { // triple textbox pinnable range
-	internal LogPlotSize(RichTextBox w, RichTextBox h, AxisControls ix, AxisControls iy, AxisControls oy, States t) : base(t) { _ix = ix; _iy = iy; _oy = oy; _w = w; _h = h; 
+	internal LogPlotSize(PlotPanel p, RichTextBox w, RichTextBox h, AxisControls ix, AxisControls iy, AxisControls oy, States t) : base(t) { _ix = ix; _iy = iy; _oy = oy; _w = w; _h = h; 
 		LogUndo();
+		P = p;
 		t.D[w] = t.D[h] = t.D[ix.S.Box] = t.D[ix.C.Box] = t.D[ix.E.Box] = t.D[iy.S.Box] = t.D[iy.C.Box] = t.D[iy.E.Box] = t.D[oy.S.Box] = t.D[oy.C.Box] = t.D[oy.E.Box] =
 			t.D[ix.Ls] = t.D[iy.Ls] = t.D[oy.Ls] = this;
 		
 	}
+	private readonly PlotPanel P;
 	private readonly AxisControls _ix, // Axes: InputX, InputY, OutputY
 		_iy, // Axes: InputX, InputY, OutputY
 		_oy; // Axes: InputX, InputY, OutputY
@@ -123,7 +125,9 @@ internal class LogPlotSize : LogSet<PlotSizeState> { // triple textbox pinnable 
 	override protected void RestoreRedo(LogState<PlotSizeState> _, LogState<PlotSizeState> to) {
 		_w.Tag = _h.Tag = true;
 		SetText(_w, to.state.w);
-		SetText(_h,  to.state.h);
+		SetText(_h, to.state.h);
+		P.SetWidth();
+		P.SetHeight();
 		_w.Tag = _h.Tag = false;
 		_ix.SetSce(to.state.ix, true);
 		_iy.SetSce(to.state.iy, true);

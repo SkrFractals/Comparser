@@ -161,7 +161,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 #if UNSAFEPARSE
 		_logs = SettingsPanel.Context.ReadCode(_toParse, _token, out _colors) ?? [];
 #else
-		try { _logs =SettingsControl.Context?.ReadCode(_toParse, token, out _colors) ?? []; } catch (Exception e) {
+		try { _logs =SettingsControl.Context.ReadCode(_toParse, token, out _colors) ?? []; } catch (Exception e) {
 			_logs = [(Color.Red,e.Message), (Color.Red, e.StackTrace ?? "")];
 		}
 #endif
@@ -223,7 +223,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 		TransferLog();
 		// evaluate expression fields with this newly parsed program
 		_var.Root.Exp?.ReEval();
-		_var.Root.Plot?.ReEval(/*SettingsControl.Context?.GetPlot()!*/);
+		_var.Root.Plot?.ReEval(/*SettingsControl.Context.GetPlot()!*/);
 		codeBox.TextChanged += CodeBox_TextChanged;
 		States.Suppressed = sup;
 	}

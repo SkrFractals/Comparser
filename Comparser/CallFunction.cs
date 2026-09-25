@@ -88,7 +88,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 	}
 	private class FuncTextOperator(Reader read, CallFunction parent, Func<ushort, string, Value> del, Value args)
 		: FunctionExpression(read, parent, OpCode.NotAvailable, args) {
-		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => Value.OperateString(depth, v, del);
+		override protected Value EvalF(ushort depth, Value v, Value args, bool allowCache) => Context.AllowStrings ? Value.OperateString(depth, v, del) : v;
 	} // type, read, this, args
 	private class FuncEval(Reader read, CallFunction parent, Value args) : FuncTextOperator(read, parent, 
 			(d, x) => d > read.Context._stackOverflow ? StackOverflow : new Expression(new(read.Context, x, read.Cancel), out _, args).Eval((ushort)(1 + d), args, false), args) { }

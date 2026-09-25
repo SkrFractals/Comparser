@@ -206,7 +206,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				vals.Values[i] = an == 0 && Virtual(vA[a]) is { } f
 					? CallVirtual(f, vB[b])
 					: an + bn == 0
-					? new(o(vA[a].Leaf, vB[b].Leaf), vA[a].Error, so(vA[a].String, vB[b].String)) 
+					? new(o(vA[a].Leaf, vB[b].Leaf), vA[a].Error, context.AllowStrings ? so(vA[a].String, vB[b].String) : vA[a].String ) 
 					: Operate2(
 						an == 0 ? new([new(vA[a].Leaf,vA[a].Error)]) : vA[a],
 						bn == 0 ? new([new(vB[b].Leaf,vA[a].Error)]) : vB[b], o, so, depth, context, args, call);
@@ -216,13 +216,16 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			//vals.Parentheses = av.Parentheses;
 			if (s != 0)
 				return vals;
-			if (Virtual(av) is { } ff)
+			if (context.AllowStrings && Virtual(av) is { } ff)
 				vals = CallVirtual(ff, bv);
 			else {
 				vals.Leaf = o(av.Leaf, bv.Leaf);
-				vals.String = av.Leaf.IsNaN() || bv.Leaf.IsNaN() ? so(
-					av.Leaf.IsNaN() ? av.String : context.ToString(av, context.Decimals,true),
-					bv.Leaf.IsNaN() ? bv.String : context.ToString(bv, context.Decimals,true)) : av.String;
+				if (context.AllowStrings) {
+					vals.String = av.Leaf.IsNaN() || bv.Leaf.IsNaN() ? so(
+						av.Leaf.IsNaN() ? av.String : context.ToString(av, context.Decimals, true),
+						bv.Leaf.IsNaN() ? bv.String : context.ToString(bv, context.Decimals, true)) : av.String;
+				}
+				vals.String = av.String;
 				Expression.Err(ref vals.Error, av);
 				Expression.Err(ref vals.Error, bv);
 			}

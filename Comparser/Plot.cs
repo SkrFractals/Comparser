@@ -37,6 +37,7 @@ public interface IPlot {
 	public (Point p, Size s) GetPlace((object? x, object? y) a);
 	public void SetFinished(Action<object?, object?, Comparser.Plot.BitmapReady, int, CancellationToken/*, string*/> finishedImage);
 	public void SoftCancel(CancellationTokenSource cancel);
+	public object? GetExpressionArgs(int index);
 }
 public /*abstract*/  partial class Comparser/*<T>*/{
 	public partial class Plot : IPlot {
@@ -64,6 +65,27 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			return (p, new(e.X - p.X, e.Y - p.Y));
 		}
 
+		public object GetExpressionArgs(int index) => new Value([
+				new(new Real(index), FailReason.Success, "x"),
+				new(InputX.start, FailReason.Success, "xstart"),
+				new(InputX.center, FailReason.Success, "xcenter"),
+				new(InputX.end, FailReason.Success, "xend"),
+				new(InputY.start, FailReason.Success, "ystart"),
+				new(InputY.center, FailReason.Success, "ycenter"),
+				new(InputY.end, FailReason.Success, "yend"),
+				new(InputY.Sample(FixedY), FailReason.Success, "yfixed"),
+				new(OutputY.start, FailReason.Success, "oystart"),
+				new(OutputY.center, FailReason.Success, "oycenter"),
+				new(OutputY.end, FailReason.Success, "oyend"),
+				new(InputT.start, FailReason.Success, "tstart"),
+				new(InputT.center, FailReason.Success, "tcenter"),
+				new(InputT.end, FailReason.Success, "tend"),
+				new(new Real(index), FailReason.Success, "t"),	
+				new(new Real(Frame), FailReason.Success, "f"),	
+				new(new Real(InputT.length), FailReason.Success, "l"),	
+				new(new Real(InputX.length), FailReason.Success, "w"),
+				new(new Real(Mode == PlotMode.Xy ? InputY.length : OutputY.length), FailReason.Success, "h"),
+			]);
 		public void LockRangeX(bool l) => LockedRangeX = l;
 		public void LockRangeY(bool l) => LockedRangeY = l;
 		public void LockRangeO(bool l) => LockedRangeO = l;

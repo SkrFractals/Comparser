@@ -43,6 +43,7 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 				Sgn = new([(X0, new(new(context, "0", cancel), out _, None), null), 
 					(X, new(new(context, "xinv(abs(x))", cancel), out _, X), null)]),
 				Clamp = new([(Xyz, new(new(context, "min(max(x,y),z)",  cancel), out _, Xyz), null)]),
+				Lerp = new([(Xyz, new(new(context, "x(1-z)+yz",  cancel), out _, Xyz), null)]),
 				SftAbs = new([(X, new(new(context, "log(1+exp(x))",  cancel), out _, X), null)]),
 				//SftNeg = new([(X, new(new(context, "neg(log(1+exp(neg(x))))",  cancel), out _, Xy), null)]),
 				SftMax = new([(Xy, new(new(context, "log(exp(x)+exp(y))",  cancel), out _, Xy), null)]),
@@ -115,6 +116,7 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 				void MakeByteCodeS(GpuValue v) {
 					GpuValue? s = v._op switch { // substitute
 						OpCode.Clamp => new(OpCode.Call, v, _subs!.Clamp),
+						OpCode.Lerp => new(OpCode.Call, v, _subs!.Lerp),
 						OpCode.SoftClamp => new(OpCode.Call, v, _subs!.SftClamp),
 						OpCode.SoftClampB => new(OpCode.Call, v, _subs!.SftClampB),
 						OpCode.SoftMax => new(OpCode.Call, v, _subs!.SftMax),

@@ -141,6 +141,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		LogB,		// = Div(Log(X),Log(B))
 		SoftClamp,	// = new([X,new(OpCode.SoftAbs,new([A,Neg(X)],OpCode.Add)), new(OpCode.SoftNeg(new([B,Neg(X)],OpCode.Add)))],OpCode.Add)
 		SoftClampB,	// = new([X,new(OpCode.SoftAbsB,new([A,Neg(X)],OpCode.Add)), new(OpCode.SoftNegB(new([B,Neg(X)],OpCode.Add)))],OpCode.Add)
+		Lerp,		// = yz + x(1-z)
 		Nsinhc,		// = X == 0 ? 1 : [A=Mul(pi,X)];Div(Sinh(A),A)
 		Sinhc,		// = X == 0 ? 1 : Div(Sinh(X),X)
 		Nsinc,		// = X == 0 ? 1 : [A=Mul(pi,X)];Div(Sin(A),A)

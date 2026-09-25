@@ -38,6 +38,7 @@ partial class SettingsPanel {
 		plotLabel = new Label();
 		xMemBox = new CheckBox();
 		preEvalBox = new CheckBox();
+		allowStringsBox = new CheckBox();
 		chunkBox = new TextBox();
 		drawTasksLabel = new Label();
 		drawTaskBox = new TextBox();
@@ -240,6 +241,19 @@ partial class SettingsPanel {
 		preEvalBox.UseVisualStyleBackColor = true;
 		preEvalBox.CheckedChanged += preEvalBox_CheckedChanged;
 		// 
+		// allowStringsBox
+		// 
+		allowStringsBox.AutoSize = true;
+		allowStringsBox.Checked = true;
+		allowStringsBox.CheckState = CheckState.Checked;
+		allowStringsBox.Location = new Point(9, 170);
+		allowStringsBox.Name = "allowStringsBox";
+		allowStringsBox.Size = new Size(92, 19);
+		allowStringsBox.TabIndex = 18;
+		allowStringsBox.Text = "Pre-Evaluate";
+		allowStringsBox.UseVisualStyleBackColor = true;
+		allowStringsBox.CheckedChanged += allowStringsBox_CheckedChanged;
+		// 
 		// chunkBox
 		// 
 		chunkBox.Font = new Font("Consolas", 9.75F, FontStyle.Bold);
@@ -374,6 +388,7 @@ partial class SettingsPanel {
 		PerformLayout();
 	}
 	private System.Windows.Forms.CheckBox preEvalBox;
+	private System.Windows.Forms.CheckBox allowStringsBox;
 	private System.Windows.Forms.Label autoLabel;
 	private System.Windows.Forms.Label reportLabel;
 	private System.Windows.Forms.TextBox autoBox;

@@ -18,6 +18,7 @@ public interface IComparser {
 	public string ToString(object value, int decimals = -1, bool pure = false, int type = 0);
 	public void SetDarkMode(bool dark);
 	public void SetPreEvaluate(bool preEval);
+	public void SetAllowStrings(bool allow);
 	public void SetDecimals(int decimals);
 	public string ParsePeek();
 	public (Color b, Color f) GetColor();
@@ -82,6 +83,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		=> AsValue(value).ToString(decimals == int.MinValue ? Decimals : decimals, pure, type);
 	public void SetDarkMode(bool dark) => _darkMode = dark;
 	public void SetPreEvaluate(bool preEval) => PreEvaluate = preEval;
+	public void SetAllowStrings(bool allow) => AllowStrings = allow;
 	public void SetDecimals(int decimals) => Decimals = decimals;
 	public IPlot GetPlot() => Plotter;
 	public string ParsePeek() => _allowParsePeek ? _currentReader == null ? "No current reader." : _currentReader.Text[_currentReader.From..] : "Parse Peek disabled.";
@@ -632,7 +634,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 	#region Content
 	private bool _darkMode = true;
 	public int Decimals = 3;
-	public bool PreEvaluate = true;
+	public bool PreEvaluate = true, AllowStrings = true;
 	public Plot Plotter;
 	
 	private Color GetColor(ParseDictionary.Type type) => _darkMode ? _darkColors[type] : _lightColors[type];
@@ -1116,6 +1118,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 
 		// triple arguments
 		A(["clamp", "Clamp"], new Cf3(/*T*/Clamp, OpCode.Clamp)); // component-wise clamp
+		A(["lerp", "Lerp", "interpolate", "Interpolate"], new Cf3(/*T*/Lerp, OpCode.Lerp)); // component-wise clamp
 		A(["softclamp", "SoftClamp", "Softclamp","sftclamp", "SftClamp", "Sftclamp" ], new Cf3(SoftClamp, OpCode.SoftClamp)); // natural soft clamp
 		A(["softmaxb", "SoftMaxB", "Softmaxb", "sftmaxb", "SftMaxB", "Sftmaxb"], new Cf3(SoftMaxB, OpCode.SoftMaxB));
 		A(["softminb", "SoftMinB", "Softminb", "sftminb", "SftMinB", "Sftminb"], new Cf3(SoftMinB, OpCode.SoftMinB));

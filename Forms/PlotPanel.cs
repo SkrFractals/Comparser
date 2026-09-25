@@ -169,10 +169,10 @@ public partial class PlotPanel : UserControl, IPanel {
 		PeekRange(_s.yRangeButton, _rangeY);
 		PeekRange(_s.oyRangeButton, _rangeO);
 		PeekRange(_s.tRangeButton, _rangeT);
-		GetPlot()?.LockRangeX(_rangeX);
-		GetPlot()?.LockRangeY(_rangeY);
-		GetPlot()?.LockRangeO(_rangeO);
-		GetPlot()?.LockRangeT(_rangeT);
+		GetPlot().LockRangeX(_rangeX);
+		GetPlot().LockRangeY(_rangeY);
+		GetPlot().LockRangeO(_rangeO);
+		GetPlot().LockRangeT(_rangeT);
 		Refresh(_tf, _frame.ToString());
 		Refresh(_tl, _length.ToString());
 		Refresh(_fy, _fixedY.ToString(CultureInfo.InvariantCulture));
@@ -203,7 +203,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		//_ = new LogSce(_outputY!, s); // 1D output Y / DONE
 		_ = new LogCombo(_s.modeSelect, s); // plot mode / DONE
 		_ = new LogText(_s.fyBox/*fy*/, s); // fixedY / DONE
-		_ = new LogPlotSize(_s.widthBox, _s.heightBox, _inputX!, _inputY!, _outputY!, s); // width x height
+		_ = new LogPlotSize(this, _s.widthBox, _s.heightBox, _inputX!, _inputY!, _outputY!, s); // width x height
 		_ = new LogOutput(_s, this, s); // output codes / DONE
 		_ = new LogLock(_s.tRangeButton, s); // lock input time / DONE
 		_ = new LogLock(_s.xRangeButton, s); // lock input X / DONe
@@ -222,7 +222,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		_inputT = new(context, _s.itsBox, _s.itcBox, _s.iteBox, _s.itsButton, _s.itcButton, _s.iteButton, p.GetAxis()[2], _inputT);
 		_outputY = new(context, _s.oysBox, _s.oycBox, _s.oyeBox, _s.oysButton, _s.oycButton, _s.oyeButton, p.GetAxis()[3], _outputY);
 		_s.outputSelect.Items.Clear();
-		_s.outputSelect.Items.AddRange(GetPlot()?.GetOutputs() ?? []);
+		_s.outputSelect.Items.AddRange(GetPlot().GetOutputs());
 		Init();
 		ReEval(/*p*/);
 	}
@@ -231,8 +231,8 @@ public partial class PlotPanel : UserControl, IPanel {
 		States.Suppressed = true;
 		_cancel.Cancel();
 		for (var i = 0; i < Outputs.Count; ++i) {
-			GetPlot()?.SetCode(i, Parse(Outputs[i].Code, false));
-			GetPlot()?.SetRgb(i, Parse(Outputs[i].Rgb, false));
+			GetPlot().SetCode(i, Parse(Outputs[i].Code, false));
+			GetPlot().SetRgb(i, Parse(Outputs[i].Rgb, false));
 		}
 		//p.SetDirty();
 		DirtyImage();
@@ -275,10 +275,10 @@ public partial class PlotPanel : UserControl, IPanel {
 	#endregion
 
 	#region Locks
-	private void LockRangeX(object? sender, EventArgs e) { PeekRange(_s.xRangeButton, _rangeX = !_rangeX); GetPlot()?.LockRangeX(_rangeX); LogState(_s.xRangeButton); }
-	private void LockRangeY(object? sender, EventArgs e) { PeekRange(_s.yRangeButton, _rangeY = !_rangeY); GetPlot()?.LockRangeY(_rangeY); LogState(_s.yRangeButton); }
-	private void LockRangeO(object? sender, EventArgs e) { PeekRange(_s.oyRangeButton, _rangeO = !_rangeO); GetPlot()?.LockRangeO(_rangeO); LogState(_s.oyRangeButton); }
-	private void LockRangeT(object? sender, EventArgs e) { PeekRange(_s.tRangeButton, _rangeT = !_rangeT); GetPlot()?.LockRangeT(_rangeT); LogState(_s.tRangeButton); }
+	private void LockRangeX(object? sender, EventArgs e) { PeekRange(_s.xRangeButton, _rangeX = !_rangeX); GetPlot().LockRangeX(_rangeX); LogState(_s.xRangeButton); }
+	private void LockRangeY(object? sender, EventArgs e) { PeekRange(_s.yRangeButton, _rangeY = !_rangeY); GetPlot().LockRangeY(_rangeY); LogState(_s.yRangeButton); }
+	private void LockRangeO(object? sender, EventArgs e) { PeekRange(_s.oyRangeButton, _rangeO = !_rangeO); GetPlot().LockRangeO(_rangeO); LogState(_s.oyRangeButton); }
+	private void LockRangeT(object? sender, EventArgs e) { PeekRange(_s.tRangeButton, _rangeT = !_rangeT); GetPlot().LockRangeT(_rangeT); LogState(_s.tRangeButton); }
 	private void PeekRange(Button rb, bool l) {
 		SetLock(SettingsPanel.Context, rb, l);
 		/*for (int ia = 0; ia < a.Length; ++ia) {
@@ -291,7 +291,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 	private void Res(object? sender, EventArgs e) {
 		SetLock(SettingsPanel.Context, _s.lockResButton, _lockedRes = !_lockedRes);
-		GetPlot()?.SetLockRes(_lockedRes);
+		GetPlot().SetLockRes(_lockedRes);
 		Resized(null, EventArgs.Empty);
 		LogState(_s.lockResButton);
 	}
@@ -311,7 +311,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		var sup = States.Suppressed;
 		States.Suppressed = true;
 		Outputs.Add(new(_s.outputSelect.Text, _s.rgbBox, _s.codeBox, RgbChanged, CodeChanged));
-		GetPlot()?.AddOutput(_s.outputSelect.Text, null, null);
+		GetPlot().AddOutput(_s.outputSelect.Text, null, null);
 		var c = _s.outputSelect.Items.Count;
 		_s.outputSelect.Items.Add(_s.outputSelect.Text);
 		_s.outputSelect.SelectedIndex = c;
@@ -377,7 +377,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		var i = _s.outputSelect.SelectedIndex;
 		if (Outputs.Count <= i || i < 0)
 			return;
-		GetPlot()?.SetClip(i, Outputs[i].Clip = _s.clipSelect.SelectedIndex);
+		GetPlot().SetClip(i, Outputs[i].Clip = _s.clipSelect.SelectedIndex);
 		LogState(_s.clipSelect);
 	}
 	public void CodeChanged(object? sender, EventArgs e) {
@@ -385,7 +385,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (i < 0 || i >= Outputs.Count)
 			return;
 		_cancel.Cancel();
-		GetPlot()?.SetCode(i, Parse(Outputs[i].Code));
+		GetPlot().SetCode(i, Parse(Outputs[i].Code));
 		LogState(_s.codeBox);
 		DirtyImage();
 	}
@@ -394,8 +394,8 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (i < 0 || i >= Outputs.Count)
 			return;
 		_cancel.Cancel();
-		GetPlot()?.SetRgb(i, Parse(Outputs[i].Rgb));
-		//GetPlot()?.SetDirty();
+		GetPlot().SetRgb(i, Parse(Outputs[i].Rgb));
+		//GetPlot().SetDirty();
 		LogState(_s.rgbBox);
 		DirtyImage();
 	}
@@ -446,6 +446,12 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (_s.widthBox.Tag is true)
 			return;
 		_s.widthBox.Tag = true;
+		SetWidth();
+		_s.widthBox.Tag = false;
+		LogState(_s.widthBox);
+		
+	}
+	public void SetWidth() {
 		int extra = _var.Form.Width - _var.Form.GetInnerPanel().Width,
 			desired = (int)(SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w)));
 		plotBox.Dock = DockStyle.Fill;
@@ -454,14 +460,9 @@ public partial class PlotPanel : UserControl, IPanel {
 			plotBox.Dock = DockStyle.None;
 			plotBox.Width = desired;
 		}
-		_s.widthBox.Tag = false;
-		LogState(_s.widthBox);
 		DirtyImage();
 	}
-	private void HeightChanged(object? sender, EventArgs e) {
-		if (_s.heightBox.Tag is true)
-			return;
-		_s.heightBox.Tag = true;
+	public void SetHeight() {
 		int extra = _var.Form.Height - _var.Form.GetInnerPanel().Height,
 			desired = (int)(SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h)));
 		plotBox.Dock = DockStyle.Fill;
@@ -470,9 +471,16 @@ public partial class PlotPanel : UserControl, IPanel {
 			plotBox.Dock = DockStyle.None;
 			plotBox.Height = desired;
 		}
+		DirtyImage();
+	}
+	private void HeightChanged(object? sender, EventArgs e) {
+		if (_s.heightBox.Tag is true)
+			return;
+		_s.heightBox.Tag = true;
+		SetHeight();
 		_s.heightBox.Tag = false;
 		LogState(_s.heightBox);
-		DirtyImage();
+		
 	}
 	private void ModeSelected(object? sender, EventArgs e) { Set2D(_s, GetPlot(), (PlotMode)_s.modeSelect.SelectedIndex); LogState(_s.modeSelect); DirtyImage(); }
 	private static void Set2D(PlotSettingsControl s, IPlot? p, PlotMode mode) {
@@ -505,7 +513,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		Refresh(_fy, end);
 	}
 	private void ChangeFy(object? e) {
-		(_fixedY, var v) = GetPlot()?.SetFixedY(e) ?? (0, "?");
+		(_fixedY, var v) = GetPlot().SetFixedY(e);
 		_s.fyLabel.Text = "Y: " + v;
 		LogState(_s.fyBox);
 		DirtyImage();
@@ -515,7 +523,7 @@ public partial class PlotPanel : UserControl, IPanel {
 
 	#region Time
 	private void TfChanged(object? sender, EventArgs e) {
-		GetPlot()?.SetFrame(Math.Min(_length - 1, _frame = (int)(SettingsPanel.Context.AsDouble(Eval(this, _tf)))));
+		GetPlot().SetFrame(Math.Min(_length - 1, _frame = Math.Clamp((int)SettingsPanel.Context.AsDouble(Eval(this, _tf)), 0, _length - 1)));
 		DirtyImage();
 		UpdatePlot(true);
 		if (_s.animatedBox.Checked || _mp4Cancel != null)
@@ -559,10 +567,22 @@ public partial class PlotPanel : UserControl, IPanel {
 		if((_div = outDiv) > 0)
 			PerformUpdate();
 		else {
-			if(_exportBmps.Length < _length)
+			/*if(_exportBmps.Length < _length)
 				_exportBmps = new Bitmap[_length];
-			_exportBmps[_frame] = bmp.D;
+			_exportBmps[_frame] = bmp.D;*/
 			bmp.F = 2;
+			if (_mp4Cancel != null && _encodedPng.Length > _frame && _encodedPng[_frame] < 3 && bmp.D != null) {
+				_encodedPng[_frame] = 1;
+				try {
+					_ = MakeTemp();
+					var m = _msPngs[_frame] ??= new();
+					bmp.D.Save(m, System.Drawing.Imaging.ImageFormat.Png);
+					_msPngs[_frame]?.Flush();
+					_encodedPng[_frame] = 3;
+				} catch (Exception) {
+					_encodedPng[_frame] = 0;
+				}
+			}
 			_finished = true;
 			_drawing = false;
 			_s.buildButton.Text = "OK";
@@ -620,7 +640,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		_s.buildButton.Text = "CANCEL";
 		//Console.WriteLine("PlotChange");
 	}
-	private int _div = 0;
+	private int _div;
 	private CancellationTokenSource _cancel = new();
 	private void DirtyImage(bool restartTimer = true) {
 		if (restartTimer)
@@ -630,6 +650,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		
 		_finished = false;
 		_s.buildButton.Text = _drawing ? "CANCEL": "PLOT" ;
+		GetVar().Root.Exp?.ReEval();
 	}
 	private void prevButton_Click(object? sender, EventArgs e) {
 		_tf.Box.Text = ((_length - 1 + _frame) % _length).ToString();
@@ -641,7 +662,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	#endregion
 
 	#region Getters
-	private IPlot? GetPlot() => SettingsPanel.Context.GetPlot();
+	public IPlot GetPlot() => SettingsPanel.Context.GetPlot();
 	//private IComparser? GetContext() => SettingsControl.Context;
 	#endregion
 
@@ -669,8 +690,8 @@ public partial class PlotPanel : UserControl, IPanel {
 			RefreshAxes();
 		}
 		//Console.WriteLine("Tick " + Static.Time.ElapsedMilliseconds);
-		_s.percentLabel.Text = (GetPlot()?.GetPercent().ToString() ?? "0") + "%";
-		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0 && _finished)
+		_s.percentLabel.Text = GetPlot().GetPercent() + "%"; 
+		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0 && _finished /*&& (_mp4Cancel == null || _encMp4 > _frame)*/)
 			nextButton_Click(_s.nextButton, EventArgs.Empty);
 		UpdatePlot();
 		//Console.WriteLine("TickEnd " + Static.Time.ElapsedMilliseconds);
@@ -699,7 +720,6 @@ public partial class PlotPanel : UserControl, IPanel {
 		}
 		//Console.WriteLine("PlotBox_PaintEnd " + Static.Time.ElapsedMilliseconds);
 	}
-	private int _counter = 0;
 	private bool _dragging, _dragged/*, dirtyDrag*/;
 	private Point _lastCursor;
 	//private (Point p, Size s) _plotLocation, _renderLocation, _newRenderLocation;
@@ -725,9 +745,9 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (delta is { X: 0, Y: 0 })
 			return;
 		//Console.WriteLine("MoveCancel: " + delta.X + " " + delta.Y + " " +  Static.Time.ElapsedMilliseconds);
-		GetPlot()?.SoftCancel(_cancel);//_cancel.Cancel(); // cancel if there was a running task rendering at old location, so it doesn't continue rendering more outdated frames
+		GetPlot().SoftCancel(_cancel);//_cancel.Cancel(); // cancel if there was a running task rendering at old location, so it doesn't continue rendering more outdated frames
 		DirtyImage(false); // make me want to start a render
-		GetPlot()?.Shift(delta.X, delta.Y);
+		GetPlot().Shift(delta.X, delta.Y);
 		plotBox.Invalidate(); // draw the image and the new shifted location
 		plotBox.Update();
 		_refreshAxes = true;
@@ -736,15 +756,15 @@ public partial class PlotPanel : UserControl, IPanel {
 		//Console.WriteLine("Invalidate: " +  Static.Time.ElapsedMilliseconds);
 		
 	}
-	private bool _refreshAxes = false;
+	private bool _refreshAxes;
 	private void PlotBox_MouseWheel(object sender, MouseEventArgs e) {
 		
 		var delta = e.Delta;
 		if (delta == 0)
 			return;
 		_dragged = true;
-		GetPlot()?.SoftCancel(_cancel);// cancel if there was a running task rendering at old scale, so it doesn't continue rendering more outdated frames
-		GetPlot()?.ZoomBinary(e.Location.X, e.Location.Y, delta > 0);
+		GetPlot().SoftCancel(_cancel);// cancel if there was a running task rendering at old scale, so it doesn't continue rendering more outdated frames
+		GetPlot().ZoomBinary(e.Location.X, e.Location.Y, delta > 0);
 		
 		//var centerX = (float)e.Location.X / plotBox.Width;
 		//var centerY = (float)e.Location.Y / plotBox.Height;
@@ -752,12 +772,12 @@ public partial class PlotPanel : UserControl, IPanel {
 			_plotLocation = (new(_plotLocation.p.X * 2 - e.Location.X, _plotLocation.p.Y * 2 - e.Location.Y), _plotLocation.s * 2);
 			_renderLocation = (new(_renderLocation.p.X * 2 - e.Location.X, _renderLocation.p.Y * 2 - e.Location.Y), _renderLocation.s * 2);
 
-			GetPlot()?.ZoomBinary(e.Location.X, e.Location.Y, true);
+			GetPlot().ZoomBinary(e.Location.X, e.Location.Y, true);
 
 		} else {
 			_plotLocation = (new((_plotLocation.p.X + e.Location.X) / 2, (_plotLocation.p.Y + e.Location.Y) / 2), _plotLocation.s / 2);
 			_renderLocation = (new((_renderLocation.p.X + e.Location.X) / 2, (_renderLocation.p.Y + e.Location.Y) / 2), _renderLocation.s / 2);
-			GetPlot()?.ZoomBinary(e.Location.X, e.Location.Y, false);
+			GetPlot().ZoomBinary(e.Location.X, e.Location.Y, false);
 		}*/
 		DirtyImage(false); // make me want to start a render
 		_refreshAxes = true;//RefreshAxes();
@@ -792,7 +812,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		RgbChanged(_s.rgbBox, EventArgs.Empty);
 		States.Suppressed = sup;
 		return;
-		void D(Control c) => s.Deserialize(s.D[c], t, ref read);
+		void D(Control control) => s.Deserialize(s.D[control], t, ref read);
 	}
 	private void savePlot_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
 		if (SettingsPanel.Context is not { } c)
@@ -822,33 +842,33 @@ public partial class PlotPanel : UserControl, IPanel {
 		+ S(_s.outputSelect)); // outputs
 		return;
 		//MessageBox.Show("Plotter file saved.", "SAVED");
-		string S(Control c) => d[c].Serialize();
+		string S(Control control) => d[control].Serialize();
 	}
 	
 	#region MP4
 
-	private bool SavePng() {
+	/*private int SavePng() {
 		if (_exportBmps.Length <= _frame)
 			_exportBmps = new Bitmap?[_length];
 		//if (_frame < 0 || encodedPng[_frame] >= 2 || ExportBmps[_frame] != null)
 		//	return false;
 		if (_exportBmps[_frame] == null)
-			return true;
+			return _encodedPng[_frame];//true;
 		_encodedPng[_frame] = 1;
 		try {
 			_ = MakeTemp();
-			// new memorystream solution
+			// new memoryStream solution
 			var m = _msPngs[_frame] ??= new();
 			_exportBmps[_frame]?.Save(m, System.Drawing.Imaging.ImageFormat.Png);
 			_msPngs[_frame]?.Flush();
 
 			_encodedPng[_frame] = 3;
-			return false;
+			return _encodedPng[_frame];//false;
 		} catch (Exception) {
 			_encodedPng[_frame] = 0;
-			return true;
+			return _encodedPng[_frame];//true;
 		}
-	}
+	}*/
 	internal static string GetRootSaveDir() {
 		string baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Comparser");
 		//if (!DisableSaving)
@@ -877,7 +897,7 @@ public partial class PlotPanel : UserControl, IPanel {
 				++enc;
 		//FinishTasks(true, true, (short _) => false); // FinishTasks will keep writing PNGs in parallel, until they are all finished (or cancel requested)
 
-		return _pngFailed >= MaxPngFails ? 2 : _mp4CancelToken.IsCancellationRequested ? 1 : 0; // If the export was cancelled from outside - terminate the ffmpeg process
+		return _pngFailed >= MaxPngFails ? 2 : _mp4CancelToken.IsCancellationRequested ? 1 : 0; // If the export was canceled from outside - terminate the ffmpeg process
 	}
 	private (int, int, string) GetPngFormat() {
 		int n = 1, nf = _length;
@@ -891,7 +911,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (SavePngs() == 2) 
 			return Fail("PNG saving failed"); // failed to save
 		if (_mp4CancelToken.IsCancellationRequested)
-			return ""; // just cancelled, return with no error
+			return ""; // just canceled, return with no error
 		pngPath = pngPath[..^4]; // remove the ".png"
 		var (n, nf, d) = GetPngFormat();
 		var maxGenerationTasks = Math.Max(1, SettingsPanel.Mp4Tasks - 1); // task count
@@ -900,10 +920,10 @@ public partial class PlotPanel : UserControl, IPanel {
 				MakePng(i);
 			return ""; // finished
 		}
-		var po = new ParallelOptions {
+		/*var po = new ParallelOptions {
 			MaxDegreeOfParallelism = SettingsPanel.Mp4Tasks,
 			CancellationToken = _mp4CancelToken
-		};
+		};*/
 		var fail = "";
 		var result = Parallel.For(0, _length, (i, state) => { MakePng(i); });
 		void MakePng(int i) {
@@ -919,7 +939,7 @@ public partial class PlotPanel : UserControl, IPanel {
 					fs.Flush();
 					fs.Close();
 					break;
-				} catch (Exception ex) {
+				} catch (Exception) {
 					Thread.Sleep(10 + 10 * attempt * attempt); // wait and try again 10 times if failed
 				}
 			}
@@ -928,14 +948,14 @@ public partial class PlotPanel : UserControl, IPanel {
 			Thread.Sleep(100); // Wait until p.for is finished
 		return fail; // finished
 	}
-	private int _encodedMp4, _pngFailed, _encMp4;
+	private int /*_encodedMp4,*/ _pngFailed, _encMp4;
 	public int SelectedFps = 60;
 	private CancellationTokenSource? _mp4Cancel;
 	private CancellationToken _mp4CancelToken;
 	private byte[] _encodedPng = [];
 	private MemoryStream?[] _msPngs = [];
 	private const int MaxPngFails = 10;
-	private Bitmap?[] _exportBmps = [];
+	//private Bitmap?[] _exportBmps = [];
 
 	private void saveMp4_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
 		_mp4Cancel?.Cancel();
@@ -943,16 +963,18 @@ public partial class PlotPanel : UserControl, IPanel {
 		_encodedPng = new byte[_length];
 		for (var i = 0; i < _msPngs.Length; ++i) {
 			_msPngs[i]?.Dispose();
-			_encodedPng[i] = 0;
 			_msPngs[i] = null;
 		}
 		_msPngs = new MemoryStream[_length];
+		for (var i = 0; i < _msPngs.Length; ++i) 
+			_encodedPng[i] = 0;
 		_ = MakeTemp();
-		_encodedMp4 = 0;
+		//_encodedMp4 = 0;
 		_s.animatedBox.Checked = true;
-		_s.itfBox.Text = "0";
 		//_s.animatedBox.Checked = false;
-		_exportBmps = [];
+		//_exportBmps = [];
+		_s.itfBox.Text = "0"; 
+		DirtyImage();
 		//_s.animatedBox.Checked = true;
 		//_s.Block();
 		Task.Run(() =>
@@ -969,7 +991,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 
 	/*bool TryPngBitmaps(FractalTask task) {
-		if (mp4CancelToken.IsCancellationRequested || bitmapsFinished < previewFrames) // Do not write when cancelled
+		if (mp4CancelToken.IsCancellationRequested || bitmapsFinished < previewFrames) // Do not write when canceled
 			return false;
 		// Png is starting from scratch - cleanup the temp files and start png index from after the preview
 		if (tryPng < 0) {
@@ -1009,67 +1031,57 @@ public partial class PlotPanel : UserControl, IPanel {
 		var ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
 		if (!File.Exists(ffmpegPath))
 			return Fail("Ffmpeg.exe not found"); // if ffmpeg doesn't exist, return failure immediately
-		//FinishTasks(true, true, _ => false); // Make sure there are no bitmap generation tasks still running
 		try {
 			File.Delete(mp4Path);  // Delete existing file if present
 		} catch (IOException ex) {
 			return Fail("Failed to delete existing file: " + ex.Message); // return failure if deletion fails
 		}
-		//Task.Run(() => SavePngs("PNGS"));
-		//SavePngs();
 		// Start FFmpeg in a parallel process to encode the PNG sequence
-		using var ffmpegProcess = new Process {
-			StartInfo = new ProcessStartInfo {
-				FileName = ffmpegPath,
-				//Arguments = $"-y -framerate {SelectedFps} -i {temp}/{filePrefix}image_%0{n}d.png -vf \"scale=iw:ih\" -movflags +faststart -c:v libx264 -profile:v high444 -level 5.2 -preset veryslow -crf 18 -pix_fmt yuv444p -timeout {pngTime.Elapsed.TotalMilliseconds * 2000 + 2000000} \"{mp4Path}\"",
-				Arguments = $"-y -framerate {SelectedFps} -f image2pipe -vcodec png -i pipe:0 -vf \"scale=iw:ih\" -movflags +faststart -c:v libx264 -profile:v high444 -level 5.2 -preset veryslow -crf 18 -pix_fmt yuv444p \"{mp4Path}\"",
-				UseShellExecute = false,
-				RedirectStandardInput = true,
-				RedirectStandardError = true, // will get progress from this
-				//RedirectStandardOutput = true, // not needed so far
-				CreateNoWindow = true
-			}
+		using var ffmpegProcess = new Process();
+		ffmpegProcess.StartInfo = new() {
+			FileName = ffmpegPath,
+			Arguments = $"-y -framerate {SelectedFps} -f image2pipe -c:v png -i pipe:0 -movflags +faststart -c:v libx264 -crf 18 -pix_fmt yuv420p \"{mp4Path}\"",
+			UseShellExecute = false,
+			RedirectStandardInput = true,
+			RedirectStandardError = true, // will get progress from this
+			//RedirectStandardOutput = true, // not needed so far
+			CreateNoWindow = true
 		};
 		string fail = ""; // setup error listener
 		try {
-			// start pipe:
-			//var pipeServer = new NamedPipeServerStream("mypipe", PipeDirection.Out);
-			//pipeServer.WaitForConnection();
-			
 			// start ffmpeg
 			if (!ffmpegProcess.Start())
 				return Fail("Ffmpeg failed to start");
-			//ffmpegProcess.BeginErrorReadLine();// Begin reading error asynchronously
+			_pngFailed = 0; 
 
-			//ffmpegProcess.BeginOutputReadLine();  // Read standard output asynchronously
-			//allocPngType = PngType.Yes; // ensures FinishTasks will want to start threads exporting PNGs
-			_pngFailed = 0; // reset failure attempt counter, every png write fail will increment it, and if it reaches 1000 it will cancel the FinishTasks
-						   //tryPng = previewFrames; // makes sure that we reexport any missing files, with these settings, the parallel thread elsewhere will export all the pngs as tmp first then rename to png
-
+			//using var allPngs = new MemoryStream();
 			// report completion
 			var frameRegex = new Regex(@"frame=\s*(\d+)", RegexOptions.Compiled);
 			ffmpegProcess.ErrorDataReceived += (s, e) => {
 				if (e.Data == null) return;
-				var match = frameRegex.Match(e.Data);
+				/*var match = frameRegex.Match(e.Data);
 				if (match.Success) {
 					_encodedMp4 = ushort.Parse(match.Groups[1].Value);
-				}
+				}*/
 			};
 			ffmpegProcess.BeginErrorReadLine();
-			// will check if that other parallel thread elsewhere finished exporting all the pngs into the memory streams, and will dump these streams sequentially into the ffmpeg's input
 			using (var inputStream = ffmpegProcess.StandardInput.BaseStream) {
-				for (;!_mp4CancelToken.IsCancellationRequested && _encMp4 < _length; Thread.Sleep(100)) {
-					while (_encMp4 < _length && _frame < _exportBmps.Length && _exportBmps[_frame] != null && _encodedPng[_encMp4] >= 2) {
-						if (_msPngs[_encMp4++] is not { } ms)
-							continue;
+				// will check if that other parallel thread elsewhere finished exporting all the pngs into the memory streams, and will dump these streams sequentially into the ffmpeg's input
+				for (_encMp4 = 0; !_mp4CancelToken.IsCancellationRequested && _encMp4 < _length; Thread.Sleep(100)) { // TODO shorten sleep
+					while (_encMp4 < _length && /*_frame < _exportBmps.Length && _exportBmps[_frame] != null && SavePng()*/ _encodedPng[_encMp4] >= 2 && _msPngs[_encMp4] is { } ms) {
+						// SavePng now returns encodedPng[encmp4]
 						ms.Position = 0;
-						ms.CopyTo(inputStream); // Write memory stream directly to FFmpeg's input stream
+						ms.CopyTo(inputStream /*allPngs*/); // Write memory stream directly to FFmpeg's input stream
+						Console.WriteLine("Exported frame: " + _encMp4);
+						++_encMp4;
 					}
-					
-					SavePng();
 				}
+
+				/*	allPngs.Position = 0;
+					allPngs.CopyTo(inputStream);*/
 			}
-			if (_pngFailed >= MaxPngFails || _mp4CancelToken.IsCancellationRequested) { // If the export was cancelled from outside - terminate the ffmpeg process
+
+			if (_pngFailed >= MaxPngFails || _mp4CancelToken.IsCancellationRequested) { // If the export was canceled from outside - terminate the ffmpeg process
 				if (ffmpegProcess.StandardInput.BaseStream.CanWrite) {
 					ffmpegProcess.StandardInput.Write("q");  // Send 'q' to FFmpeg to terminate gracefully
 					ffmpegProcess.StandardInput.Flush();     // Ensure the command is sent

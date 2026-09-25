@@ -22,7 +22,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
 	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1, Mp4Tasks = 1;
 	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
-	private bool  _preEvaluate = true, _darkMode = true;
+	private bool _preEvaluate = true, _darkMode = true, _allowStrings = true;
 	public static readonly IComparser Context = new Comparser.Comparser();
 	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000, PreviewLoad = 3;
 	public static Reporting ReportingMode = Reporting.Report;
@@ -46,7 +46,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		UpdateAuto();
 		UpdateReport();
 		preEvalBox.Checked = true;
-		var initTasks = Math.Max(MaxTasks / 2, 1);
+		var initTasks = Math.Max(MaxTasks, 1);
 		taskBox.Text = initTasks.ToString();
 		drawTaskBox.Text = initTasks.ToString();
 		mp4TaskBox.Text = initTasks.ToString();
@@ -66,7 +66,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	private void DecimalBox_TextChanged(object? sender, EventArgs e) {
 		var old = Decimals;
 		_ = int.TryParse(decimalBox.Text, out Decimals);
-		Context?.SetDecimals(Decimals);
+		Context.SetDecimals(Decimals);
 		if (old != Decimals)
 			_var.Root.Code?.CodeChanged = true; // re-parse so the prints and expressions update
 	}
@@ -119,6 +119,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 		_preEvaluate = preEvalBox.Checked;
 		SetPreEval();
 	}
+	private void allowStringsBox_CheckedChanged(object sender, EventArgs e) {
+		_allowStrings = allowStringsBox.Checked;
+		SetAllowStrings();
+	}
 	private void plotBox_TextChanged(object sender, EventArgs e) {
 		if (!int.TryParse(plotBox.Text, out PlotDelay) || PlotDelay < 100) PlotDelay = 100;
 	}
@@ -136,10 +140,11 @@ public partial class SettingsPanel : UserControl, IPanel {
 
 	#region Actions
 	public void SetDarkMode() {
-		Context?.SetDarkMode(_darkMode);
+		Context.SetDarkMode(_darkMode);
 		_var.Root.SetDark(_darkMode);
 	}
-	public void SetPreEval() => Context?.SetPreEvaluate(_preEvaluate);
+	public void SetPreEval() => Context.SetPreEvaluate(_preEvaluate);
+	public void SetAllowStrings() => Context.SetAllowStrings(_allowStrings);
 	private void UpdateAuto() => autoButton.Text = AutoBuild ? "DELEAYED AUTOMATIC" : "MANUAL";
 	private void UpdateReport() => reportButton.Text = ReportingMode switch {
 		Reporting.Silent => "SILENT",
