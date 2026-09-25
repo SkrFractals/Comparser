@@ -45,6 +45,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		autoBox_TextChanged(reportBox, EventArgs.Empty);
 		UpdateAuto();
 		UpdateReport();
+		UpdateFrameRate();
 		preEvalBox.Checked = true;
 		var initTasks = Math.Max(MaxTasks, 1);
 		taskBox.Text = initTasks.ToString();
@@ -111,8 +112,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 		if (!int.TryParse(mp4TaskBox.Text, out Mp4Tasks) || Mp4Tasks < 1) Mp4Tasks = 1;
 		if (Mp4Tasks > MaxTasks) Mp4Tasks = MaxTasks;
 	}
-	private void frameRateBox_TextChanged(object sender, EventArgs e) {
+	private void frameRateBox_TextChanged(object sender, EventArgs e) => UpdateFrameRate();
+	private void UpdateFrameRate() {
 		if (!int.TryParse(frameRateBox.Text, out FrameRate) || FrameRate < 1) FrameRate = 1;
+		GetVar().Root.Plot?.SetFramerate();
 	}
 
 	private void drawChunkBox_TextChanged(object sender, EventArgs e) {

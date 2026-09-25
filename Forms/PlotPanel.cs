@@ -4,8 +4,6 @@ using Comparser.Forms.Controls;
 using Comparser.Forms.Core;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Text.RegularExpressions;
 using static Comparser.Forms.Core.IPanel;
 namespace Comparser.Forms;
 
@@ -20,6 +18,12 @@ public partial class PlotPanel : UserControl, IPanel {
 	#endregion
 
 	#region Structures
+	private enum SaveType : byte {
+		Plotter,
+		Png,
+		Pngs,
+		Mp4
+	}
 	public record SceState(string s, string c, string e, int l);
 	public class Output(string name, RichTextBox rgb, RichTextBox code, EventHandler rgbChanged, EventHandler codeChanged) {
 		public readonly TextField
@@ -112,15 +116,8 @@ public partial class PlotPanel : UserControl, IPanel {
 		InitializeComponent();
 		_s = new();
 	}
-	private enum SaveType : byte {
-		Plotter,
-		Png,
-		Pngs,
-		Mp4
-	}
-	private SaveType saveType = SaveType.Plotter;
 	private void saveSelect_SelectedIndexChanged(object? sender, EventArgs e) {
-		saveType = (SaveType)Math.Max(saveSelect.SelectedIndex, 0);
+		_saveType = (SaveType)Math.Max(_s.saveSelect.SelectedIndex, 0);
 	}
 	public PlotPanel(MenuPanel root, ParentForm parent) : this() {
 		InitVar(ref _var, this, root, parent, "Comparser - Plotter");
@@ -159,10 +156,12 @@ public partial class PlotPanel : UserControl, IPanel {
 		_s.fycButton.Click += FycClick;
 		_s.fyeButton.Click += FyeClick;
 		_var.Form.FormBorderStyle = FormBorderStyle.Sizable;
+		
 		Init();
 		parent.SetMinSize();
 		parent.Text = "Comparser - Plotter";
 	}
+	public void SetFramerate() => fps.Interval = Math.Max(1, (int)(1000.0 / SettingsPanel.FrameRate));
 	private void Init() {
 		if (GetPlot() is { } p)
 			p.SetFinished(OnFinished);
@@ -251,22 +250,29 @@ public partial class PlotPanel : UserControl, IPanel {
 		DirtyImage();
 		States.Suppressed = sup;
 	}
-	private void PlotClick(object? sense, EventArgs e) { }
 	#endregion
 
 	#region Variables
+	public int SelectedFps = 60;
+	public readonly List<Output> Outputs = [];
+	private SaveType _saveType = SaveType.Plotter;
+	private bool _drawing, _forced, _finished, _dirtyImage, _refreshAxes, _lockedRes, _animated, _cancelled, _dragging, _dragged,
+		_rangeX = true, _rangeY = true, _rangeO = true, _rangeT = true;
+	private int _div, _frame, /*_encodedMp4,*/ _pngFailed, _encExport, _length = 1, _finishedFrame = -1;
+	private double _fixedY;
+	private byte[] _encodedPng = [];
+	private (object?, object?) _renderAxes;
+	private Point _lastCursor;
+	private CancellationToken _exportCancelToken;
+	private Bitmap? _exportBmp;
+	private AxisControls? _inputX, _inputY, _inputT, _outputY;
+	private Bitmap? _bmp;
+	private CancellationTokenSource? _exportCancel;
+	private MemoryStream?[] _msPngs = [];
+	private readonly Stopwatch _plotDelay = new();
 	private readonly PlotSettingsControl _s;
 	private readonly TextField _fy = new(), _w = new(), _h = new(), _tf = new(), _tl = new();
-	public readonly List<Output> Outputs = [];
-	private AxisControls? _inputX, _inputY, _inputT, _outputY;
-	private bool _rangeX = true, _rangeY = true, _rangeO = true, _rangeT = true, _lockedRes;
-	//private Task? _draw;
-	private Bitmap? _bmp;
-	private readonly Stopwatch _plotDelay = new();
-	//private volatile bool _finishedImage;
-	private bool _dirtyImage;
-	private int _length = 1, _frame;
-	private double _fixedY;
+	private const int MaxPngFails = 10;
 	#endregion
 
 	#region Actions
@@ -283,7 +289,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		UpdatePlot(true);
 	}
 	private void ClickSave(object? sender, EventArgs e) {
-		switch (saveType) {
+		switch (_saveType) {
 			case SaveType.Plotter: savePlot.ShowDialog(); return;
 			case SaveType.Png: savePng.ShowDialog(); return;
 			case SaveType.Pngs: savePngs.ShowDialog(); return;
@@ -479,7 +485,7 @@ public partial class PlotPanel : UserControl, IPanel {
 			plotBox.Dock = DockStyle.None;
 			plotBox.Width = desired;
 		}
-		DirtyImage();
+		UpdateSize();
 	}
 	public void SetHeight() {
 		int extra = _var.Form.Height - _var.Form.GetInnerPanel().Height,
@@ -490,6 +496,11 @@ public partial class PlotPanel : UserControl, IPanel {
 			plotBox.Dock = DockStyle.None;
 			plotBox.Height = desired;
 		}
+		UpdateSize();
+	}
+	private void UpdateSize() {
+		GetPlot().Resize(plotBox.Width,plotBox.Height,_length);
+		ChangeFy(Eval(this, _fy, false));
 		DirtyImage();
 	}
 	private void HeightChanged(object? sender, EventArgs e) {
@@ -498,6 +509,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		_s.heightBox.Tag = true;
 		SetHeight();
 		_s.heightBox.Tag = false;
+		
 		LogState(_s.heightBox);
 		
 	}
@@ -511,25 +523,28 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 	private void FyChanged(object? sender, EventArgs e) => ChangeFy(Eval(this, _fy));
 	private void FysClick(object? sender, EventArgs e) {
-		ChangeFy(/*_inputY?.S.Value*/0.0);
-		if (GetPlot() is not { } p)
-			return;
-		var (s, _, _, _) = p.GetAxis()[1].GetSce();
-		Refresh(_fy, s);
+		_s.fyBox.Text = "0";
+		//ChangeFy(/*_inputY?.S.Value*/0.0);
+		//if (GetPlot() is not { } p)
+		//	return;
+		//var (s, _, _, _) = p.GetAxis()[1].GetSce();
+		//Refresh(_fy, s);
 	}
 	private void FycClick(object? sender, EventArgs e) {
-		ChangeFy( /*_inputY?.C.Value*/plotBox.Height / 2.0);
-		if (GetPlot() is not { } p)
-			return;
-		var (_, c, _, _) = p.GetAxis()[1].GetSce();
-		Refresh(_fy, c);
+		_s.fyBox.Text = (plotBox.Height / 2.0).ToString(CultureInfo.InvariantCulture);
+		//ChangeFy( /*_inputY?.C.Value*/plotBox.Height / 2.0);
+		//if (GetPlot() is not { } p)
+		//	return;
+		//var (_, c, _, _) = p.GetAxis()[1].GetSce();
+		//Refresh(_fy, c);
 	}
 	private void FyeClick(object? sender, EventArgs e) {
-		ChangeFy( plotBox.Height);
-		if (GetPlot() is not { } p)
-			return;
-		var (_, _, end, _) = p.GetAxis()[1].GetSce();
-		Refresh(_fy, end);
+		_s.fyBox.Text = plotBox.Height.ToString();
+		//ChangeFy( plotBox.Height);
+		//if (GetPlot() is not { } p)
+		//	return;
+		//var (_, _, end, _) = p.GetAxis()[1].GetSce();
+		//Refresh(_fy, end);
 	}
 	private void ChangeFy(object? e) {
 		(_fixedY, var v) = GetPlot().SetFixedY(e);
@@ -541,8 +556,32 @@ public partial class PlotPanel : UserControl, IPanel {
 	#endregion
 
 	#region Time
+	private void Fps_Tick(object? sender, EventArgs e) {
+		/*if (_mp4Cancel != null && _frame != _encMp4) {
+			if((_frame = _encMp4) < _length)
+				_s.itfBox.Text = _frame.ToString();
+			else {
+				_s.itfBox.Text = (_frame = 0).ToString();
+				_s.Unblock();
+			}
+		}*/
+		if(_refreshAxes)
+		{
+			_refreshAxes = false;
+			RefreshAxes();
+		}
+		//Console.WriteLine("Tick " + Static.Time.ElapsedMilliseconds);
+		var (p1, p2) = GetPlot().GetPercent();
+		GetVar().Form.Text = p1 + "% " + p2 +"% Comparser - Plotter"; 
+		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0 && _finished /*&& (_mp4Cancel == null || _encMp4 > _frame)*/)
+			nextButton_Click(_s.nextButton, EventArgs.Empty);
+		UpdatePlot();
+		//Console.WriteLine("TickEnd " + Static.Time.ElapsedMilliseconds);
+	}
 	private void TfChanged(object? sender, EventArgs e) {
+		_tf.Box.Visible = true;
 		GetPlot().SetFrame(Math.Min(_length - 1, _frame = Math.Clamp((int)SettingsPanel.Context.AsDouble(Eval(this, _tf)), 0, _length - 1)));
+		_tf.Box.Visible = _s.IsVisible;
 		DirtyImage();
 		UpdatePlot(true);
 		if (_s.animatedBox.Checked || _exportCancel != null)
@@ -587,6 +626,7 @@ public partial class PlotPanel : UserControl, IPanel {
 			_exportBmps[_frame] = bmp.D;*/
 			bmp.F = 2;
 			_exportBmp = bmp.D;
+			_finishedFrame = _frame;
 			if (_exportCancel != null && _encodedPng.Length > _frame && _encodedPng[_frame] < 3 && bmp.D != null) {
 				_encodedPng[_frame] = 1;
 				try {
@@ -605,8 +645,6 @@ public partial class PlotPanel : UserControl, IPanel {
 		}
 		//Console.WriteLine("FinUi");
 	}
-	private (object?, object?) _renderAxes;
-	private bool _drawing, _forced, _finished;
 	private void UpdatePlot(bool forced = false) {
 		/*if (_finishedImage) {
 			//if(_div <= 0)
@@ -649,14 +687,20 @@ public partial class PlotPanel : UserControl, IPanel {
 		bool mem = false;
 		if (GetPlot() is { } p && (_drawing = p.Update(out mem, plotBox.Width, plotBox.Height, _length, SettingsPanel.PreviewLoad == 0 || _animated || _exportCancel != null || !InPlace() && SettingsPanel.UseMem, ref _cancel))) {
 			_cancelled = _dirtyImage = _forced = false;
+			_finishedFrame = -1;
 		}
-		if (mem)
-			return;
+		if (mem) { 
+			//_cancelled = _dirtyImage = _forced = false; 
+			_dirtyImage = false;
+			if (!_animated)
+				_forced = false;
+			return; }
+		_finishedFrame = -1;
 		_finished = false;
 		_s.buildButton.Text = "CANCEL";
 		//Console.WriteLine("PlotChange");
 	}
-	private int _div;
+	
 	private CancellationTokenSource _cancel = new();
 	private void DirtyImage(bool restartTimer = true) {
 		if (restartTimer)
@@ -689,32 +733,10 @@ public partial class PlotPanel : UserControl, IPanel {
 	public bool Redo() => _myStates[SettingsPanel.Context].Redo();
 	private readonly Dictionary<IComparser, States> _myStates = [];
 	#endregion
-
-	private bool _animated, _cancelled;
-	private void Fps_Tick(object? sender, EventArgs e) {
-		/*if (_mp4Cancel != null && _frame != _encMp4) {
-			if((_frame = _encMp4) < _length)
-				_s.itfBox.Text = _frame.ToString();
-			else {
-				_s.itfBox.Text = (_frame = 0).ToString();
-				_s.Unblock();
-			}
-		}*/
-		if(_refreshAxes)
-		{
-			_refreshAxes = false;
-			RefreshAxes();
-		}
-		//Console.WriteLine("Tick " + Static.Time.ElapsedMilliseconds);
-		_s.percentLabel.Text = GetPlot().GetPercent() + "%"; 
-		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0 && _finished /*&& (_mp4Cancel == null || _encMp4 > _frame)*/)
-			nextButton_Click(_s.nextButton, EventArgs.Empty);
-		UpdatePlot();
-		//Console.WriteLine("TickEnd " + Static.Time.ElapsedMilliseconds);
-	}
+	
+	#region Plot
+	public void OpenSettings() => _var.Root.ShowC(_var.Root.PlotSetForm, _var.Form);
 	private void PlotBox_Paint(object sender, PaintEventArgs e) {
-		//Console.WriteLine("PlotBox_Paint " + Static.Time.ElapsedMilliseconds);
-		//GetVar().Form.Text = "null" + counter++;
 		if (_bmp == null)
 			return;
 		// Faster rendering with crisp pixels
@@ -726,7 +748,6 @@ public partial class PlotPanel : UserControl, IPanel {
 				if (GetPlot() is not { } plot)
 					continue;
 				var (p, s) = plot.GetPlace(_renderAxes);
-				//GetVar().Form.Text = p.ToString() + " " + counter++;
 				e.Graphics.DrawImage(_bmp, new Rectangle(p.X, p.Y, s.Width, s.Height));
 				attempt = 10;
 			} catch (Exception) {
@@ -734,11 +755,7 @@ public partial class PlotPanel : UserControl, IPanel {
 				Thread.Sleep(10 + 10 * attempt * attempt);
 			}
 		}
-		//Console.WriteLine("PlotBox_PaintEnd " + Static.Time.ElapsedMilliseconds);
 	}
-	private bool _dragging, _dragged/*, dirtyDrag*/;
-	private Point _lastCursor;
-	//private (Point p, Size s) _plotLocation, _renderLocation, _newRenderLocation;
 	private void plotBox_MouseDown(object sender, MouseEventArgs e) {
 		_dragging = true;
 		_lastCursor = e.Location;
@@ -750,7 +767,6 @@ public partial class PlotPanel : UserControl, IPanel {
 			return;
 		OpenSettings();
 	}
-	public void OpenSettings() => _var.Root.ShowC(_var.Root.PlotSetForm, _var.Form);
 	private void plotBox_MouseMove(object sender, MouseEventArgs e) {
 		if (!_dragging)
 			return;
@@ -772,7 +788,6 @@ public partial class PlotPanel : UserControl, IPanel {
 		//Console.WriteLine("Invalidate: " +  Static.Time.ElapsedMilliseconds);
 		
 	}
-	private bool _refreshAxes;
 	private void PlotBox_MouseWheel(object sender, MouseEventArgs e) {
 		
 		var delta = e.Delta;
@@ -800,6 +815,9 @@ public partial class PlotPanel : UserControl, IPanel {
 		plotBox.Invalidate(); // draw the image and the new shifted location
 		plotBox.Update();
 	}
+	#endregion
+	
+	#region Save/Load/Export
 	private void openPlot_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
 		if (SettingsPanel.Context is not { } c)
 			return;
@@ -860,8 +878,6 @@ public partial class PlotPanel : UserControl, IPanel {
 		//MessageBox.Show("Plotter file saved.", "SAVED");
 		string S(Control control) => d[control].Serialize();
 	}
-	
-	#region Export
 	internal static string GetRootSaveDir() {
 		string baseDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Comparser");
 		//if (!DisableSaving)
@@ -886,20 +902,20 @@ public partial class PlotPanel : UserControl, IPanel {
 			++n;
 		return (n, nf, "D" + n);
 	}
-	private Bitmap? _exportBmp;
-	private int /*_encodedMp4,*/ _pngFailed, _encExport;
-	public int SelectedFps = 60;
-	private CancellationTokenSource? _exportCancel;
-	private CancellationToken _exportCancelToken;
-	private byte[] _encodedPng = [];
-	private MemoryStream?[] _msPngs = [];
-	private const int MaxPngFails = 10;
 	private void savePngs_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
 		=> StartExport(() => SavePngs(savePngs.FileName));
 	private void saveMp4_FileOk(object sender, System.ComponentModel.CancelEventArgs e)
 		=> StartExport(() => PngsToMp4(saveMp4.FileName));
 	private void savePng_FileOk(object sender, System.ComponentModel.CancelEventArgs e) {
-		if (_exportBmp == null)
+		if (_exportBmp == null) { 
+			MessageBox.Show(
+				"This current image is not finished rendering yet.", 
+				"NOT READY");
+			return;
+		}
+		if (_finishedFrame != _frame && DialogResult.Yes != MessageBox.Show(
+				"This current image is not finished rendering yet. Do you want to export the previously finished image instead?", 
+				"NOT READY", MessageBoxButtons.YesNo))
 			return;
 		using var myStream = savePng.OpenFile();
 		_exportBmp.Save(myStream, System.Drawing.Imaging.ImageFormat.Png);
@@ -924,7 +940,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		_s.itfBox.Text = "0";
 		DirtyImage();
 		//_s.animatedBox.Checked = true;
-		//_s.Block();
+		_s.Block();
 		_ = Task.Run(() => {
 			del();
 			// _s.Unblock();
@@ -933,7 +949,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		});
 	}
 	private void StopExport() {
-		//_s.Unblock();
+		_s.Unblock();
 		_s.animatedBox.Checked = false;
 	}
 	internal string SavePngs(string pngPath) {
@@ -1000,14 +1016,14 @@ public partial class PlotPanel : UserControl, IPanel {
 
 			//using var allPngs = new MemoryStream();
 			// report completion
-			var frameRegex = new Regex(@"frame=\s*(\d+)", RegexOptions.Compiled);
+			/*var frameRegex = new Regex(@"frame=\s*(\d+)", RegexOptions.Compiled);
 			ffmpegProcess.ErrorDataReceived += (s, e) => {
 				if (e.Data == null) return;
-				/*var match = frameRegex.Match(e.Data);
+				var match = frameRegex.Match(e.Data);
 				if (match.Success) {
 					_encodedMp4 = ushort.Parse(match.Groups[1].Value);
-				}*/
-			};
+				}
+			};*/
 			ffmpegProcess.BeginErrorReadLine();
 			using (var inputStream = ffmpegProcess.StandardInput.BaseStream) {
 				// will check if that other parallel thread elsewhere finished exporting all the pngs into the memory streams, and will dump these streams sequentially into the ffmpeg's input

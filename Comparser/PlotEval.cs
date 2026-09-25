@@ -20,6 +20,7 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 		public bool Null() => _exp == null;
 
 		public int GetPercent() => _current?.progressRows ?? 0;
+		public int GetTotalPercent() => _current?.ProgressTotal ?? 0;
 		private PlotFrame? _current;
 
 		private int div = 0, previews = 0, previewBitmap = 0;

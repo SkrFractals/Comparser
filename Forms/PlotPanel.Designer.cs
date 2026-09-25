@@ -47,7 +47,6 @@ partial class PlotPanel {
 		plotBox.SizeMode = PictureBoxSizeMode.StretchImage;
 		plotBox.TabIndex = 1;
 		plotBox.TabStop = false;
-		plotBox.Click += PlotClick;
 		plotBox.Paint += PlotBox_Paint;
 		plotBox.MouseDown += plotBox_MouseDown;
 		plotBox.MouseMove += plotBox_MouseMove;

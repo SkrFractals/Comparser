@@ -24,7 +24,6 @@ partial class PlotSettingsControl {
 	/// </summary>
 	private void InitializeComponent() {
 		panel = new Panel();
-		percentLabel = new Label();
 		fysButton = new Button();
 		fycButton = new Button();
 		fyeButton = new Button();
@@ -103,7 +102,6 @@ partial class PlotSettingsControl {
 		// panel
 		// 
 		panel.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-		panel.Controls.Add(percentLabel);
 		panel.Controls.Add(fysButton);
 		panel.Controls.Add(fycButton);
 		panel.Controls.Add(fyeButton);
@@ -166,16 +164,6 @@ partial class PlotSettingsControl {
 		panel.Name = "panel";
 		panel.Size = new Size(320, 685);
 		panel.TabIndex = 86;
-		// 
-		// percentLabel
-		// 
-		percentLabel.AutoSize = true;
-		percentLabel.Font = new Font("Consolas", 12F, FontStyle.Bold);
-		percentLabel.Location = new Point(116, 168);
-		percentLabel.Name = "percentLabel";
-		percentLabel.Size = new Size(45, 19);
-		percentLabel.TabIndex = 88;
-		percentLabel.Text = "100%";
 		// 
 		// fysButton
 		// 
@@ -888,6 +876,7 @@ partial class PlotSettingsControl {
 		saveSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 		saveSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
 		saveSelect.FormattingEnabled = true;
+		saveSelect.Text = "Plotter";
 		saveSelect.Items.AddRange(new object[] { "Plotter", "This Image", "Pngs Anim", "Mp4 Anim" });
 		saveSelect.Location = new Point(178, 4);
 		saveSelect.Name = "saveSelect";
@@ -985,7 +974,6 @@ partial class PlotSettingsControl {
 	public System.Windows.Forms.Button buildButton;
 	public System.Windows.Forms.Button loadButton;
 	public System.Windows.Forms.ComboBox clipSelect;
-    public Label percentLabel;
     public Button fysButton;
     public Button fycButton;
     public Button fyeButton;
