@@ -1,8 +1,8 @@
 Iterations: 10
-DrawIterated(v, t): v < 0 ? 0 : hsv2rgb(t + v / 3, 1, 1)
+DrawIterated(v, t): v >= -2 ? hsv2rgb(t + v / 3, 1, 1) : 0
 /* call just Mandelbrot(c), but will also handle initiating z and n appropriately */
 /* Mandelbrot(c, z) will plot a julia set with that c. */
 Mandelbrot(c, z:0, n:0, m:z@@) /* n,m are variables, do not input them in the call */
- : m > 256 ? n + 2 - ln(m) $$ 3 /* escaping, and smooths the output into a gradient */
- : n > Iterations ? -1 /* iteration limit */
- : Mandelbrot(c, cub(z) + c, 1 + n) /* recurse: (z, c, n) -> (zz + c, c, ++n) */—
+ : m > 256 ? n - ln(m) $$ 3 /* escaping, and smooths the output into a gradient */
+ : n > Iterations ? _ /* iteration limit */
+ : Mandelbrot(c, cub(z) + c, n+) /* recurse: (z, c, n) -> (zz + c, c, ++n) */—

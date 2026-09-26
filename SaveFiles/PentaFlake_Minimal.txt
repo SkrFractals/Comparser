@@ -1,0 +1,5 @@
+it:6;t5:τ/5;tt:τ/10;tm:τ+tt;sc:φ+;s3:scale^3;m(a):(a+tm)%t5-tt
+In(z,s,f):z@<=scos(tt)/cos(tt-f@)
+D(v):0<=v?hsv2rgb(v/3,1,1):0
+F(z,s:1,n:it,l:s/sc,a:arg(z),f:m(a)):In(z,s,f)=0?_:n<0?0:In(-z,l,m(a+π))?F(-z,l,n-)+:F(z-(ze^(-if))||s/φ,l,n-)
+—

@@ -224,8 +224,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					vals.String = av.Leaf.IsNaN() || bv.Leaf.IsNaN() ? so(
 						av.Leaf.IsNaN() ? av.String : context.ToString(av, context.Decimals, true),
 						bv.Leaf.IsNaN() ? bv.String : context.ToString(bv, context.Decimals, true)) : av.String;
-				}
-				vals.String = av.String;
+				} else vals.String = av.String;
 				Expression.Err(ref vals.Error, av);
 				Expression.Err(ref vals.Error, bv);
 			}

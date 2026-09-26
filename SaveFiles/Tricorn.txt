@@ -1,8 +1,8 @@
 Iterations: 10
-DrawIterated(v): v < 0 ? (0, 0, 0) : hsv2rgb(v / 3, 1, 1)
+DrawIterated(v): v >= -2 ? hsv2rgb(v / 3, 1, 1) : 0
 /* call just Tricorn(c), but will also handle initiating z and n appropriately */
 /* Tricorn(c, z) will plot a julia set with that c. */
 Tricorn(c, z:0, n:0, m:z@@) /* n,m are variables, do not input them in the call */
- : m > 256 ? n + 2 - log2(ln(m)) /* escaping, and smooths the output into a gradient */
- : n > iterations ? -1 /* iteration limit */
- : Tricorn(c, z~& + c, 1 + n) /* recurse: (z, c, n) -> (zz + c, c, ++n) */—
+ : m > 256 ? n - log2(ln(m)) /* escaping, and smooths the output into a gradient */
+ : n > iterations ? _ /* iteration limit */
+ : Tricorn(c, z~& + c, n+) /* recurse: (z, c, n) -> (zz + c, c, ++n) */—

@@ -1,11 +1,11 @@
 /* Newton Fractal */
-EvalPoly(c, z, n:c# - 1) : sum("k", 0, n, "c[k]z^k")
-DiffPoly(c, n:c# - 1) : 1 > n ? 0 : vec("k", 1, n, "kc[k]")
+EvalPoly(c, z, n:c#-) : sum("k", 0, n, "c[k]z^k")
+DiffPoly(c, n:c#-) : 1 > n ? 0 : vec("k", 1, n, "kc[k]")
 NewtonP(p, dp, z, n, f:EvalPoly(p, z), d:EvalPoly(dp, z), q: z - f/d)
  : n < 0 ? z 
- : NewtonP(p, dp, q, n - 1)
+ : NewtonP(p, dp, q, n-)
 
 Iterations: 4 /* choose the number of iterations */
 
-DrawNewton(v) : hsv2rgb(arg(v)/τ, 1, 1)
-Newton(z, t, n:Iterations, tt: t(1-t), p: (1,0,tt,1-tt)) : NewtonP(p, DiffPoly(p), z, n)—
+DrawNewton(v) : hsv2rgb(arg(v) / τ, 1, 1)
+Newton(z, t, n:Iterations, tt: t(1 - t), p: (1, 0, tt, 1 - tt)) : NewtonP(p, DiffPoly(p), z, n)—

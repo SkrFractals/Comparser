@@ -770,6 +770,8 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 	private static readonly Ce OpCount = new(typeof(FuncCount), 0);
 	private static readonly Ce OpCatCount = new(typeof(FuncCatCount), 0);
 	private static readonly Cf OpAbs = new(T_Abs, OpCode.Abs);
+	private static readonly Cf OpInc = new(Inc, OpCode.Inc);
+	private static readonly Cf OpDec = new(Dec, OpCode.Dec);
 	private static readonly Cf OpSqrAbs = new(T_SqrAbs, OpCode.SqrAbs);
 	private static readonly Cf OpCompAbs = new(AbsComp, OpCode.Absri);
 	private static readonly Cf OpSign = new(Sign, OpCode.Sgn);

@@ -1,17 +1,16 @@
 /*Pentaflake*/
 iterations: 6 /* choose iteration count */
-t5: τ / 5; t10: τ / 10; t10m: τ + t10; scale: 1 + φ; s3 : scale^3 /* constants */
+t5: τ / 5; t10: τ / 10; t10m: τ + t10; scale: φ+; s3 : scale^3 /* constants */
 m(a) : (a + t10m) % t5 - t10 /* helper function cycling the angle towards children */
-InsidePentagon(z, s, a, f) : z@ <= scos(t10) / cos(t10 - f@) /* is z inside a pentagon of size s? */
+InsidePentagon(z, s, f) : z@ <= scos(t10) / cos(t10 - f@) /* is z inside a pentagon of size s? */
 Flake(z, s: 1, n: iterations, /* mandatory and optional inputs */
  l: s / scale, /* child size */
  a: arg(z), /* angle of z from center */
- ap: a + π, /* rotate 180 for the central pentagon */
  f: m(a)) /* which outer child we fell onto? */
- : InsidePentagon(z, s, a, f) = 0 ? _ /* outside the pentagon, or within the voids between them? */
+ : InsidePentagon(z, s, f) = 0 ? _ /* outside the pentagon, or within the voids between them? */
  : n < 0 ? 0 /* bottom of the recursion, initiate the counter */
- : InsidePentagon(-z, l, ap, m(ap)) ? 1 + Flake(-z, l, n - 1) /* central pentagon? it is flipped */ 
- : Flake(z - (ze^(-if))||s / φ, l, n - 1) /* inside the peripheral 5, translate back to center and recurse */
+ : InsidePentagon(-z, l, m(a + π)) ? Flake(-z, l, n-)+ /* central pentagon? it is flipped */ 
+ : Flake(z - (zexp(-if))||s / φ, l, n-) /* inside the peripheral 5, translate back to center and recurse */
 
-DrawHue(v, t) : 0 <= v@@ ? hsv2rgb((v - t) / 3, 1, 1) : 0 /* converts PentaFlake(z) output into color */
-PentaFlake(z, t) : Flake(zi^(.4t), 2scale^t)—
+DrawHue(v, t) : 0 <= v ? hsv2rgb((v - t) / 3, 1, 1) : 0 /* converts PentaFlake(z) output into color */
+PentaFlake(z, t) : Flake(zexp(tit10), 2scale^t)—

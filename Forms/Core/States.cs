@@ -126,8 +126,7 @@ internal class LogPlotSize : LogSet<PlotSizeState> { // triple textbox pinnable 
 		_w.Tag = _h.Tag = true;
 		SetText(_w, to.state.w);
 		SetText(_h, to.state.h);
-		P.SetWidth();
-		P.SetHeight();
+		P.SetRes();
 		_w.Tag = _h.Tag = false;
 		_ix.SetSce(to.state.ix, true);
 		_iy.SetSce(to.state.iy, true);

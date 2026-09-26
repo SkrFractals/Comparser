@@ -2,15 +2,15 @@
 iterations: 5 /* choose iteration count */
 scale: 3; t6: τ / 6; t12: τ / 12; t12m: τ + t12; /* constants */
 m(a) : (a + t12m) % t6 - t12 /* helper function cycling the angle towards children */
-InsideHexagon(z, s, a, f) : z@ <= scos(t12) / cos(t12 - f@) /* is z inside a hexagon of size s? */
+InsideHexagon(z, s, f) : z@ <= scos(t12) / cos(t12 - f@) /* is z inside a hexagon of size s? */
 Flake(z, s: 1, n: iterations, /* mandatory and optional inputs */
  l: s / scale, /* child size */
  a: arg(z), /* angle of z from center */
  f: m(a)) /* which outer child we fell onto? */
- : 0 = InsideHexagon(z, s, a, f) ? _ /* outside the hexagon, or within the voids between them? */
+ : 0 = InsideHexagon(z, s, f) ? _ /* outside the hexagon, or within the voids between them? */
  : n < 0 ? 0 /* bottom of the recursion, initiate the counter */
- : InsideHexagon(z, l, a, m(a)) ? 1 + Flake(z, l, n - 1) /* central hexagon? */ 
- : Flake(z - 2l(ze^(-if))||, l, n - 1) /* inside the peripheral 6, translate back to center and recurse */
+ : InsideHexagon(z, l, f) ? Flake(z, l, n-)+ /* central hexagon? */ 
+ : Flake(z - 2l(zexp(-if))||, l, n-) /* inside the peripheral 6, translate back to center and recurse */
 
-DrawHue(v, t) : 0 <= v@@ ? hsv2rgb((v - t) / 3, 1, 1) : 0 /* converts HexaFlake(z) output into color */
-HexaFlake(z, t) : Flake(zi^(4t/6), 2scale^t)—
+DrawHue(v, t) : 0 <= v ? hsv2rgb((v - t) / 3, 1, 1) : 0 /* converts HexaFlake(z) output into color */
+HexaFlake(z, t) : Flake(zexp(tit6), 2scale^t)—

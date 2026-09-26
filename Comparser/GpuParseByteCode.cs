@@ -138,6 +138,8 @@ public /*abstract*/  partial class Comparser/*<ILeaf> where ILeaf : unmanaged, I
 						OpCode.Exp2 => new(OpCode.Exp, new([Ln2, v], OpCode.Mul)), 
 						OpCode.Log10 => new([new(OpCode.Log, v), Iln10], OpCode.Mul),
 						OpCode.Log2 => new([new(OpCode.Log, v), Iln2], OpCode.Mul),
+						OpCode.Inc => new([v, new(Real.unit)], OpCode.Add),
+						OpCode.Dec => new([v, new(-Real.unit)], OpCode.Add),
 						OpCode.Sinc => new(OpCode.Call, v, _subs!.Sinc),
 						OpCode.Nsinc => new(OpCode.Call, v, _subs!.Nsinc),
 						OpCode.Sinhc => new(OpCode.Call, v, _subs!.Sinhc),

@@ -438,6 +438,18 @@ public interface ILeaf/*<T> where T : unmanaged, IScalar<T>*/ {
 		NumericKind.Quaternion => Quaternion/*<T>*/.Sqrt((Quaternion/*<T>*/)t),
 		_ => Real/*<T>*/.nan
 	};
+	public static ILeaf/*<T>*/ Inc(ILeaf/*<T>*/ t) => t.kind switch {
+		NumericKind.Real => (Real/*<T>*/)t + 1,
+		NumericKind.Complex => (Complex/*<T>*/)t + 1,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)t + 1,
+		_ => Real/*<T>*/.nan
+	};
+	public static ILeaf/*<T>*/ Dec(ILeaf/*<T>*/ t) => t.kind switch {
+		NumericKind.Real => (Real/*<T>*/)t - 1,
+		NumericKind.Complex => (Complex/*<T>*/)t - 1,
+		NumericKind.Quaternion => (Quaternion/*<T>*/)t - 1,
+		_ => Real/*<T>*/.nan
+	};
 	public static ILeaf/*<T>*/ T_Abs(ILeaf/*<T>*/ t) => t.kind switch {
 		NumericKind.Real => INumber<Real/*<T>,T*/>.T_Abs((Real/*<T>*/)t),
 		NumericKind.Complex => INumber<Complex/*<T>,T*/>.T_Abs((Complex/*<T>*/)t),

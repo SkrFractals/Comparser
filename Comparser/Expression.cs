@@ -10,7 +10,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		
 		#region Content
 
-		protected bool _preEvaluatable = true;
+		protected bool PreEvaluatable = true;
 		// Contains user-defined custom function
 		protected readonly Comparser/*<T>*/ Context;
 		// Parsed and evaluated data
@@ -29,7 +29,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		/// <param name="args">arguments</param>
 		/// <param name="allowCache">should be disabled when multitasking as it is not thread safe</param>
 		/// <returns>Evaluated value of this expression</returns>
-		public virtual Value Eval(ushort depth, Value args, bool allowCache = true, bool collapse = true) {
+		public virtual Value Eval(ushort depth, Value args, bool allowCache = true) {
 			if (allowCache && _cache.GetEval(args)) return _cache.Result?.Eval!;
 			Value result = new(new Value[V.Values.Length]);
 			var error = FailReason.Success;
@@ -210,6 +210,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 					'=' => new Equal(), '<' => new Less(read.CharAtRel('=', 1)), '>' => new More(read.CharAtRel('=', 1)),
 					'[' => new Index(), '!' => new Exclamation(), '&' => new Sqr(), '~' => new Conj(), '#' => new Count(true), '@' => new Abs(true), '|' => new AbsRi(true), _ => new Mul(false)
 				}).GetType() switch {
+					var x when x == typeof(Add) => !SecondOpCharMissing('+', o) && (read.From += 2) > 0 && Encapsulate(new FuncOperator(Context, OpInc, Inc, OpCode.Inc, expr[^1])),
+					var x when x == typeof(Sub) => !SecondOpCharMissing('-', o) && (read.From += 2) > 0 && Encapsulate(new FuncOperator(Context, OpDec, Dec, OpCode.Dec, expr[^1])),
 					var x when x == typeof(Sqr) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpSqr, ILeaf.Sqr, OpCode.Sqr, expr[^1])), // sqr
 					var x when x == typeof(Conj) => ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpConj, ILeaf.Conj, OpCode.Conj, expr[^1])), // conjugate
 					var x when x == typeof(Exclamation) => SecondOpCharMissing('=', new Exclamation(OpOrder.Compare)) && ++read.From > 0 && Encapsulate(new FuncOperator(Context, OpFact, Factorial, OpCode.Factorial, expr[^1])), // factorial
@@ -230,6 +232,16 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 				while (true) {
 					var fail = Fail((r.Operand = new(read, out o, args, cache, (r.Op = o).Order, parseAs)).V);
 					if (fail) {
+						switch (r.Op.GetType()) { // post-fix unary increment/decrement:
+							case var x when x == typeof(Add):
+								r.Op = new();
+								Encapsulate(new FuncOperator(Context, OpInc, ILeaf.Inc, OpCode.Inc, expr[^1]));
+								return true;//ReadOperatorOperand(ref nextOp);
+							case var x when x == typeof(Sub):
+								r.Op = new();
+								Encapsulate(new FuncOperator(Context, OpDec, ILeaf.Dec, OpCode.Dec, expr[^1]));
+								return true;//ReadOperatorOperand(ref nextOp);
+						}
 						if (parseAs != ParseAs.Expression && F()) // operand failed when we're looking for an argument - go back and take the string and try the defArg there 
 							break;
 						if (r.Op.EatOp > 0 && F())
@@ -255,12 +267,12 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			bool SecondOpCharMissing(char c, Operator newOp) {
 				if (!read.CharAtRel(c, 1))
 					return true; // must be the single-character operator, go to the single-character branch (true)
-				o = newOp; // found the second possible character for this op -> replace teh operator and go to the double-char branch (false) 
+				o = newOp; // found the second possible character for this op -> replace the operator and go to the double-char branch (false) 
 				return false;
 			}
 			#endregion
 
-			#region Orders Of Operations
+			#region OrdersOfOperations
 			bool SubTerm(out Expression readTo, char req) {
 				var fail = Fail((readTo = new(read, out _, args, 0, 0, parseAs >= ParseAs.Definition ? ParseAs.DefinitionExp : parseAs)).V);
 				read.TrimStart();
@@ -288,7 +300,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			}
 			#endregion
 
-			#region Read Function/Delegate Calls
+			#region ReadFunction/DelegateCalls
 			bool TryFunc() {
 				var startFrom = read.From;
 				foreach (var (name, obj) in Context.Context.Get(read.Text, read.From, Functions))
@@ -525,7 +537,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			}
 			// experimental - pre-evaluate parts of expressions that are not dependent on any arguments:
 			bool CollapseTerm(ref Expression exp) {
-				if (exp._preEvaluatable && Context.PreEvaluate && !CollapseValue(exp.V))
+				if (exp.PreEvaluatable && Context.PreEvaluate && !CollapseValue(exp.V))
 					exp = new(Context, exp.Eval(0, args, false));
 				return false;
 			}

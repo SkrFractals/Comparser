@@ -470,34 +470,23 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (_s.widthBox.Tag is true)
 			return;
 		_s.widthBox.Tag = true;
-		SetWidth();
+		SetRes();
 		_s.widthBox.Tag = false;
 		LogState(_s.widthBox);
 		
 	}
-	public void SetWidth() {
-		int extra = _var.Form.Width - _var.Form.GetInnerPanel().Width,
-			desired = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w));
+	public void SetRes() {
+		int extraW = _var.Form.Width - _var.Form.GetInnerPanel().Width,
+			extraH = _var.Form.Height - _var.Form.GetInnerPanel().Height,
+			desiredW = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w)),
+			desiredH = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h));
 		plotBox.Dock = DockStyle.Fill;
-		_var.Form.Width = extra + desired;
-		var h = plotBox.Width;
-		if (plotBox.Width != desired) {
+		_var.Form.Width = extraW + desiredW;
+		_var.Form.Height = extraH + desiredH;
+		if (plotBox.Width != desiredW || plotBox.Height != desiredH) {
 			plotBox.Dock = DockStyle.None;
-			plotBox.Width = desired;
-			plotBox.Height = h;
-		}
-		UpdateSize();
-	}
-	public void SetHeight() {
-		int extra = _var.Form.Height - _var.Form.GetInnerPanel().Height,
-			desired = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h));
-		plotBox.Dock = DockStyle.Fill;
-		_var.Form.Height = extra + desired;
-		var w = plotBox.Width;
-		if (plotBox.Height != desired) {
-			plotBox.Dock = DockStyle.None;
-			plotBox.Height = desired;
-			plotBox.Width = w;
+			plotBox.Width = desiredW;
+			plotBox.Height = desiredH;
 		}
 		UpdateSize();
 	}
@@ -510,7 +499,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		if (_s.heightBox.Tag is true)
 			return;
 		_s.heightBox.Tag = true;
-		SetHeight();
+		SetRes();
 		_s.heightBox.Tag = false;
 		
 		LogState(_s.heightBox);
@@ -606,7 +595,11 @@ public partial class PlotPanel : UserControl, IPanel {
 		LogState(_s.itlBox);
 		DirtyImage();
 	}
-	private void AniChanged(object? sender, EventArgs e) => LogState(_s.animatedBox);
+	private void AniChanged(object? sender, EventArgs e) {
+		if(_s.animatedBox.Checked)
+			UpdatePlot(true);
+		LogState(_s.animatedBox);
+	}
 	private bool InPlace() => !(GetPlot() is { } p) || p.InPlace(_renderAxes);
 	private void OnFinished(object? x, object? y, Comparser.Comparser.Plot.BitmapReady bmp, int outDiv, CancellationToken renderToken/*, string message = ""*/) {
 		if (IsDisposed || Disposing || !IsHandleCreated) {
@@ -669,10 +662,12 @@ public partial class PlotPanel : UserControl, IPanel {
 			_forced = true;
 		if (_drawing)
 			return;
+		bool inPlace = InPlace();
 		// draw blocks/delays
-		if (!_cancelled && (SettingsPanel.AutoPlot && _dirtyImage || _div > 0) || _forced) {
-
-			if (!(_forced || _s.animatedBox.Checked || _exportCancel != null || _div > 0) && InPlace()) {
+		if (!_cancelled && (SettingsPanel.AutoPlot == SettingsPanel.AutoPlotting.DelayedAuto && _dirtyImage || _div > 0) 
+			|| _forced 
+			|| !inPlace && SettingsPanel.AutoPlot == SettingsPanel.AutoPlotting.OnlyCursor) {
+			if (!(_forced || _s.animatedBox.Checked || _exportCancel != null || _div > 0) && inPlace) {
 				if (_plotDelay.IsRunning) {
 					if (_plotDelay.ElapsedMilliseconds < SettingsPanel.PlotDelay/* && InPlace()*/)
 						return;

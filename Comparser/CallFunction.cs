@@ -78,8 +78,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 			: base(read, out _, args) => (_parent, OpCode) = (parent, op);
 		protected FunctionExpression(Comparser/*<T>*/ context, CallFunction parent, OpCode op, Value input) 
 			: base(context, input) => (_parent, OpCode) = (parent, op);
-		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true, bool collapse = true) {
-			var v = base.Eval(depth, args/*, text*/, allowCache, false);
+		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true/*, bool collapse = true*/) {
+			var v = base.Eval(depth, args/*, text*/, allowCache/*, false*/);
 			return allowCache ? _parent.Cache.GetEval(v) ? _parent.Cache.Result?.Eval! : _parent.Cache.Insert(v, EvalF(depth, v, args, allowCache)) : EvalF(depth, v, args, allowCache);
 		}
 		protected abstract Value EvalF(ushort depth, Value v, Value args, bool allowCache);
@@ -152,7 +152,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 	#region Function Expressions - Vectors
 	// extracts terms from a vector using indices in: [expression]. Example: (0a,1b,2c,(30d,31e),5f)[3,2,(5,1,3)] = (30d,31e),2c,(5,1,(30d,31e))
 	private class FuncIndex(Comparser/*<T>*/ context, Value input, Value indices) : Expression(context, input) {
-		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true, bool collapse = true) 
+		public override Value Eval(ushort depth, Value args/*, string text = ""*/, bool allowCache = true/*, bool collapse = true*/) 
 			=> depth > Context._stackOverflow ? StackOverflow : Value.OperateValue(EvalValue((ushort)(1 + depth), CollapseScalar(indices), args, allowCache), Take, base.Eval(depth, args/*, text*/, allowCache));
 		private Value Take(Value from, object? i) {
 			if (i is not Value v)
@@ -202,7 +202,7 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 	// "to" can be smaller than "from", works both ways (does not return additive/multiplicative identity when in the wrong order, just iterates backwards)
 	private abstract class Iterator : FunctionExpression {
 		protected Iterator(Reader read, CallFunction parent, OpCode op, Value args) : base(read, parent, op, args) {
-			_preEvaluatable = false;
+			PreEvaluatable = false;
 			var iteratorIndex = args.Values.Length;
 			if (V.Values.Length != 4) {
 				_expr = new(new(read.Context, "", read.Cancel), out _, _args = None);

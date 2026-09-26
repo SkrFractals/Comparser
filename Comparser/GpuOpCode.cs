@@ -123,6 +123,8 @@ public /*abstract*/  partial class Comparser/*<T> where T : unmanaged, IScalar<T
 		// ------------------------------------------------------------------------
 		
 		// Substituted during bytecode making
+		Inc,		// = X+1
+		Dec,		// = X-1
 		More,		// = Less(Neg(X))
 		MoreEqual,	// = LessEqual(Neg(X))
 		False,		// = 1 - True(X)

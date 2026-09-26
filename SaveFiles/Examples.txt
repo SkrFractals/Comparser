@@ -1,5 +1,5 @@
 printstring: "\nPattern matching factorial:"
-PF(0): 1; PF(x): xPF(x - 1)
+PF(0): 1; PF(x): xPF(x-) /* x- = x-1 */
 print: PF(5) /* = 5! = 120 */
 
 printstring: "\nNested default arguments:"
@@ -13,7 +13,7 @@ gdp: "GP"
 print: (gdp, "GM")(4, 3) /* = (GP,GM)(4,3) = (GP(4),GM(3)) = (4 + 2i, 3 - 2i) */
 
 printstring: "\nLazy default argument evaluation:"
-F2(x, r:xF2(x - 1)): x < 2 ? 1 : r
+F2(x, r:xF2(x-)): x < 2 ? 1 : r
 print: F2(5) /* = 5! = 120 */
 
 printstring: "\nCycled operation nesting:"
@@ -61,13 +61,13 @@ printvalue: PositiveZeta(3) + " ~ " + apery
 
 printstring: "\nEvaluate a polynomial F(1 + 2x + 3x^2) at F(2)"
 F: (1, 2, 3) /* f(1 + 2x + 3x^2) */
-EvalPoly(x, c : F, n: c# - 1) : sum("k", 0, n, "c[k]x^k")
-PrintPoly(p): vec("k", 0, p#-1, "p[k] + \"x^\" + k")
+EvalPoly(x, c : F, n: c#-) : sum("k", 0, n, "c[k]x^k")
+PrintPoly(p): vec("k", 0, p#-, "p[k] + \"x^\" + k")
 printvalue: PrintPoly(F)
 printvalue: "F(2) = " + EvalPoly(2)
 
 printstring: "\nTake a derivative of that polynomial and evaluate at F'(5)"
-DiffPoly(c, n:c# - 1) : 1 > n ? 0 : vec("k", 1, n, "kc[k]")
+DiffPoly(c, n:c#-) : 1 > n ? 0 : vec("k", 1, n, "kc[k]")
 DF : DiffPoly(F)
 printvalue: PrintPoly(DF)
 printvalue: "F'(5) = " + EvalPoly(5, DF)

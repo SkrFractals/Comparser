@@ -25,8 +25,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public static readonly IComparser Context = new Comparser.Comparser();
 	public static int ReportingDelay = 1000, BuildDelay = 5000, PlotDelay = 5000, PreviewLoad = 3, FrameRate = 30;
 	public static Reporting ReportingMode = Reporting.Report;
-	public static bool AutoBuild = true, AutoPlot = true;
+	public static bool AutoBuild = true;
+	public static AutoPlotting AutoPlot = AutoPlotting.OnlyCursor;
 	public enum Reporting : byte { Silent = 0, Timer = 1, Report = 2 }
+	public enum AutoPlotting : byte { Manual = 0, OnlyCursor = 1, DelayedAuto = 2 }
 	private static int _controlTabIndex;
 	#endregion
 
@@ -46,6 +48,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 		UpdateAuto();
 		UpdateReport();
 		UpdateFrameRate();
+		UpdatePlot();
 		preEvalBox.Checked = true;
 		var initTasks = Math.Max(MaxTasks, 1);
 		taskBox.Text = initTasks.ToString();
@@ -162,7 +165,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	}
 
 	private void plotButton_Click(object sender, EventArgs e) {
-		AutoPlot = !AutoPlot;
+		AutoPlot = (AutoPlotting)(((int)AutoPlot + 1) % 3);
 		UpdatePlot();
 	}
 	private void xMemBox_CheckedChanged(object sender, EventArgs e) {
@@ -186,7 +189,12 @@ public partial class SettingsPanel : UserControl, IPanel {
 		Reporting.Report => "REPORT STATE",
 		_ => "???"
 	};
-	private void UpdatePlot() => plotButton.Text = AutoPlot ? "DELEAYED AUTOMATIC" : "MANUAL";
+	private void UpdatePlot() => plotButton.Text = AutoPlot switch {
+		AutoPlotting.Manual => "MANUAL",
+		AutoPlotting.OnlyCursor => "ONLY CURSOR",
+		AutoPlotting.DelayedAuto => "DELAYED AUTOMATIC",
+		_ => "???"
+	};
 	#endregion
 
 	public static void ComboBox_MouseWheel(object? sender, MouseEventArgs e) => ((HandledMouseEventArgs)e).Handled = true;
