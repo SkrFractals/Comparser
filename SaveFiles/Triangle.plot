@@ -1,0 +1,1 @@
+320—320—-1—0—1—1—i—0—-i—1—0—0.5—1—0—1—0—0—0.5—1—0—0—1—1—1—1—0—2—0—1—Triangle—DrawHue(v)—Triangle(z)—0—Triangle—DrawHue(v)—Triangle(z)—0—

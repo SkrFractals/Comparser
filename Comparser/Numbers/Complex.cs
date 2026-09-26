@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 using static Comparser.Comparser.Numbers.ILeaf;
 using static Comparser.Comparser.Numbers.Static;
 
@@ -30,6 +31,8 @@ public readonly struct Complex/*<double>*/(double r = default, double i = defaul
 	public static bool IsNaN(Complex/*<T>*/ c) => double.IsNaN(c.R) || double.IsNaN(c.I);
 	public bool IsNaN() => IsNaN(this);
 
+	public override bool Equals([NotNullWhen(true)] object? obj) => GetHashCode() == obj?.GetHashCode();//=> obj is ILeaf l && ILeaf.LeafEquals(this, l);
+    public override int GetHashCode() => HashCode.Combine(R, I, 0, 0);
 	public override string ToString() => ToString(-1);
 	//private static readonly string[] Units = ["i"];
 	//public static string[] epsUnit => ["i", "ε", "εi"];

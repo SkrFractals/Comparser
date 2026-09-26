@@ -81,7 +81,7 @@ public partial class MenuPanel : UserControl, IPanel {
 			return;
 		f.Location = p?.Location ?? new();
 		if(!f.Visible)
-			f.Show(this);
+			f.Show(p);
 	}
 	#endregion
 	public bool Undo() => true;

@@ -22,6 +22,7 @@ partial class ComparserPanel {
 	/// </summary>
 	private void InitializeComponent() {
 		components = new Container();
+		toolTips = new ToolTip(components);
 		fps = new System.Windows.Forms.Timer(components);
 		logButton = new Button();
 		logBox = new RichTextBox();
@@ -158,6 +159,8 @@ partial class ComparserPanel {
 	}
 	private System.Windows.Forms.Button buildButton;
 	#endregion
+
+	private ToolTip toolTips;
 	private System.Windows.Forms.Timer fps;
 	private System.Windows.Forms.RichTextBox logBox;
 	private System.Windows.Forms.Button logButton;

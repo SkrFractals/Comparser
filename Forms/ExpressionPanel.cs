@@ -57,12 +57,43 @@ public partial class ExpressionPanel : UserControl, IPanel {
 	#endregion
 
 	#region Inits
-	public ExpressionPanel() => InitializeComponent();
+	public ExpressionPanel() {
+		InitializeComponent();
+		string plot = " of the plotter.\n",
+			it = "Input Time ",
+			ix = "Input X ",
+			iy = "Input Y ",
+			oy = "Output Y ",
+			start = "Start",
+			center = "Center",
+			end = "End";
+		SetupControl(expBox, "Here you can evaluate various expressions. For testing or getting some text output.\nRunningthese expressions won't re-parse the program liek using print commands.\nYou also have a lot of input values available here, such as:\n"
+			+ "x = the index of the expression. The number you see on its left."
+			+ "t = the input time sample. the same t value the expression below had received for this frame.\n"
+			+ "ts = " + it + start + plot
+			+ "tc = " + it + center + plot
+			+ "te = " + it + end + plot
+			+ "xs = " + ix + start + plot
+			+ "xc = " + ix + center + plot
+			+ "xe = " + ix + end + plot
+			+ "ys = " + iy + start + plot
+			+ "yc = " + iy + center + plot
+			+ "ye = " + iy + end + plot
+			+ "oys = " + oy + start + plot
+			+ "oyc = " + oy + center + plot
+			+ "oye = " + oy + end + plot
+			+ "ye = Fixed Y" + plot
+			+ "w = the screen space horizontal size - the width of the image.\n"
+			+ "h = the screen space vertical size - the height of the image.\n"
+			+ "f = the animation frame index. Not sampled Time Axis, it is the value in the textbox between the previous and next frame buttons in the animation row.\n"
+			+ "l = the animation length, the same value as the leftmost textbox in the animation row.\n");
+	}
 	public ExpressionPanel(MenuPanel root, ParentForm parent) : this() => InitVar(ref _var, this, root, parent, "Comparser -  Expression Evaluator");
 	#endregion
 
 	#region Variables
 	private bool _dark;
+	private int _controlTabIndex;
 	private const int InputSize = 64;
 	private readonly List<ExpRow> _expressionRows = [];
 	private readonly List<Button> _swaps = [];
@@ -209,4 +240,10 @@ public partial class ExpressionPanel : UserControl, IPanel {
 	#endregion
 	public bool Undo() => true;
 	public bool Redo() => true;
+	private void SetupControl(Control control, string tip) {
+		// Add tooltip and set the next tabIndex
+		//myControls.Add(control, tip);
+		toolTips.SetToolTip(control, tip/*L(tip)*/); // TODO add localization support L(key)
+		control.TabIndex = ++_controlTabIndex;
+	}
 }

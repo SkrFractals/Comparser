@@ -23,6 +23,8 @@ partial class PlotSettingsControl {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
+		components = new System.ComponentModel.Container();
+		toolTips = new ToolTip(components);
 		panel = new Panel();
 		fysButton = new Button();
 		fycButton = new Button();
@@ -92,6 +94,7 @@ partial class PlotSettingsControl {
 		animatedBox = new CheckBox();
 		saveButton = new Button();
 		saveSelect = new ComboBox();
+        exportLabel = new Label();
 		panel.SuspendLayout();
 		((System.ComponentModel.ISupportInitialize)splitContainer).BeginInit();
 		splitContainer.Panel1.SuspendLayout();
@@ -876,17 +879,31 @@ partial class PlotSettingsControl {
 		saveSelect.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 		saveSelect.Font = new Font("Consolas", 12F, FontStyle.Bold);
 		saveSelect.FormattingEnabled = true;
-		saveSelect.Text = "Plotter";
 		saveSelect.Items.AddRange(new object[] { "Plotter", "This Image", "Pngs Anim", "Mp4 Anim" });
 		saveSelect.Location = new Point(178, 4);
 		saveSelect.Name = "saveSelect";
 		saveSelect.Size = new Size(139, 27);
 		saveSelect.TabIndex = 89;
+		saveSelect.Text = "Plotter";
+        // 
+        // exportLabel
+        // 
+        exportLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+		exportLabel.TextAlign = ContentAlignment.MiddleRight;
+        exportLabel.AutoSize = true;
+        exportLabel.Font = new Font("Consolas", 12F, FontStyle.Bold);
+        exportLabel.Location = new Point(150, 7);
+        exportLabel.Name = "label1";
+        exportLabel.Size = new Size(117, 19);
+        exportLabel.TabIndex = 88;
+		exportLabel.Visible = false;
+        exportLabel.Text = "";
 		// 
 		// PlotSettingsControl
 		// 
 		AutoScaleMode = AutoScaleMode.None;
 		BackColor = Color.FromArgb(64, 64, 64);
+		Controls.Add(exportLabel);
 		Controls.Add(saveSelect);
 		Controls.Add(loadButton);
 		Controls.Add(panel);
@@ -907,9 +924,11 @@ partial class PlotSettingsControl {
 		((System.ComponentModel.ISupportInitialize)splitContainer).EndInit();
 		splitContainer.ResumeLayout(false);
 		ResumeLayout(false);
+		PerformLayout();
 	}
 
 	#endregion
+	private ToolTip toolTips;
 	private Panel panel;
 	private Label ixeLabel;
 	private Label ixcLabel;
@@ -979,4 +998,5 @@ partial class PlotSettingsControl {
     public Button fyeButton;
 	public Button saveButton;
 	public ComboBox saveSelect;
+	public Label exportLabel;
 }

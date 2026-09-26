@@ -1,0 +1,1 @@
+320—320—-2—0—2—1—2i—0—-2i—1—0—0—0—-1—10—0—0—0.5—1—0—0—1—1—1—1—0—2—0—1—BurningShip—DrawIterated(v,t)—BurningShip(z)—0—BurningShip—DrawIterated(v,t)—BurningShip(z)—0—

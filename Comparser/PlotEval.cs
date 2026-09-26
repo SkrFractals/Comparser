@@ -1,4 +1,5 @@
 ﻿using Comparser.Comparser.Numbers;
+using Comparser.Forms;
 using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
 public /*abstract*/  partial class Comparser/*<T>*/ {
@@ -24,8 +25,8 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 		private PlotFrame? _current;
 
 		private int div = 0, previews = 0, previewBitmap = 0;
-		private void StartAni(bool animate, int h) {
-			previews = animate ? 0 : Math.Max(0, (int)Math.Log2(h) - 4);
+		private void StartAni(bool noPrev, int h) {
+			previews = noPrev ? 0 : Math.Max(0, (int)Math.Log2(h) - 4);
 			div = Math.Max(0, previews - previewBitmap);
 		}
 		//private Task? task;

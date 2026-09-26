@@ -1,0 +1,7 @@
+/*Triangle*/
+Iterations:6
+DrawHue(v):v<0?(0,0,0):hsv2rgb(v/3,1,1)
+L(z,s):z/s-floor(z/s) /* helper function that folds the triangle coordinates */
+Triangle(z,s:1,n:Iterations,
+ r: re(z), j: re(-iz), a: 1 - r - j / √3, b: r - j / √3, c: 2j / √3, t: Triangle(z, s / 2, n - 1)
+) : n < 0 ? 0 : t + mul((L(a, s), L(b, s), L(c, s)) < .5)—

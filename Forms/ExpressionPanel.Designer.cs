@@ -21,6 +21,8 @@ partial class ExpressionPanel {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
+		components = new System.ComponentModel.Container();
+		toolTips = new ToolTip(components);
 		expBox = new Button();
 		SuspendLayout();
 		// 
@@ -47,5 +49,6 @@ partial class ExpressionPanel {
 	}
 
 	#endregion
+	private ToolTip toolTips;
 	private System.Windows.Forms.Button expBox;
 }

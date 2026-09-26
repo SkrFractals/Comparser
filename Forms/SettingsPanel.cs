@@ -15,12 +15,11 @@ public partial class SettingsPanel : UserControl, IPanel {
 	#endregion
 
 	#region Variables
-	//private SettingsLayout _s = new();
 	public static bool UseMem;
 	public static int Decimals = 3;
 	//public static int Algebra = 1;
 	private static readonly int MaxTasks = Environment.ProcessorCount - (Environment.ProcessorCount >> 3); // use up to 7/8 of all cores (more gap with more cores)
-	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1, Mp4Tasks = 1;
+	public static int Tasks = 1, Chunks = 8, DrawTasks = 1, DrawChunks = 1, Mp4Tasks = 1, SuperSampling = 1;
 	//private readonly IComparser[] _algebras = [new ComparserR(), new ComparserC(), new ComparserQ()];
 	private bool _preEvaluate = true, _darkMode = true, _allowStrings = true;
 	public static readonly IComparser Context = new Comparser.Comparser();
@@ -28,6 +27,7 @@ public partial class SettingsPanel : UserControl, IPanel {
 	public static Reporting ReportingMode = Reporting.Report;
 	public static bool AutoBuild = true, AutoPlot = true;
 	public enum Reporting : byte { Silent = 0, Timer = 1, Report = 2 }
+	private static int _controlTabIndex;
 	#endregion
 
 	#region Inits
@@ -60,6 +60,30 @@ public partial class SettingsPanel : UserControl, IPanel {
 		// blocks scrolling over int from changing their value
 		algebraBox.MouseWheel += ComboBox_MouseWheel;
 		previewSelect.MouseWheel += ComboBox_MouseWheel;
+		
+		SetupControl(decimalBox, "How many digit after the decimal point to print?");
+		SetupControl(algebraBox, "Choose the Comparser algebra. Currently all are merged into a polymorphic one. Later might add Dual variant.");
+		SetupControl(autoBox, "The Code window will auto-parse itself after that many milliseconds of inactivity, or not?");
+		SetupControl(autoButton, "Will the Code window auto-parse itself?");
+		SetupControl(reportBox, "I think this just delays the coloring of the code...? Maybe it's obsolete.");
+		SetupControl(reportButton, "What will parsing of the Code window report into the log panel?");
+		SetupControl(plotBox, "The Plotter window will auto-plot itself after that many milliseconds of inactivity, or not?");
+		SetupControl(plotButton, "Will the Plotter window auto-plot itself?");
+		SetupControl(previewSelect, "How large percentage of threads will be assigned to work at fast small resolution previews, that are later replaced by the slower final full resolution?");
+		SetupControl(localeSelect, "Choose a localization language");
+		
+		SetupControl(preEvalBox, "Will constant expression that don't contain any dynamic argument be pre-evaluated into constants? Might not work with meta functions like 'eval'.");
+		SetupControl(allowStringsBox, "This could partially disable string operations, could remove some unnecessary fluff from purely numeric expressions, increasing plotter performance.");
+		SetupControl(xMemBox, "Will the Evaluation expression (the bottom textbox) attempt to re-use previously evaluated pixels and move them to a new location when only a viewport is moved?\n"
+			+ "(This feature is not fully debugged yet, and dones't work correctly yet)");
+		
+		SetupControl(ssBox, "How many times o sub-divide the image horizontally and vertically for more samples per pixel? A value 3 will take 9 samples per pixel.");
+		SetupControl(taskBox, "How many CPU threads are allowed to start for each frame's evaluation? (The Evaluation expression in the bottom textbox)");
+		SetupControl(taskBox, "How much will the evaluation of XY plots be subdivided between each task? Helps smoothen the load if different line regions have different evaluation time like mandelbrot.");
+		SetupControl(drawTaskBox, "How many CPU threads are allowed to start for each frame's evaluation? (The Evaluation expression in the bottom textbox)");
+		SetupControl(drawChunkBox, "How much will the drawing of images be subdivided between each task? This is unlikely to help, as the Rgb Expression is unlikely to vary in complexity.");
+		SetupControl(mp4TaskBox, "How many CPU threads are allowed to start for MP4 export? (This is obsolete and not actually parallelized.)");
+		SetupControl(frameRateBox, "The framerate of exported MP4. Also the framerate of the preview animator.");
 	}
 	#endregion
 
@@ -102,6 +126,10 @@ public partial class SettingsPanel : UserControl, IPanel {
 	}
 	private void chunkBox_TextChanged(object sender, EventArgs e) {
 		if (!int.TryParse(chunkBox.Text, out Chunks) || Chunks < 1) Chunks = 1;
+	}
+	private void ssBox_TextChanged(object sender, EventArgs e) {
+		if (!int.TryParse(ssBox.Text, out SuperSampling) || SuperSampling < 1) SuperSampling = 1;
+		GetVar().Root.Plot?.ReEval(false);
 	}
 
 	private void drawTaskBox_TextChanged(object sender, EventArgs e) {
@@ -168,6 +196,11 @@ public partial class SettingsPanel : UserControl, IPanel {
 	private void previewSelect_SelectedIndexChanged(object sender, EventArgs e) => PreviewLoad = Math.Max(previewSelect.SelectedIndex, 0);
 	public bool Undo() => true;
 	public bool Redo() => true;
-
-
+	private void SetupControl(Control control, string tip) {
+		// Add tooltip and set the next tabIndex
+		//myControls.Add(control, tip);
+		toolTips.SetToolTip(control, tip/*L(tip)*/); // TODO add localization support L(key)
+		control.TabIndex = ++_controlTabIndex;
+	}
+	
 }

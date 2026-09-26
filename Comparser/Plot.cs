@@ -1,6 +1,7 @@
 ﻿using Comparser.Comparser.Numbers;
 using Comparser.Forms;
 using System.Drawing.Imaging;
+using System.Numerics;
 using static Comparser.Comparser.Numbers.ILeaf;
 namespace Comparser.Comparser;
 public enum PlotMode : byte {
@@ -45,13 +46,13 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			if (a.x == null || a.y == null)
 				return true;
 			PlotAxis ax = (PlotAxis)a.x, ay = (PlotAxis)a.y;
-			var d = GetPlace(a);
+			var (p, s) = GetPlace(a);
 			var y = Mode switch {
 				PlotMode.Xy => InputY,
 				_ => OutputY
 			};
 			
-			return d.p is { X: 0, Y: 0 } && d.s.Width == ax.length && d.s.Height == ay.length && InputX.length == ax.length && y.length == ay.length;
+			return p is { X: 0, Y: 0 } && s.Width == ax.length / SettingsPanel.SuperSampling && s.Height == ay.length / SettingsPanel.SuperSampling && InputX.length == ax.length && y.length == ay.length;
 		}
 		public (Point p, Size s) GetPlace((object? x, object? y) a) {
 			var y = Mode switch {
@@ -60,26 +61,26 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			};
 			PlotAxis? ax = (PlotAxis?)a.x, ay = (PlotAxis?)a.y;
 			if (ax == null || ay == null) return (new(0, 0), new(0, 0));
-			Point p = new(ValueToScreenLin(ax.start, InputX.start, InputX.d), ValueToScreenLin(ay.start, y.start, y.d));
-			Point e = new(ValueToScreenLin(ax.end, InputX.start, InputX.d), ValueToScreenLin(ay.end, y.start, y.d));
+			Point p = new(ValueToScreenLin(ax.start, InputX.start, InputX.d)/ SettingsPanel.SuperSampling, ValueToScreenLin(ay.start, y.start, y.d)/ SettingsPanel.SuperSampling);
+			Point e = new(ValueToScreenLin(ax.end, InputX.start, InputX.d)/ SettingsPanel.SuperSampling, ValueToScreenLin(ay.end, y.start, y.d)/ SettingsPanel.SuperSampling);
 			return (p, new(e.X - p.X, e.Y - p.Y));
 		}
 
 		public object GetExpressionArgs(int index) => new Value([
 				new(new Real(index), FailReason.Success, "x"),
-				new(InputX.start, FailReason.Success, "xstart"),
-				new(InputX.center, FailReason.Success, "xcenter"),
-				new(InputX.end, FailReason.Success, "xend"),
-				new(InputY.start, FailReason.Success, "ystart"),
-				new(InputY.center, FailReason.Success, "ycenter"),
-				new(InputY.end, FailReason.Success, "yend"),
-				new(InputY.Sample(FixedY), FailReason.Success, "yfixed"),
-				new(OutputY.start, FailReason.Success, "oystart"),
-				new(OutputY.center, FailReason.Success, "oycenter"),
-				new(OutputY.end, FailReason.Success, "oyend"),
-				new(InputT.start, FailReason.Success, "tstart"),
-				new(InputT.center, FailReason.Success, "tcenter"),
-				new(InputT.end, FailReason.Success, "tend"),
+				new(InputX.start, FailReason.Success, "xs"),
+				new(InputX.center, FailReason.Success, "xc"),
+				new(InputX.end, FailReason.Success, "xe"),
+				new(InputY.start, FailReason.Success, "ys"),
+				new(InputY.center, FailReason.Success, "yc"),
+				new(InputY.end, FailReason.Success, "ye"),
+				new(InputY.Sample(FixedY), FailReason.Success, "yf"),
+				new(OutputY.start, FailReason.Success, "oys"),
+				new(OutputY.center, FailReason.Success, "oyc"),
+				new(OutputY.end, FailReason.Success, "oye"),
+				new(InputT.start, FailReason.Success, "ts"),
+				new(InputT.center, FailReason.Success, "tc"),
+				new(InputT.end, FailReason.Success, "te"),
 				new(new Real(index), FailReason.Success, "t"),	
 				new(new Real(Frame), FailReason.Success, "f"),	
 				new(new Real(InputT.length), FailReason.Success, "l"),	
@@ -121,10 +122,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						new((Real)l, FailReason.Success, "l")
 					]);
 			}
-			public (double, double, double) ProcessColor(Value? value, (double r, double g, double b) c, ILeaf z, ILeaf t, double x, double y, double f, int taskIndex) {
+			public Vector3 ProcessColor(Value? value, Vector3 c, ILeaf z, ILeaf t, double x, double y, double f, int taskIndex) {
 				var args = _args[taskIndex];
 				args.Values[0].Values = [value ?? new()];
-				args.Values[1].Values = [new((Real)c.r), new((Real)c.g), new((Real)c.b)];
+				args.Values[1].Values = [new((Real)c.X), new((Real)c.Y), new((Real)c.Z)];
 				args.Values[2].Leaf = z;
 				args.Values[3].Leaf = t;
 				args.Values[4].Leaf = (Real)x;
@@ -132,16 +133,15 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				args.Values[6].Leaf = (Real)f;
 				var rgb = ColorCodeRgb?.Eval(0, args, SettingsPanel.DrawTasks <= 1);
 				if (rgb is null)
-					return (0,0,0);
+					return Vector3.Zero;
 				if (rgb.Values.Length >= 3) {
-					var r = (Get(0), Get(1), Get(2));
-					return r;
+					return new Vector3((float)Get(0), (float)Get(1), (float)Get(2));
 				}
 				rgb = UnCollapseScalar(rgb);
 				if (rgb.Values.Length != 1)
-					return (0,0,0);
-				var light = Get(0);
-				return (light, light, light);
+					return Vector3.Zero;
+				var light = (float)Get(0);
+				return new Vector3(light);
 				double Get(int i) => Clip switch { 0 => Math.Clamp(rgb.Values[i].Re(), 0, 1), 1 => Loop(rgb.Values[i].Re()), _ => rgb.Values[i].Re() };
 				double Loop(double i) => Static.Cycle(i);
 			}
@@ -169,7 +169,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		public readonly Comparser/*<T>*/ Context;
 		private readonly IPlotAxis[] _axis;
 		public Plot(Comparser/*<T>*/ context) {
-			var i = Complex.one - (Complex)1;
+			var i = Numbers.Complex.one - (Numbers.Complex)1;
 			_axis = [InputX = new(context, -10 * unit, 20 * unit, 1),
 				InputY = new(context, 10 * i, -20 * i, 1),
 				InputT = new(context, zero, unit, 1),
@@ -191,7 +191,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			foreach (var p in _percent)
 				doneD += p;
 			return (P(done,total), P(doneD, _totalD));
-			int P(int d, int t) => t == 0 ? 0 : 100 * d / t;
+			static int P(int d, int t) => t == 0 ? 0 : 100 * d / t;
 		}
 		private int[] _percent = [];
 		public void ChangeMode(PlotMode xy) => Mode = xy;
@@ -290,7 +290,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						return memory = false;
 					}
                     bmp = b;
-					return memory = true; 
+					return memory = false;//true; 
 				}
 				if (length != _length) 
 					_bitmaps = new BitmapReady?[length];
@@ -347,7 +347,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		public bool Update(out bool memory, int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel) {
 			memory = false;
 
-			if(_drawTask is { IsCompleted: false }) {
+			var ss = SettingsPanel.SuperSampling;
+			int ws = w * ss, hs = h * ss;
+
+			if (_drawTask is { IsCompleted: false }) {
 				if(DoSoftCancel(ref cancel))
 					return false;
 				//Console.WriteLine("working");
@@ -359,7 +362,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 
 			var dirtied = false; 
 			// if size changed, it will resize everything and mark things dirty
-			Resize(w, h, l); _dirty |= InputX.DirtyL; 
+			Resize(ws, hs, l); _dirty |= InputX.DirtyL; 
 			// prepare axis lines and plot values if they are dirty
 			Color[] linesY, linesX = InputX.lines;
 			// = InputX.DirtyL ? Lines(InputX) : InputX.lines;
@@ -448,6 +451,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			else
 				for (int task = 0; task < tasks; ++task)
 					_percent[task] = 0;
+			
 			unsafe {
 				//Console.WriteLine("StartDraw: W"+bmp.d.Width + " T"+Static.Time.ElapsedMilliseconds);
 				var renderBitmap = bmp;
@@ -457,35 +461,46 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				var lb = renderBitmap.D.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				var ptr = (byte*)(void*)lb.Scan0;
 				var t = InputT.Sample(Frame);
-
+				var ssss = ss * ss;
+				var bwss = bw * ss;
+				var bhss = bh * ss;
 				var renderToken = cancel.Token;
 				switch (Mode) {
 				case PlotMode.XContour:
 				case PlotMode.XFill:
-					var yz = _renderOy!.Sample(FixedY);
+					var yz = _renderOy!.Sample(FixedY * ss);
 					SplitTasks(MultiX, _renderOy);
 					break;
 					void MultiX(float yf, float subChunkLength, int taskIndex) => Static.Multi(yf, subChunkLength, taskIndex, TaskDrawX, tasks, chunks);
 					void TaskDrawX(int ys, int ye, int taskIndex) {
+						var p = ptr + ys * lb.Stride;
+						ys *= ss;
+						ye *= ss;
+						Vector3[] buffer = new Vector3[bw];
+						
 						for (var y = ys; y < ye; ++y) {
 							if (renderToken.IsCancellationRequested)
 								break;
-
-							var p = ptr + lb.Stride * y;
-							var yColor = linesY[y];
-							for (int x = 0, intPtr = 0; x < bw; ++x, ++intPtr, p += 3) {
+							var ym = y % ss == 0;
+							
+							//var yColor = linesY[y];
+							var yss = (y + 1) % ss != 0;
+							for (int x = 0, intPtr = 0; x < bwss; ++x, ++intPtr) {
 								if (renderToken.IsCancellationRequested)
 									break;
+								var xs = x / ss;
+								if (x % ss == 0 && ym) buffer[xs] = Vector3.Zero;
 								var z = Add(_renderIx!.Sample(x), yz);
-								var rgbc = Max(linesX[x], yColor);
-								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
+								//var rgbc = Max(linesX[x], yColor);
+								//(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
 								Value[] ov;
 								//T v;
+								var c = Vector3.Zero;
 								if (Mode == PlotMode.XContour)
 									foreach (var o in OutputR) {
 										if (o.Eval?.Null() ?? true) continue;
 										Value[] prev = o.Values.V[_r.RenderDiv].div[x].GetValues(), next = o.Values.V[_r.RenderDiv].div[Math.Min(x + 1, o.Values.V[_r.RenderDiv].div.Length - 1)].GetValues();
-										for (int i = 0; i < prev.Length; ++i)
+										for (var i = 0; i < prev.Length; ++i)
 											if (C(_renderOy!.ValueToScreen(prev[i].GetLeaf()), _renderOy!.ValueToScreen(next[i].GetLeaf())))
 												c = o.ProcessColor(prev[i], c, z, t, x, y, Frame, taskIndex);
 									}
@@ -495,7 +510,12 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 											foreach (var prevV in ov[intPtr].GetValues())
 												if (y < _renderOy!.ValueToScreen(zero) == _renderOy!.ValueToScreen(prevV.GetLeaf()) < y)
 													c = o.ProcessColor(prevV, c, z, t, x, y, Frame, taskIndex);
-								(p[2], p[1], p[0]) = GetRgb(c);
+								buffer[xs] += c / ssss;
+
+								if ((x + 1) % ss != 0 || yss)
+									continue;
+								(p[2], p[1], p[0]) = GetRgb(buffer[xs]);
+								p += 3;
 							}
 							++_percent[taskIndex];
 							continue;
@@ -508,21 +528,30 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					break;
 					void MultiXy(float yf, float subChunkLength, int taskIndex) => Static.Multi(yf, subChunkLength, taskIndex, TaskDrawXy, tasks, chunks);
 					void TaskDrawXy(int ys, int ye, int taskIndex) {
-						var intPtr = ys * bw;
+						var p = ptr + ys * lb.Stride;
+						ys *= ss;
+						ye *= ss;
+						var intPtr = ys * bwss;
+						Vector3[] buffer = new Vector3[bw];
+						
 						for (var y = ys; y < ye; ++y) {
-
 							if (renderToken.IsCancellationRequested)
 								break;
+							var ym = y % ss == 0;
 							var yz2 = _renderIy!.Sample(y);
-							byte* p = ptr + lb.Stride * y;
-							var yColor = linesY[y];
-
-							for (var x = 0; x < bw; ++x, ++intPtr, p += 3) {
+						
+							//var yColor = linesY[y];
+							var yss = (y + 1) % ss != 0;
+							for (var x = 0; x < bwss; ++x, ++intPtr) {
 								if (renderToken.IsCancellationRequested)
 									break;
+								var xs = x / ss;
+								if (x % ss == 0 && ym) 
+									buffer[xs] = Vector3.Zero;
 								var z = Add(_renderIx!.Sample(x), yz2);
-								var rgbc = Max(linesX[x], yColor);
-								(double r, double g, double b) c = (rgbc.R / 255.0, rgbc.G / 255.0, rgbc.B / 255.0);
+								//var rgbc = Max(linesX[x], yColor);
+								//Vector3 c = new(rgbc.R / 255.0f, rgbc.G / 255.0f, rgbc.B / 255.0f);
+								var c = Vector3.Zero;
 								foreach (var o in OutputR)
 									if (!(o.Eval?.Null() ?? true)) {
 										var ov = o.Values.V[_r.RenderDiv].div;
@@ -532,7 +561,11 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 										}
 										c = o.ProcessColor(ov[intPtr], c, z, t, x, y, Frame, taskIndex);
 									}
-								(p[2], p[1], p[0]) = GetRgb(c);
+								buffer[xs] += c / ssss;
+								if ((x + 1) % ss != 0 || yss)
+									continue;
+								(p[2], p[1], p[0]) = GetRgb(buffer[xs]);
+								p += 3;
 							}
 							++_percent[taskIndex];
 						}
@@ -542,7 +575,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				void SplitTasks(Action<float,float,int> del, PlotAxis? rY) {
 					//Console.WriteLine("SplitTasks");
 					foreach (var o in OutputR)
-						o.PrepareArgs(bw, bh, InputT.length, tasks);
+						o.PrepareArgs(bwss, bhss, InputT.length, tasks);
 					_drawTask = Task.Run(() => DrawTask(del, rY)/*, cancel*/);
 				}
 				void DrawTask(Action<float,float,int> del, PlotAxis? rY) {
@@ -562,15 +595,21 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 						++_drawn;
 						//if (OutputR[0].Values.X?.start != _renderIx?.start)throw new("inconsistent axis!");
 					}
-					FinishedImage?.Invoke(_renderIx != null ? new PlotAxis(_renderIx) : null, rY != null ? new PlotAxis(rY) : null, rBmp, _r.RenderDiv, renderToken/*, "FIN"*/);
+					FinishedImage?.Invoke(
+						_renderIx != null ? new PlotAxis(_renderIx) : null, 
+						rY != null ? new PlotAxis(rY) : null, 
+						rBmp, _r.RenderDiv, renderToken/*, "FIN"*/);
 				}
-				(byte, byte, byte) GetRgb((double r, double g, double b) c) => ((byte)Math.Clamp(c.r * 255, 0, 255), (byte)Math.Clamp(c.g * 255, 0, 255),(byte)Math.Clamp(c.b * 255, 0, 255));
+				(byte, byte, byte) GetRgb(Vector3 c) => (
+					(byte)Math.Clamp(c.X * 255, 0, 255), 
+					(byte)Math.Clamp(c.Y * 255, 0, 255),
+					(byte)Math.Clamp(c.Z * 255, 0, 255));
             }
 			return true;
-			void Lines(PlotAxis a, Color[] axis) {
+			/*void Lines(PlotAxis a, Color[] axis) {
 				for (var i = 0; i < axis.Length; ++i) // combine axis lines
 					axis[i] = Max(axis[i], a.lines[i]);
-			}
+			}*/
 			bool DoSoftCancel(ref CancellationTokenSource cancel) {
 				if (_softCancel == cancel) {
 					if (_drawn > 0) { 
@@ -582,7 +621,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				} else _softCancel = null;
 				return false;
 			}
-			Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
+			//Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
 		}
 		public static int ValueToScreenLin(ILeaf value, ILeaf start, ILeaf d) => (int)Math.Round(Div(Sub(value, start), d).Re());//length * ILeaf.D2(value - start, end - start, Static.Div);
 		public static ILeaf ScreenToValueLin(int x, ILeaf start, ILeaf d) => Add(start, Mul((Real)x, d));//INumber<ILeaf>.Lerp(start, end, new((double)x / length));

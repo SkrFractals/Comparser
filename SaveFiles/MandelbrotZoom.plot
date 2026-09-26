@@ -1,0 +1,1 @@
+160—160—-2—0—2—1—2i—0—-2i—1—0—0—0—1—30—0—0—0—1—0—0—1—1—1—1—0—2—0—1—Mandelbrot—DrawIterated(v, t)—Mandelbrot(z, t)—0—Mandelbrot—DrawIterated(v, t)—Mandelbrot(z, t)—0—

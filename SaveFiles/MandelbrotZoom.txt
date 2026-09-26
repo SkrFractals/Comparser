@@ -1,0 +1,12 @@
+IterationsFrom: 20
+IterationsTo: 100
+ZoomInto: -1.76 + 0i /* Assuming you start at X=(-2,0,2) and Y=(2i,0,-2i) take ( XCenter + i*YCenter) at your desired end zoom level */
+ZoomScale: 0.0155 /* Assuming you start at X=(-2,0,2) and Y=(2i,0,-2i) take (XEnd - XStart) at your desired end zoom level, and divide that by 4 */
+M(c, nl, n:0, z:0, m:z@@) : m > 256 ? n - log2(ln(m)) : n > nl ? _ : M(c, nl, 1 + n, z& + c)
+/* Copy this whole following line to Expressions, and then zoom to where you want to go, you will get ZoomInto, ZoomScale as a result, and copy those here above */
+GetZoom(xc, yc, xs, xe)
+ : xc + yc, (xe - xs) / 4
+/* the z's scale should be multiplied by s, but the translation I'm not too sure how to compute*/
+/* public user functions to use in the plotter: */
+DrawIterated(v, t): 0 <= v@@ ? hsv2rgb(t + v / 3, 1, 1) : 0
+Mandelbrot(c, t, s: ZoomScale^t) : M(lerp(ZoomInto/(1-ZoomScale),c,s), lerp(Iterationsfrom, IterationsTo, t))—

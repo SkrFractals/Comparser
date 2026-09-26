@@ -19,7 +19,14 @@ public partial class ComparserPanel : UserControl, IPanel {
 	#endregion
 
 	#region Inits
-	public ComparserPanel() => InitializeComponent();
+	public ComparserPanel() {
+		InitializeComponent();
+		SetupControl(logButton, "Open a bigger maximalized Log Window.");
+		SetupControl(buildButton, "Build the program (parse the text in the Code Box).");
+		SetupControl(loadButton, "Load code into the Code Box from a text file.");
+		SetupControl(saveButton, "Save the code in the Code Box into a text file.");
+		SetupControl(logBox, "Here wou can see the logs from last parse.\n including error messages and prints.");
+	}
 	public ComparserPanel(MenuPanel root, ParentForm parent) : this() {
 		InitVar(ref _var, this, root, parent, "Comparser - Code & Build");
 		splitContainer.Panel1MinSize = 3 * Pad + 2 * RowHeight;
@@ -71,6 +78,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 	private CancellationToken _token;
 	private Stopwatch _buildTime = new();
 	private bool _dirtyResult, _dirtyLog;
+	private int _controlTabIndex;
 	#endregion
 
 	#region Events
@@ -372,4 +380,10 @@ public partial class ComparserPanel : UserControl, IPanel {
 	private void saveButton_Click(object sender, EventArgs e) => saveCode.ShowDialog();
 	public bool Undo() => _myStates[SettingsPanel.Context].Undo();
 	public bool Redo() => _myStates[SettingsPanel.Context].Redo();
+	private void SetupControl(Control control, string tip) {
+		// Add tooltip and set the next tabIndex
+		//myControls.Add(control, tip);
+		toolTips.SetToolTip(control, tip/*L(tip)*/); // TODO add localization support L(key)
+		control.TabIndex = ++_controlTabIndex;
+	}
 }

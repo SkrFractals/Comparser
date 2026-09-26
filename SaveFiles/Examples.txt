@@ -1,0 +1,77 @@
+printstring: "\nPattern matching factorial:"
+PF(0): 1; PF(x): xPF(x - 1)
+print: PF(5) /* = 5! = 120 */
+
+printstring: "\nNested default arguments:"
+N(z, p: (2, 3i)): z + p
+print: N(4) /* 4 + (2, 3i) = (6, 4 + 3i)*/
+
+printstring: "\nNested mixed call delegates:"
+GP(x): x + 2i
+GM(x): x - 2i
+gdp: "GP"
+print: (gdp, "GM")(4, 3) /* = (GP,GM)(4,3) = (GP(4),GM(3)) = (4 + 2i, 3 - 2i) */
+
+printstring: "\nLazy default argument evaluation:"
+F2(x, r:xF2(x - 1)): x < 2 ? 1 : r
+print: F2(5) /* = 5! = 120 */
+
+printstring: "\nCycled operation nesting:"
+printvalue: (1, -1)(1, 2, 3, 4, 5) /* = (1*1, -1*2, +1*3, -1*4, +1*5) */
+printvalue: (0,i) + (1, 2, 3, 4, 5) /* = (1, 2+i, 3, 4+i, 5) */
+printvalue: ("frac", "trunc", 1)(1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7)
+printvalue: ((-1, 1), 3)(10, 20, 30, 40, 50)
+
+printstring: "\nDecreasing for cycle:"
+IterWhile: 5 /* try other values like 10, 2, -5, -10000...*/
+while: IterWhile > 0 {
+ printvalue: IterWhile
+ if: IterWhile = 8 { break: 1 }
+ IterWhile: IterWhile - 1 
+} : IterWhile < -9000 {
+ printstring: "not only is IterWhile negative, it is below -9000!"
+}
+
+printstring: "\n\"Do\" command, defines another factorial and evaluated: 0.5!"
+do: "DYNAMIC(x) : x!"
+print: DYNAMIC(/2)
+
+printstring: "\nEval function dynamically parses and evaluates any valid string as an expression:"
+incremented: sin(1)
+print: incremented
+print: eval("1 +" + incremented)
+
+printstring: "\nBuild a vector of first 10 factorials dynamically, and take a parir of 2nd+3rd one, and a 5th one:"
+TenFactorials: vec("k", 1, 10, "k!")
+print: TenFactorials
+print: TenFactorials[(2,3),5] /* nested indexer */
+printstring: "\nComplex nested indexer of a nested vector:"
+print: (0+"a", 1+"b", 2+"c", (30+"d", 31+"e"), 5+"f", (11, 12, 13))[3, 2, (5, 1, 3)]
+
+printstring: "\nFirst 42 terms of e^x taylor series, approximating e^1 ~ 1:"
+precision: 42
+ExpTaylor(x): sum("k", 0, precision - 1, "x^k/k!")
+print: ExpTaylor(1)
+
+PositiveZeta(s, p : precision) : sum("k", 1, p, "k^(-s)")
+printstring: "\nFirst 250 terms of the Basel problem, Zeta(2), approaching π^2/6 slowly:"
+printvalue: PositiveZeta(2, 99) + " ~ " + π^2 / 6
+printstring: "\nFirst 42 terms of Zeta(3), quicky approaching the Apery constant:"
+printvalue: PositiveZeta(3) + " ~ " + apery
+
+printstring: "\nEvaluate a polynomial F(1 + 2x + 3x^2) at F(2)"
+F: (1, 2, 3) /* f(1 + 2x + 3x^2) */
+EvalPoly(x, c : F, n: c# - 1) : sum("k", 0, n, "c[k]x^k")
+PrintPoly(p): vec("k", 0, p#-1, "p[k] + \"x^\" + k")
+printvalue: PrintPoly(F)
+printvalue: "F(2) = " + EvalPoly(2)
+
+printstring: "\nTake a derivative of that polynomial and evaluate at F'(5)"
+DiffPoly(c, n:c# - 1) : 1 > n ? 0 : vec("k", 1, n, "kc[k]")
+DF : DiffPoly(F)
+printvalue: PrintPoly(DF)
+printvalue: "F'(5) = " + EvalPoly(5, DF)
+
+printstring: "\nQuaternions, left and right non-commutative division:"
+UnitQ : 1 + i + j + k
+printvalue: UnitQ^2, UnitQ / i, UnitQ \ i—

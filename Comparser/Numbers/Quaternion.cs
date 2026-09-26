@@ -1,4 +1,5 @@
-﻿using static Comparser.Comparser.Numbers.Static;
+﻿using System.Diagnostics.CodeAnalysis;
+using static Comparser.Comparser.Numbers.Static;
 namespace Comparser.Comparser.Numbers;
 public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, double k = 0) : ILeaf, INumber<Quaternion> {
 
@@ -67,8 +68,9 @@ public readonly struct Quaternion(double r = 0, double i = 0, double j = 0, doub
 	public static double[] EpsValues(Quaternion r, Quaternion e) => [r.R, r.I, r.J, r.K, e.R, e.I, e.J, e.K];
 	public override string ToString() => ToString(-1);
 	private static readonly string[] Units = ["i", "j", "k"];
-
-	public string ToString(int d) => ValueToString(Units, [R, I, J, K], d);
+    public override bool Equals([NotNullWhen(true)] object? obj) => GetHashCode() == obj?.GetHashCode();//=> obj is ILeaf l && ILeaf.LeafEquals(this, l);
+    public override int GetHashCode() => HashCode.Combine(R, I, J, K);
+    public string ToString(int d) => ValueToString(Units, [R, I, J, K], d);
 	#endregion
 
 	#region Constants

@@ -147,7 +147,6 @@ public partial class PlotPanel : UserControl, IPanel {
 		_s.outputSelect.SelectedIndexChanged += SelectOutput;
 		_s.clipSelect.SelectedIndexChanged += SelectClip;
 		_s.buildButton.Click += ClickBuild;
-		//_s.saveMp4.Click += ClickMp4;
 		_s.saveSelect.SelectedIndexChanged += saveSelect_SelectedIndexChanged;
 
 		_s.saveButton.Click += ClickSave;
@@ -206,14 +205,14 @@ public partial class PlotPanel : UserControl, IPanel {
 		// blocks scrolling over them from changing their value
 		_s.modeSelect.MouseWheel += SettingsPanel.ComboBox_MouseWheel;
 		_s.outputSelect.MouseWheel += SettingsPanel.ComboBox_MouseWheel;
+        _s.saveSelect.MouseWheel += SettingsPanel.ComboBox_MouseWheel;
 
-		
-		
-		//_ = new LogSce(_inputX!, s); // input X / DONE
-		//_ = new LogSce(_inputY!, s); // 2d input Y / DONE
-		//_ = new LogSce(_inputT!, s); // input time / DONE
-		//_ = new LogSce(_outputY!, s); // 1D output Y / DONE
-		_ = new LogCombo(_s.modeSelect, s); // plot mode / DONE
+
+        //_ = new LogSce(_inputX!, s); // input X / DONE
+        //_ = new LogSce(_inputY!, s); // 2d input Y / DONE
+        //_ = new LogSce(_inputT!, s); // input time / DONE
+        //_ = new LogSce(_outputY!, s); // 1D output Y / DONE
+        _ = new LogCombo(_s.modeSelect, s); // plot mode / DONE
 		_ = new LogText(_s.fyBox/*fy*/, s); // fixedY / DONE
 		_ = new LogPlotSize(this, _s.widthBox, _s.heightBox, _inputX!, _inputY!, _outputY!, s); // width x height
 		_ = new LogOutput(_s, this, s); // output codes / DONE
@@ -238,7 +237,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		Init();
 		ReEval(/*p*/);
 	}
-	public void ReEval(/*IPlot p*/) {
+	public void ReEval(/*IPlot p*/bool total = true) {
 		var sup = States.Suppressed;
 		States.Suppressed = true;
 		_cancel.Cancel();
@@ -478,23 +477,27 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 	public void SetWidth() {
 		int extra = _var.Form.Width - _var.Form.GetInnerPanel().Width,
-			desired = (int)(SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w)));
+			desired = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w));
 		plotBox.Dock = DockStyle.Fill;
 		_var.Form.Width = extra + desired;
+		var h = plotBox.Width;
 		if (plotBox.Width != desired) {
 			plotBox.Dock = DockStyle.None;
 			plotBox.Width = desired;
+			plotBox.Height = h;
 		}
 		UpdateSize();
 	}
 	public void SetHeight() {
 		int extra = _var.Form.Height - _var.Form.GetInnerPanel().Height,
-			desired = (int)(SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h)));
+			desired = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h));
 		plotBox.Dock = DockStyle.Fill;
 		_var.Form.Height = extra + desired;
+		var w = plotBox.Width;
 		if (plotBox.Height != desired) {
 			plotBox.Dock = DockStyle.None;
 			plotBox.Height = desired;
+			plotBox.Width = w;
 		}
 		UpdateSize();
 	}
@@ -570,8 +573,11 @@ public partial class PlotPanel : UserControl, IPanel {
 			_refreshAxes = false;
 			RefreshAxes();
 		}
-		//Console.WriteLine("Tick " + Static.Time.ElapsedMilliseconds);
-		var (p1, p2) = GetPlot().GetPercent();
+        var (p1, p2) = GetPlot().GetPercent();
+        if (_exportCancel != null)
+			_s.exportLabel.Text = _frame + " / " + _length + ": " + p1 + "%";
+        //Console.WriteLine("Tick " + Static.Time.ElapsedMilliseconds);
+        
 		GetVar().Form.Text = p1 + "% " + p2 +"% Comparser - Plotter"; 
 		if ((_animated = _s.animatedBox.Checked) && !_drawing && _div == 0 && _finished /*&& (_mp4Cancel == null || _encMp4 > _frame)*/)
 			nextButton_Click(_s.nextButton, EventArgs.Empty);
@@ -618,7 +624,7 @@ public partial class PlotPanel : UserControl, IPanel {
 			plotBox.Invalidate();
 			plotBox.Update();
 		}
-		if((_div = outDiv) > 0)
+		if ((_div = outDiv) > 0)
 			PerformUpdate();
 		else {
 			/*if(_exportBmps.Length < _length)
@@ -779,7 +785,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		//Console.WriteLine("MoveCancel: " + delta.X + " " + delta.Y + " " +  Static.Time.ElapsedMilliseconds);
 		GetPlot().SoftCancel(_cancel);//_cancel.Cancel(); // cancel if there was a running task rendering at old location, so it doesn't continue rendering more outdated frames
 		DirtyImage(false); // make me want to start a render
-		GetPlot().Shift(delta.X, delta.Y);
+		GetPlot().Shift(delta.X * SettingsPanel.SuperSampling, delta.Y * SettingsPanel.SuperSampling);
 		plotBox.Invalidate(); // draw the image and the new shifted location
 		plotBox.Update();
 		_refreshAxes = true;
@@ -795,7 +801,7 @@ public partial class PlotPanel : UserControl, IPanel {
 			return;
 		_dragged = true;
 		GetPlot().SoftCancel(_cancel);// cancel if there was a running task rendering at old scale, so it doesn't continue rendering more outdated frames
-		GetPlot().ZoomBinary(e.Location.X, e.Location.Y, delta > 0);
+		GetPlot().ZoomBinary(e.Location.X * SettingsPanel.SuperSampling, e.Location.Y* SettingsPanel.SuperSampling, delta > 0);
 		
 		//var centerX = (float)e.Location.X / plotBox.Width;
 		//var centerY = (float)e.Location.Y / plotBox.Height;
@@ -956,7 +962,7 @@ public partial class PlotPanel : UserControl, IPanel {
 
 		string fail = ""; // setup error listener
 		pngPath = pngPath[..^4]; // remove the ".png"
-		var (n, nf, d) = GetPngFormat();
+		var (_, _, d) = GetPngFormat();
 		try {
 			_pngFailed = 0;
 			// will check if that other parallel thread elsewhere finished exporting all the pngs into the memory streams, and will dump these streams sequentially into the ffmpeg's input

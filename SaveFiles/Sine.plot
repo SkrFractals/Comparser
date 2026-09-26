@@ -1,0 +1,1 @@
+320—320—0—0—tau—0—0—0—i—0—2—0—-2—1—10—0—0—3.142—tau—0—0—1—1—1—1—0—0—0—1—Name Output—lin2rgb(v)—sin(z+t)—0—Name Output—lin2rgb(v)—sin(z+t)—0—

@@ -1,0 +1,1 @@
+320—320—-1—0—1—1—i—0—-i—1—0—0—0—0—30—0—0—0.5—1—0—0—1—1—1—1—0—2—0—1—PentaFlake—DrawHue(v, t)—PentaFlake(z, t)—0—PentaFlake—DrawHue(v, t)—PentaFlake(z, t)—0—

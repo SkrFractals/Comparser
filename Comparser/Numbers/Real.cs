@@ -1,4 +1,5 @@
-﻿using static Comparser.Comparser.Numbers.Static;
+﻿using System.Diagnostics.CodeAnalysis;
+using static Comparser.Comparser.Numbers.Static;
 namespace Comparser.Comparser.Numbers;
 public readonly struct Real/*<double>*/(double r = default) : ILeaf/*<double>*/, INumber<Real/*<double>,double*/> /*where double : unmanaged, IScalar<double>*/ {
 	public readonly double R = r;
@@ -23,9 +24,11 @@ public readonly struct Real/*<double>*/(double r = default) : ILeaf/*<double>*/,
 	public static bool IsNaN(Real/*<double>*/ r) => double.IsNaN(r.R);
 	public static bool operator ==(Real /*<double>*/ a, Real /*<double>*/ b) => Math.Abs(a.R - b.R) <= Math.Max(Math.Abs(a.R), Math.Abs(b.R)) * 1e-6;//(a.R == b.R);
 	public static bool operator !=(Real/*<double>*/ a, Real/*<double>*/ b) => Math.Abs(a.R - b.R) > Math.Max(Math.Abs(a.R), Math.Abs(b.R)) * 1e-6;//(a.R != b.R);
-	//public static string[] epsUnit => ["ε"];
-	//public static double[] EpsValues(Real/*<double>*/ r, Real/*<double>*/ e) => [r.R, e.R];
-	public override string ToString() => ToString(-1);
+                                                                                                                                                  //public static string[] epsUnit => ["ε"];
+                                                                                                                                                  //public static double[] EpsValues(Real/*<double>*/ r, Real/*<double>*/ e) => [r.R, e.R];
+    public override bool Equals([NotNullWhen(true)] object? obj) => GetHashCode() == obj?.GetHashCode();//=> obj is ILeaf l && ILeaf.LeafEquals(this, l);
+    public override int GetHashCode() => HashCode.Combine(R, 0, 0, 0);
+    public override string ToString() => ToString(-1);
 	public string ToString(int d) => _sr(R, d);
 	#endregion
 	

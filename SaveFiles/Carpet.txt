@@ -1,0 +1,6 @@
+/*Sierpinski Carpet*/
+Iterations: 6
+DrawHue(v, t) : 0 <= v ? hsv2rgb(t + v / 3, 1, 1) : 0
+Carpet(z, s:1, n:Iterations, 
+ m: z / s - floor(z / s), c: Carpet(z, s / 3, n - 1)
+) : n < 0 ? 0 : c + (m = clamp(m, (1 + i) / 3, (2 + 2i) / 3))—

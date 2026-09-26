@@ -1,0 +1,1 @@
+320—320—0—0—1—0—0—0—i—0—0—0—1—0—10—0—0—0.5—1—0—0—1—1—1—1—0—2—0—1—Carpet—DrawHue(v, t)—Carpet(z)—0—Carpet—DrawHue(v, t)—Carpet(z)—0—

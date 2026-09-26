@@ -1,0 +1,12 @@
+/* Newton Fractal */
+EvalPoly(c, z, n: c# - 1) : sum("k", 0, n, "c[k]z^k")
+DiffPoly(c, n:c# - 1) : 1 > n ? 0 : vec("k", 1, n, "kc[k]")
+
+Iterations: 20 /* choose the number of iterations */
+Poly : (-1,0,0,1) /* choose the polynomial: z^3 - 1 */
+
+DPoly : DiffPoly(Poly) /* take a derivative */
+Newton(z, n:Iterations, f:EvalPoly(Poly, z), d:EvalPoly(DPoly, z), q: z - f/d)
+ : n < 0 ? z 
+ : Newton(q, n - 1)
+DrawNewton(v) : hsv2rgb(arg(v)/τ, 1, 1)—

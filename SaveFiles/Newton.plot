@@ -1,0 +1,1 @@
+320—320—-10—0—10—-1—10i—0—-10i—-1—-10—0—10—-1—1—0—-10—0—10—-1—0—1—1—1—1—0—2—0—1—Name Output—DrawNewton(v)—Newton(z)—0—Name Output—DrawNewton(v)—Newton(z)—0—

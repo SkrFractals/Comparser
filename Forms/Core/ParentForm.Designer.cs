@@ -20,6 +20,7 @@ partial class ParentForm {
 	/// the contents of this method with the code editor.
 	/// </summary>
 	private void InitializeComponent() {
+		var resources = new System.ComponentModel.ComponentResourceManager(typeof(ParentForm));
 		innerPanel = new Panel();
 		outerPanel = new Panel();
 		openFileDialog1 = new OpenFileDialog();
@@ -57,6 +58,7 @@ partial class ParentForm {
 		BackColor = Color.FromArgb(64, 64, 64);
 		ClientSize = new Size(350, 350);
 		Controls.Add(outerPanel);
+		Icon = (Icon)resources.GetObject("$this.Icon");
 		MinimumSize = new Size(120, 120);
 		Name = "ParentForm";
 		Text = "Comparser - Complex Computer Parser";
