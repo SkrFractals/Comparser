@@ -206,6 +206,14 @@ Normalize.
 _\<expression\>_#  
 Count top-level vector elements  
 Example: (1,2,3,(4,5,6))# = 4  
+_\<expression\>_++  
+Increment. Equals to _\<expression\>_+1, doesn't mutate.  
+_\<expression\>_--  
+Decrement. Equal to _\<expression\>_-1, doesn't mutate.  
+_\<expression\>_+  
+Short Increment. This has the order of operations value of addition, meaning ab+ would be (ab)++. Only works if the expression is ending after it with symbols like ',', ')', ']', ':', etc.  
+_\<expression\>_-  
+Short Decrement. This has the order of operations value of addition, meaning ab- would be (ab)--. Only works if the expression is ending after it with symbols like ',', ')', ']', ':', etc.  
   
 ### Binary operators:  
 _\<expression\>_ + _\<expression\>_  
