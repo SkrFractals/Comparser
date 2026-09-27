@@ -5,7 +5,9 @@ NewtonP(p, dp, z, n, f:EvalPoly(p, z), d:EvalPoly(dp, z), q: z - f/d)
  : n < 0 ? z 
  : NewtonP(p, dp, q, n-)
 
-Iterations: 4 /* choose the number of iterations */
+Iterations: 10 /* choose the number of iterations */
+Poly1: (1,0,0,1,0) /* must finish with zeroes, otherwise it would loob back to first element while lerping with Poly2 */
+Poly2: (1,0,0,0,1)
 
 DrawNewton(v) : hsv2rgb(arg(v) / τ, 1, 1)
-Newton(z, t, n:Iterations, tt: t(1 - t), p: (1, 0, tt, 1 - tt)) : NewtonP(p, DiffPoly(p), z, n)—
+Newton(z, t, n:Iterations, p: lerp(Poly1, Poly2, (4t(1 - t))&)) : NewtonP(p, DiffPoly(p), z, n)—

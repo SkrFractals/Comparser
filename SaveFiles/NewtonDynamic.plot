@@ -1,0 +1,1 @@
+160—160—-2—0—2—1—2i—0—-2i—1—0—0—0—0—30—17—0—0.5—1—0—1—1—1—1—1—0—2—0—1—Name Output—DrawNewton(v)—Newton(z, t)—0—Name Output—DrawNewton(v)—Newton(z, t)—0—

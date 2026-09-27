@@ -10,7 +10,7 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 		private ILeaf _mDt = nan;
 		private int _mLt;
 		//private readonly Comparser/*<T>*/ _context;
-		public CancellationToken Cancel;
+		//public CancellationToken Cancel;
 		//private static readonly Value Xyt = new([new(T.nan, 0, "x"), new(T.nan, 0, "y"), new(T.nan, 0, "t")]);
 		//public PlotEval(CancellationToken cancel, Comparser/*<T>*/ context, string text) => _exp = new(new(_context = context, exp = text, cancel), out _, Xyt);
 		/*public void ReParse(CancellationToken cancel, string text) {
@@ -49,14 +49,14 @@ public /*abstract*/  partial class Comparser/*<T>*/ {
 		// t: (S = input time on the left side of the screen, step = step value, time[x]-time[x-1], length = animation length, S + step*length = input time on the right side of the screen)
 		// all x,y,t are complex numbers, animation will lerp time complex input from t.S to t.S + t.step * t.length.
 		// basically the frame want to plot a function f(x,y,t), with x = T.Lerp(axisX.S,axisX.S+axisX.step*axisX.length,screen.x/screen.width), same for y, and t = T.Lerp(axisT.S, ..., frame/animationLength) 
-		public void GetPlotX(bool noPreview, Plot.Values values, out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, double y, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+		public void GetPlotX(bool noPreview, Plot.Values values, out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, double y, Plot.PlotAxis at, int frame, PlotPanel.Cancels cancels, double recallTolerance = .5) {
 			if (InitTest(out changed, recallTolerance, at, noPreview, ax.length))
-				(_current = _plot[frame]).GetPlotX(values, div, out changed, _exp!, ax, ay, at, y, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
+				(_current = _plot[frame]).GetPlotX(values, div, out changed, _exp!, ax, ay, at, y, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, cancels);
 		}
 
-		public void GetPlotXy(bool noPreview, Plot.Values values, out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, double recallTolerance = .5) {
+		public void GetPlotXy(bool noPreview, Plot.Values values, out bool changed, Plot.PlotAxis ax, Plot.PlotAxis ay, Plot.PlotAxis at, int frame, PlotPanel.Cancels cancels, double recallTolerance = .5) {
 			if (InitTest(out changed, recallTolerance, at, noPreview, ay.length))
-				(_current = _plot[frame]).GetPlotXy(values, div, out changed, _exp!, ax, ay, at, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, Cancel);
+				(_current = _plot[frame]).GetPlotXy(values, div, out changed, _exp!, ax, ay, at, frame, Add(_mSt, Mul((Real)frame, _mDt)), recallTolerance, cancels);
 		}
 
 		public class AxisOverlap {

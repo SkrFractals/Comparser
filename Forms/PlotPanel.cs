@@ -249,6 +249,24 @@ public partial class PlotPanel : UserControl, IPanel {
 		DirtyImage();
 		States.Suppressed = sup;
 	}
+	public class Cancels {
+		public readonly Stack<CancellationTokenSource> C = [];
+		public CancellationToken GetToken => C.Count > 0 ? C.Peek().Token : NewC();
+		public CancellationToken GetNewToken() {
+			if(C.Count > 0)
+				C.Clear();
+			return GetToken;
+		}
+		private CancellationToken NewC() {
+			CancellationTokenSource c = new();
+			C.Push(c);
+			return c.Token;
+		}
+		public void Cancel() {
+			foreach (var c in C) c.Cancel();
+			C.Clear();
+		}
+	}
 	#endregion
 
 	#region Variables
@@ -686,7 +704,9 @@ public partial class PlotPanel : UserControl, IPanel {
 		
 		// TODO if the plot Location is entirely outside the view, then consider it non-animated
 		bool mem = false;
-		if (GetPlot() is { } p && (_drawing = p.Update(out mem, plotBox.Width, plotBox.Height, _length, SettingsPanel.PreviewLoad == 0 || _animated || _exportCancel != null || !InPlace() && SettingsPanel.UseMem, ref _cancel))) {
+		if (GetPlot() is { } p && (_drawing = p.Update(out mem, plotBox.Width, plotBox.Height, _length, 
+			SettingsPanel.PreviewLoad == 0 || _animated || _exportCancel != null || !InPlace() && SettingsPanel.UseMem, 
+			_cancel))) {
 			_cancelled = _dirtyImage = _forced = false;
 			_finishedFrame = -1;
 		}
@@ -702,7 +722,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		//Console.WriteLine("PlotChange");
 	}
 	
-	private CancellationTokenSource _cancel = new();
+	private Cancels _cancel = new();
 	private void DirtyImage(bool restartTimer = true) {
 		if (restartTimer)
 			_plotDelay.Restart();

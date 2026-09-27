@@ -29,7 +29,9 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 			private bool _xyCancelled = true, _xCancelled = true;
 			private readonly List<Value[]> _plotsX = [[]], _plotsXy = [[]];
 			public bool TaskRunning() => Static.TaskRunning(_taskArr);
-			public unsafe void GetPlotXy(Plot.Values values, int divMax, out bool changed, Expression exp, Plot.PlotAxis axF, Plot.PlotAxis ayF, Plot.PlotAxis at, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
+			public unsafe void GetPlotXy(Plot.Values values, int divMax, out bool changed, Expression exp, Plot.PlotAxis axF, Plot.PlotAxis ayF, Plot.PlotAxis at, double frame, ILeaf memFrame, double recallTolerance, PlotPanel.Cancels cancels, bool refresh = false) {
+				
+				
 				ILeaf aS = Add(axF.start, ayF.start), mSx, mSy, mDx, mDy = mDx = mSy = mSx = zero;
 				int mLx = 0, mLy = 0;
 				if (SqrAbs(Sub(at.Sample(frame), _t2)) <= SqrAbs(at.d) * recallTolerance && !_xyCancelled) {
@@ -43,6 +45,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					(_plotsXy[0], _memXy) = (values.V[0].div = _memXy, _plotsXy[0]);
 					return;
 				}
+				CancellationToken token = cancels.GetNewToken();
 				changed = true; // not the same axes, so the image will be changed
 				// remember what axes are we going to plot:
 				(_mLx2, _mLy2, _mSx2, _mSy2, _mDx2, _mDy2) = (axF.length, ayF.length, axF.start, ayF.start, axF.d, ayF.d);
@@ -114,11 +117,11 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 						Action xtest = Math.Abs(modX) <= 1 ? NoX : YesX;
 						Action ytest = Math.Abs(modY) <= 1 ? NoY : YesY;
 						void NoX() {
-							for (Begin(); x < ex && !cancel.IsCancellationRequested; ++x)
+							for (Begin(); x < ex && !token.IsCancellationRequested; ++x)
 								plot[x + yw] = _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY];
 						}
 						void YesX() {
-							for (Begin(); x < ex && !cancel.IsCancellationRequested; ++pX, ++x)
+							for (Begin(); x < ex && !token.IsCancellationRequested; ++pX, ++x)
 								plot[x + yw] = pX % modX < 1 ? _memXy[_rnd(_mapClU(pm, x)) * mulX + py * mulY] : Eval();
 						}
 						Rows(Math.Min(ye, (int)bottom.I), ytest);
@@ -179,7 +182,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 						}
 						void PgRow() {
 							Begin();
-							for (int e = Math.Min(ax.length, (int)bounds.I); x < e && !cancel.IsCancellationRequested; plot[x + yw] = Fracs(out var p) ? _memXy[p] : Eval(), ++x)
+							for (int e = Math.Min(ax.length, (int)bounds.I); x < e && !token.IsCancellationRequested; plot[x + yw] = Fracs(out var p) ? _memXy[p] : Eval(), ++x)
 								uv = _map(pm, x, y);
 							Finish();
 							// ReSharper disable AccessToModifiedClosure
@@ -197,11 +200,11 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					Et();
 					return;
 
-					void Et() => _xyCancelled = cancel.IsCancellationRequested;
+					void Et() => _xyCancelled = token.IsCancellationRequested;
 					bool Test(double t) => t is < .5 and >= -.5;
 					void Begin() {
 						var e = Math.Min(ax.length, (int)bounds.R);
-						for (x = 0, yw = y * ax.length; x < e && !cancel.IsCancellationRequested; ++x) E();
+						for (x = 0, yw = y * ax.length; x < e && !token.IsCancellationRequested; ++x) E();
 					} // to the left of the outer bounds
 					bool FailAffineMap(ILeaf mS, double e) {
 						ILeaf s;
@@ -225,10 +228,11 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 						return SqrAbs(Sub(q, Add(Mul(dx, (Real)u), Mul(dy, (Real)v)))) <= tolerance;
 					}
 					void Rows(int yEnd, Action a) {
-						for (; y < yEnd && !cancel.IsCancellationRequested; a(), ++y) (x, yw, _taskProgress[taskIndex]) = (0, y * ax.length, _taskProgress[taskIndex] + 1);
+						for (; y < yEnd && !token.IsCancellationRequested; a(), ++y) (x, yw, _taskProgress[taskIndex]) = (0, y * ax.length, _taskProgress[taskIndex] + 1);
+						y = yEnd;
 					}
 					void Finish() {
-						for (; x < ax.length && !cancel.IsCancellationRequested; ++x) E();
+						for (; x < ax.length && !token.IsCancellationRequested; ++x) E();
 					} // to the right of the outer bounds
 					void E() => plot[x + yw] = Eval();
 					Value Eval() {
@@ -238,7 +242,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					}
 				}
 			}
-			public void GetPlotX(Plot.Values values, int divMax, out bool changed, Expression exp, Plot.PlotAxis axF, Plot.PlotAxis ayF, Plot.PlotAxis atF, double y, double frame, ILeaf memFrame, double recallTolerance, CancellationToken cancel, bool refresh = false) {
+			public void GetPlotX(Plot.Values values, int divMax, out bool changed, Expression exp, Plot.PlotAxis axF, Plot.PlotAxis ayF, Plot.PlotAxis atF, double y, double frame, ILeaf memFrame, double recallTolerance, PlotPanel.Cancels cancels, bool refresh = false) {
 				Value[] memY = []; 
 				int memYo = -1, mLx = 0;
 				ILeaf mSx = zero, mDx = zero, yC = ayF.Sample(y); // y coordinate
@@ -258,6 +262,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					_xCancelled = changed = false;
 					return;
 				}
+				var token = cancels.GetNewToken();
 				changed = true;
 				(_mSx1, _mDx1, _mY1, _mLx1) = (axF.start, axF.d, yC, axF.length);
 				// prepare the div axes and preview arrays:
@@ -325,7 +330,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 							return;
 						} // the ratio between asked-memory step sizes is not an integer, the interlacing won't work, so re-eval all
 						int phase; // find the phase when the axis maps to memory ( then we will loop: once "take from memory" then (dScale-1) times "re-eval") 
-						for (phase = 0; phase < dScale && o.IaStart < o.IaEnd && !cancel.IsCancellationRequested; plot[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
+						for (phase = 0; phase < dScale && o.IaStart < o.IaEnd && !token.IsCancellationRequested; plot[o.IaStart] = Eval(o.IaStart), mt = o.Map(++o.IaStart), ++phase)
 							if (!DistanceMismatch(o, Mul((Real)mt, mDx), o.IaStart))
 								break; // stop evaluating once we find the phase match,then we can proceed with the interlacing
 						if (phase == dScale) { // failed to find any match that might be repeating every phase, just re-eval all:
@@ -333,7 +338,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 							Et();
 							return;
 						}
-						for (phase = 0, x = o.IaStart; x < ixe && !cancel.IsCancellationRequested; ++x, ++_taskProgress[taskIndex]) // do the interlacing
+						for (phase = 0, x = o.IaStart; x < ixe && !token.IsCancellationRequested; ++x, ++_taskProgress[taskIndex]) // do the interlacing
 							plot[x] = phase++ % dScale == 0 ? memY[o.Map(x) + memYo] : Eval(x); // phase 0 % dScale = transfer, otherwise eval
 					} else
 						for (x = o.IaStart; x < o.IaEnd; ++x, ++_taskProgress[taskIndex]) // the memory-asked axis bases match, so the transfer can be much simpler:
@@ -346,14 +351,14 @@ public /*abstract*/ partial class Comparser/*<T>*/ {
 					//  we haven't found any memory Y match, or only might be intersecting at 0-1 points, 1 point intersection is not worth finding so just render the whole X line
 					// So re-eval the whole frame
 					void ReEval(int end = int.MaxValue) {
-						for (var iEnd = Math.Min(end, xe); x < iEnd && !cancel.IsCancellationRequested; ++x, ++_taskProgress[taskIndex]) // eval at the whole X axis range
+						for (var iEnd = Math.Min(end, xe); x < iEnd && !token.IsCancellationRequested; ++x, ++_taskProgress[taskIndex]) // eval at the whole X axis range
 							plot[x] = Eval(x); // eval at this x coordinate
 					}
 					Value Eval(int ix) {
 						args.Values[0].Leaf = Add(ax.Sample(ix), yC);
 						return exp.Eval(0, args, false/*SettingsPanel.Tasks <= 1*/);
 					}
-					void Et() => _xCancelled = cancel.IsCancellationRequested;
+					void Et() => _xCancelled = token.IsCancellationRequested;
 				}
 			}
 			private void Multi(int taskIndex, int d, Plot.PlotAxis a, Plot.Values values, Action<int,int,int,int> plot) {

@@ -19,7 +19,7 @@ public interface IPlot {
 	public void ZoomContinuous(int x, int y, double size);
 	public void ZoomBinary(int x, int y, bool zoomIn) => ZoomContinuous(x, y, zoomIn ? .5 : 2);
 	public void Shift(int dx, int dy);
-	public bool Update(out bool memory, int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel);
+	public bool Update(out bool memory, int w, int h, int l, bool noPreview, PlotPanel.Cancels cancel);
 	public IPlotAxis[] GetAxis();
 	public void DelOutput(int output);
 	public void DelAll();
@@ -37,7 +37,7 @@ public interface IPlot {
 	public bool InPlace((object? x, object? y) a);
 	public (Point p, Size s) GetPlace((object? x, object? y) a);
 	public void SetFinished(Action<object?, object?, Comparser.Plot.BitmapReady, int, CancellationToken/*, string*/> finishedImage);
-	public void SoftCancel(CancellationTokenSource cancel);
+	public void SoftCancel(PlotPanel.Cancels cancel);
 	public object? GetExpressionArgs(int index);
 }
 public /*abstract*/  partial class Comparser/*<T>*/{
@@ -330,7 +330,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				}
 			}
 		}
-		public void SoftCancel(CancellationTokenSource cancel) {
+		public void SoftCancel(PlotPanel.Cancels cancel) {
 			if (_drawn > 0)
 				cancel.Cancel();
 			else
@@ -338,27 +338,27 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 		}
 		private Task[] _taskArr = [];
 		private bool _dirty;
-		private CancellationTokenSource? _softCancel;
+		private PlotPanel.Cancels? _softCancel;
 		private readonly Renders _r = new();
 		private int _drawn; // how many preview frames have already been drawn?
 		private PlotAxis? _renderIx, _renderIy, _renderOy;
 		private Task? _drawTask;
 		
-		public bool Update(out bool memory, int w, int h, int l, bool noPreview, ref CancellationTokenSource cancel) {
+		public bool Update(out bool memory, int w, int h, int l, bool noPreview, PlotPanel.Cancels cancel) {
 			memory = false;
 
 			var ss = SettingsPanel.SuperSampling;
 			int ws = w * ss, hs = h * ss;
 
 			if (_drawTask is { IsCompleted: false }) {
-				if(DoSoftCancel(ref cancel))
+				if(DoSoftCancel())
 					return false;
 				//Console.WriteLine("working");
-				return !cancel.IsCancellationRequested;
+				return !cancel.GetToken.IsCancellationRequested;
 				
 			}
-			var newCancel = new CancellationTokenSource();
-			var newCancelToken = newCancel.Token;
+			//var newCancel = new CancellationTokenSource();
+			//var newCancelToken = newCancel.Token;
 
 			var dirtied = false; 
 			// if size changed, it will resize everything and mark things dirty
@@ -374,41 +374,45 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
 						// Refresh 1D (X,FixedY) output values
-						o.Eval.GetPlotX(noPreview, o.Values, out var d, InputX, InputY, FixedY, new(InputT), Frame);
-						Dirtied(d, o);
+						o.Eval.GetPlotX(noPreview, o.Values, out var d, InputX, InputY, FixedY, new(InputT), Frame, cancel);
+						if(d) Dirtied();
 					}
 					break;
 				default: // XY mode:
 					linesY = InputY.lines;
 					foreach (var o in OutputR) {
 						if (o.Eval?.Null() ?? true) continue;
-						o.Eval.Cancel = newCancelToken;
+						//o.Eval.Cancel = newCancelToken;
 						// Refresh 2D (X,Y) output values
-						o.Eval.GetPlotXy(noPreview, o.Values, out var d, InputX, InputY, new(InputT), Frame);
-						Dirtied(d, o);
+						o.Eval.GetPlotXy(noPreview, o.Values, out var d, InputX, InputY, new(InputT), Frame, cancel);
+						if(d) Dirtied();
 					}
 					break;
-					void Dirtied(bool d, PlotOutput o) {
-						if (!d)
+					void Dirtied() {
+						if(dirtied)//if (IsDirtied(d, o))
 							return;
-						dirtied = true;
-						//Console.WriteLine("Dirtied");
-						o.Eval?.Cancel = newCancelToken;
-						_dirty = true;
+						dirtied = _dirty = true;
 						_drawn = 0;
 					}
+					/*bool IsDirtied(bool d, PlotOutput o) {
+						if (!d)
+							return true;
+						//o.Eval?.Cancel = newCancelToken;
+						return dirtied;
+					}*/
 			}
 			
 			var dirt = _dirty;
 			if (dirtied) {
 				//Console.WriteLine("Dirtied: "+InputX.length);
-				cancel = newCancel;
+				//cancel.C.Clear();
+				//cancel.C.Push(newCancel);
 				_softCancel = null;
 				_renderIx = new(InputX); // these new should not be necessary - or maybe yes to prevent crashes from changing WH while generating
 				_renderIy = new(InputY);
 				_renderOy = new(OutputY);
 			}
-			if (DoSoftCancel(ref cancel))
+			if (DoSoftCancel())
 				return false;
 			_dirty = false;
 			var maxDiv = int.MaxValue;
@@ -420,14 +424,15 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				if (!memory) {
 					// should we re-evaluate GetPlot?
 					cancel.Cancel();
+					_dirty = true;
 					return false;
 				}
 			} else if(!dirtied) {
 				// TODO test if this doesn't break anything
 				// if we only changed some setting, that doesn't affect GetPlot values, but only wants to re-render RgbEval, then assign a new cancel
-				foreach (var o in OutputR)
-					o.Eval?.Cancel = newCancel.Token;
-				cancel = newCancel;
+				//foreach (var o in OutputR)
+				//	o.Eval?.Cancel = newCancel.Token;
+				//cancel.C.Push(newCancel);
 			}
 			// GetPlot tasks still running?
 			bool notReady = false;
@@ -464,7 +469,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				var ssss = ss * ss;
 				var bwss = bw * ss;
 				var bhss = bh * ss;
-				var renderToken = cancel.Token;
+				var renderToken = cancel.GetToken;
 				switch (Mode) {
 				case PlotMode.XContour:
 				case PlotMode.XFill:
@@ -610,15 +615,17 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				for (var i = 0; i < axis.Length; ++i) // combine axis lines
 					axis[i] = Max(axis[i], a.lines[i]);
 			}*/
-			bool DoSoftCancel(ref CancellationTokenSource cancel) {
-				if (_softCancel == cancel) {
-					if (_drawn > 0) { 
+			bool DoSoftCancel() {
+				//if (_softCancel.GetToken == cancel.GetToken) {
+				if (_softCancel != null) {
+					if (_drawn > 0) {
 						cancel.Cancel();
 						_dirty = true;
 						_softCancel = null;
 						return true;
 					}
-				} else _softCancel = null;
+				}
+				//} else _softCancel = null;
 				return false;
 			}
 			//Color Max(Color a, Color b) => Color.FromArgb(Math.Max(a.R, b.R), Math.Max(a.G, b.G), Math.Max(a.B, b.B));
