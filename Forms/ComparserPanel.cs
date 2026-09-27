@@ -12,7 +12,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 	public Size GetSize() => new((Pad << 1) + 64, 120);
 	public void SetDark(bool dark) {
 		BaseSetDark(this);
-		DrawLogsAndColors();
+		DrawLogsAndColors(false);
 	}
 	public void PerformClose() { }
 	public void CoreLayout() { }
@@ -141,8 +141,10 @@ public partial class ComparserPanel : UserControl, IPanel {
 		_codeTime.Stop();
 		_freeTime.Stop();
 		CodeChanged = false;
-		_parsing = ParseState.Parsing;
 		fps.Interval = 100;
+		if (codeBox.Text == _toParse)
+			return;
+		_parsing = ParseState.Parsing;
 		_toParse = codeBox.Text;
 		_token = (_cancel = new()).Token;
 		buildButton.Text = "CANCEL";
@@ -187,7 +189,7 @@ public partial class ComparserPanel : UserControl, IPanel {
 			_dirtyLog = false;
 		} else _dirtyLog = true;
 	}
-	private void DrawLogsAndColors() {
+	private void DrawLogsAndColors(bool reEval = true) {
 		_dirtyResult = false;
 		_freeTime.Stop();
 		var sup = States.Suppressed;
@@ -230,8 +232,10 @@ public partial class ComparserPanel : UserControl, IPanel {
 		}
 		TransferLog();
 		// evaluate expression fields with this newly parsed program
-		_var.Root.Exp?.ReEval();
-		_var.Root.Plot?.ReEval(/*SettingsControl.Context.GetPlot()!*/);
+		if (reEval) {
+			_var.Root.Exp?.ReEval();
+			_var.Root.Plot?.ReEval( /*SettingsControl.Context.GetPlot()!*/);
+		}
 		codeBox.TextChanged += CodeBox_TextChanged;
 		States.Suppressed = sup;
 	}

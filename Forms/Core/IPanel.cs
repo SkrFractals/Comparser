@@ -59,11 +59,12 @@ public interface IPanel{
 				case ComboBox:
 				case RichTextBox:
 				case LineNumberControl:
-					
+					var tag = oc.Tag;
+					oc.Tag = true;
 					oc.BackColor = oc.BackColor == Color.Red ? Color.Red : color.back;
 					oc.ForeColor = color.fore;
 					DarkC(oc.Controls, color);
-					
+					oc.Tag = tag;
 					break;
 				case Label:
 					oc.ForeColor = color.back;

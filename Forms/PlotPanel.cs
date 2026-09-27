@@ -424,7 +424,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 	public void CodeChanged(object? sender, EventArgs e) {
 		var i = _s.outputSelect.SelectedIndex;
-		if (i < 0 || i >= Outputs.Count)
+		if (i < 0 || i >= Outputs.Count || _s.codeBox.Tag is true)
 			return;
 		_cancel.Cancel();
 		GetPlot().SetCode(i, Parse(Outputs[i].Code));
@@ -433,7 +433,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 	public void RgbChanged(object? sender, EventArgs e) {
 		var i = _s.outputSelect.SelectedIndex;
-		if (i < 0 || i >= Outputs.Count)
+		if (i < 0 || i >= Outputs.Count || _s.rgbBox.Tag is true)
 			return;
 		_cancel.Cancel();
 		GetPlot().SetRgb(i, Parse(Outputs[i].Rgb));
@@ -450,7 +450,7 @@ public partial class PlotPanel : UserControl, IPanel {
 		prevW = Width;
 	}*/
 	private void Resized(object? sense, EventArgs e) {
-		if (_lockedRes || _s.widthBox.Tag is true || _s.heightBox.Tag is true)
+		if (_lockedRes || _s.widthBox.Tag is true || _s.heightBox.Tag is true || plotBox.Width == 0 || plotBox.Height == 0 || plotBox.Width == EvalW() && plotBox.Height == EvalH())
 			return;
 		plotBox.Dock = DockStyle.Fill;
 		Refresh(_w, plotBox.Width.ToString());
@@ -493,11 +493,13 @@ public partial class PlotPanel : UserControl, IPanel {
 		LogState(_s.widthBox);
 		
 	}
+	private int EvalW() => (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w));
+	private int EvalH() => (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h));
 	public void SetRes() {
 		int extraW = _var.Form.Width - _var.Form.GetInnerPanel().Width,
 			extraH = _var.Form.Height - _var.Form.GetInnerPanel().Height,
-			desiredW = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _w)),
-			desiredH = (int)SettingsPanel.Context.AsDouble(Eval(SettingsPanel.Context, _h));
+			desiredW = EvalW(),
+			desiredH = EvalH();
 		plotBox.Dock = DockStyle.Fill;
 		_var.Form.Width = extraW + desiredW;
 		_var.Form.Height = extraH + desiredH;
