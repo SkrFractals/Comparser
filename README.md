@@ -3,7 +3,7 @@ Complex Computer Parser
 
 -currently in development, some parts might not work properly yet-
 
-(when you seea colored square at the titles, they are the dark-mode coloring of those kinds of syntax you will get when actually writing them)
+(when you see a colored square at the titles, they are the dark-mode coloring of those kinds of syntax you will get when actually writing them)
   
 ## EXECUTION STAGES:  
 Comparser has two distinct stages:  
