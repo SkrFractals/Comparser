@@ -7,17 +7,25 @@ public static class Static {
 	public const string UnlockedSymbol = "🔓";
 	public static readonly bool[] FindName = [false, false, false, true];
 	public static readonly bool[] FindArgs = [true, true, false, true];
-	private const int Bernoullis = 20;
+	// WARNING: The ulong[] pascal triangle overflows at 34.
+	// For higher values - increase the precision of "var p" in MakeBernoullisR to BigInteger
+	private const int Bernoullis = 33; 
 	static Static() {
 		var b2 = MakeBernoullisR();
 		B2F = new double[b2.Length];
-		for (int i = 0; i < b2.Length; ++i)
-			B2F[i] = b2[i] * Factorial(2*i + 1);
+		for (var i = 0; i < b2.Length; ++i)
+			B2F[i] = b2[i] / NaturalFactorial(2 * (i + 1));
 		B2G = new double[b2.Length];
-		for (int i = 0; i < b2.Length; ++i)
+		for (var i = 0; i < b2.Length; ++i)
 			B2G[i] = b2[i] / (2 + (6 + 4 * i) * i);
 	}
-	static double Factorial(int n) {
+	static double NaturalFactorial(int n) {
+		if (n > 21) {
+			double fd = 1; // use double from n > 21, to prevent overflow
+			while (n > 0)
+				fd *= n--;
+			return fd;
+		}
 		ulong f = 1; // calculate natural factorial exactly
 		while (n > 0)
 			f *= (ulong)n--;
@@ -26,37 +34,39 @@ public static class Static {
 
 	private static double[] MakeBernoullisR() {
 		var b = new double[Bernoullis];
-		const int maxIterations = Bernoullis << 1;
+		const int maxIterations = Bernoullis + 1 << 1;
 		b[0] = 1.0 / 6;
 		// b[i] = sum[m=0..n]: sum[k=0..m]: (-1)^k * Comb(m k) * k^n * (m+1)^(-1)
-		for (var i = 2; i < Bernoullis; ++i) {
+		for (var i = 2; i <= Bernoullis; ++i) {
 			int e, o, m, tri, n = i << 1;
-			var powers = new BigRational[n+1];
+			var powers = new BigRational[n + 1];
 			for (var k = 2; k <= n; ++k) { // prepare k^n
 				var power = powers[k] = new(k, 1);
-				for(int j = n - 1; j > 0; j >>= 1, power *= power)
-					if((j & 1) == 1)
+				for (int j = n - 1; j > 0; j >>= 1, power *= power)
+					if ((j & 1) == 1)
 						powers[k] *= power;
 			}
-			BigRational nk, ns =  (powers[2] - new BigRational(7,2)) * new BigRational(1, 3); // m=0 + m=1 + m=2 ...first 3 terms
-			var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
-			for (p[m = 2] = 1; (tri = m) < n; ) { // m-loop
+			BigRational nk, ns = (powers[2] - new BigRational(7, 2)) * new BigRational(1, 3); // m=0 + m=1 + m=2 ...first 3 terms
+			var p = new ulong[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
+			for (p[m = 2] = 1; (tri = m) < n;) { // m-loop
 				while (tri > 2) p[tri] += p[--tri]; // add the non-edge pascal triangle terms
-				p[2] += m; // increment the 3rd column on the left edge of the pascal triangle
-				if (m % 2 == 0) (e, o) = (m, ++m); else (o, e) = (m, ++m); // odd and even loops
+				p[2] += (ulong)m; // increment the 3rd column on the left edge of the pascal triangle
+				if (m % 2 == 0) (e, o) = (m, ++m);
+				else (o, e) = (m, ++m); // odd and even loops
 				p[m] = 1; // add a new 1 at the end column on the right edge of the pascal triangle
-				nk = new(-m, 1);  // 1st term (and 0th is always zero for n>0)
+				nk = new(-m, 1); // 1st term (and 0th is always zero for n>0)
 				do nk += new BigRational(p[e], 1) * powers[e]; // k-loop: even k terms, p[e] = Combinations(n,e)
 				while (2 <= (e -= 2)); // decrement even k iterators down to 1
-				do nk -=  new BigRational(p[o], 1) * powers[o]; // k-loop: odd k terms, p[o] = Combinations(n,o)
+				do nk -= new BigRational(p[o], 1) * powers[o]; // k-loop: odd k terms, p[o] = Combinations(n,o)
 				while (2 <= (o -= 2)); // decrement odd k iterators down to 1
-				ns += nk  * new BigRational(1,1 + m);
+				ns += nk * new BigRational(1, 1 + m);
 			}
 			b[i - 1] = ns.FromD();
 		}
 		return b;
-	}//1.0 / (1 + 1.0 / m);
-	
+	}
+
+
 	// Bernoulli numbers
 	// B2[i]/(2(n+1))! ...for zeta euler
 	public static readonly double[] B2F;
@@ -240,3 +250,54 @@ public static class Static {
 }
 
 
+/*(double, double)[] B2 = [
+			(b2[0], 1.0 / 6),
+			(b2[1], -1.0 / 30),
+			(b2[2], 1.0 / 42),
+			(b2[3], -1.0 / 30),
+			(b2[4], 5.0 / 66),
+			(b2[5], -691.0 / 2730),
+			(b2[6], 7.0 / 6),
+			(b2[7], -3617.0 / 510),
+			(b2[8], 43867.0 / 798),
+			(b2[9], -174611.0 / 330),
+			(b2[10], 854513.0 / 138),
+			(b2[11], -236364091.0 / 2730),
+			(b2[12], 8553103.0 / 6),
+			(b2[13], -23749461029.0 / 870),
+			(b2[14], 8615841276005.0 / 14322),
+			(b2[15], -7709321041217.0 / 510),
+			(b2[16], 2577687858367.0 / 6),
+			(b2[17], -26315271553053477373.0 / 1919190),
+			(b2[18], 2929993913841559.0 / 6),
+			(b2[19], -261082718496449122051.0 / 13530),
+			(b2[20], 1520097643918070802691.0 / 1806), // 42
+			(b2[21], -27833269579301024235023.0 / 690),
+			(b2[22], 596451111593912163277961.0 / 282),
+			(b2[23], -5609403368997817686249127547.0 / 46410),
+			(b2[24], 495057205241079648212477525.0 / 66),
+			(b2[25], -801165718135489957347924991853.0 / 1590),
+			(b2[26], 29149963634884862421418123812691.0 / 798),
+			(b2[27], -2479392929313226753685415739663229.0 / 870),
+			(b2[28], 84483613348880041862046775994036021.0 / 354),
+			(b2[29], -1215233140483755572040304994079820246041491.0 / 56786730), // 60
+		];*/
+
+/*double[] FF = new double[30];
+for (int i = 19; i < 30; ++i)
+	FF[i] = Factorial(i);
+
+double[] F2 = new double[16];
+for (int i = 0; i < 16; ++i)
+	F2[i] = Factorial(2 * (i + 1));
+*/
+/*Complex[][] eulers = new Complex[16][];
+for (int i = 0; i < 16; ++i) {
+	eulers[i] = [
+		INumber<Complex>.Zeta_Euler(new(2)),
+		INumber<Complex>.Zeta_Euler(new(4)),
+		INumber<Complex>.Zeta_Euler(new(6)),
+		INumber<Complex>.Zeta_Euler(new(10))
+	];
+}
+B2F = B2F;*/

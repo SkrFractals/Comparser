@@ -450,9 +450,10 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 	/// <returns>zeta evaluated</returns>
 	private static T Zeta_Hasse(T t) {
 		// zeta(c) = (c-1)^(-1) * sum[n=0..i]: (n+1)^(-1) * sum[k=0..n]: (-1)^k * Combination(n,k) * (k + 1)^(1 - c)
-		T nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
-		const int maxIterations = 42;
-		T term = unit;
+		T term = unit, nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
+		// WARNING: the int[] pascal triangle overflows at 34.
+		// To increase maxIterations any further, you'll need to use a higher precision for "var p"
+		const int maxIterations = 33; 
 		var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
 		for (int tri, n = p[1] = 1; (tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20; ns += term = nk / (n + 1)) {
 			while (tri > 1)
@@ -470,15 +471,15 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 		}
 		return ns; // multiplied by Inc(c - 1) outside this function, as c - 1 is precomputed there
 	}
-	private static T Zeta_Euler(T t) { // using B2k Bernoulli numbers/factorials
+	public static T Zeta_Euler(T t) { // using B2k Bernoulli numbers/factorials
 		int terms = 32, berns = B2F.Length;
 		var s = unit;
 		for (byte n = 2; n < terms; ++n)
 			s += n ^ -t;
 		var sum = s + (s = terms ^ -t) * (.5 + terms / (t - 1)) + B2F[0] * (s *= t / terms);
 		terms *= terms;
-		for (var k = 1; k < berns; ++k)
-			sum += B2F[k] * (s *= (t + 2 * k + 1) * (t + 2 * k + 2) / terms);
+		for (var k = 1; k < berns; ++k) 
+			sum += B2F[k] * (s *= (t + 2 * k - 1) * (t + 2 * k) / terms);
 		return sum;
 	}
 	// Elegant Zeta reflection: ζ(1-s)τ^s = CosI(s)Γ(s)ζ(s)
@@ -504,7 +505,7 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 			// far from pole - use Euler that is excellent when far from it
 			: IScalar<double>.ToDouble(T.Re(t)) >= .5 ? Zeta_Euler(t)
 			// negative and far from the pole - reflect Euler (using the formula derived above)
-			: Zeta_Euler(t) * (Math.Tau ^ t1) * Gamma_Stirling_Positive(1 - t) * T.Sin_2Q(t);
+			: Zeta_Euler(1 - t) * (Math.Tau ^ t1) * Gamma_Stirling_Positive(1 - t) * T.Sin_2Q(t);
 	}
 	#endregion
 
