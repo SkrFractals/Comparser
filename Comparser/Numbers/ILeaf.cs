@@ -832,4 +832,25 @@ public interface ILeaf/*<T> where T : unmanaged, IScalar<T>*/ {
 	#endregion
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private static bool N(ILeaf t, out double r) => (r = t.Re()) < 0;
+	
+	#region Zeta Implementations
+	public static ILeaf Zeta_Euler(ILeaf t) => t.kind switch {
+		NumericKind.Real => INumber<Complex>.Zeta_Euler((Complex)(Real)t),
+		NumericKind.Complex => INumber<Complex>.Zeta_Euler((Complex)t),
+		NumericKind.Quaternion => INumber<Quaternion>.ComplexOp((Quaternion)t, INumber<Complex>.Zeta_Euler),
+		_ => Real.nan
+	};
+	public static ILeaf Zeta_Hasse(ILeaf t) => t.kind switch {
+		NumericKind.Real => INumber<Complex>.Zeta_Hasse((Complex)(Real)t) * (Complex)Real.Inv((Real)t - 1),
+		NumericKind.Complex => INumber<Complex>.Zeta_Hasse((Complex)t) * Complex.Inv((Complex)t - 1),
+		NumericKind.Quaternion => INumber<Quaternion>.ComplexOp((Quaternion)t, INumber<Complex>.Zeta_Hasse) * Quaternion.Inv((Quaternion)t - 1),
+		_ => Real.nan
+	};
+	public static ILeaf Zeta_Laurent(ILeaf t) => t.kind switch {
+		NumericKind.Real => INumber<Complex>.Zeta_Laurent((Complex)(Real)t),
+		NumericKind.Complex => INumber<Complex>.Zeta_Laurent((Complex)t),
+		NumericKind.Quaternion => INumber<Quaternion>.ComplexOp((Quaternion)t, INumber<Complex>.Zeta_Laurent),
+		_ => Real.nan
+	};
+	#endregion
 }

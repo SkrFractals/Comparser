@@ -63,8 +63,8 @@ public interface IPanel{
 					oc.Tag = true;
 					oc.BackColor = oc.BackColor == Color.Red ? Color.Red : color.back;
 					oc.ForeColor = color.fore;
-					DarkC(oc.Controls, color);
 					oc.Tag = tag;
+					DarkC(oc.Controls, color);
 					break;
 				case Label:
 					oc.ForeColor = color.back;

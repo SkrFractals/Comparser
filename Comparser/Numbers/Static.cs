@@ -9,7 +9,7 @@ public static class Static {
 	public static readonly bool[] FindArgs = [true, true, false, true];
 	// WARNING: The ulong[] pascal triangle overflows at 34.
 	// For higher values - increase the precision of "var p" in MakeBernoullisR to BigInteger
-	private const int Bernoullis = 33; 
+	private const int Bernoullis = 33;//10;// 33; // TODO return to 33 
 	static Static() {
 		var b2 = MakeBernoullisR();
 		B2F = new double[b2.Length];
@@ -92,6 +92,9 @@ public static class Static {
 	public const double G3 = 0.0020538344203033458661600465427533842857158044 / 6; // gamma3 / 3!
 	public const double G4 = 0.0023253700654673000574681701775260680009044694 / 24; // gamma4 / 4!
 	public const double G5 = 0.0007933238173010627017533348774444448307315394 / 120; // gamma5 / 5!
+	public const double G6 = 0.0002387693454301996098724218419080042777837151 / -(6*5*4*3*2); // gamma6 / 6!
+	public const double G7 = 0.0005272895670577510460740975054788582819962534 / -(7*6*5*4*3*2); // gamma7 / 7!
+	public const double G8 = 0.0003521233538030395096020521650012087417291805 / -(8*6*5*4*3*2); // gamma8 / 8!
 
 	public static int Gcd(int a, int b) {
 		if (a < 0) a = -a;

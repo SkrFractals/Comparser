@@ -100,7 +100,10 @@ public partial class ExpressionPanel : UserControl, IPanel {
 	#endregion
 
 	#region Events
-	private void ExpChanged(object? sender, EventArgs e) => Eval((int?)((Control?)sender)?.Tag ?? 0);
+	private void ExpChanged(object? sender, EventArgs e) {
+		if(((Control?)sender)?.Tag is int i)
+			Eval(i);
+	}
 	private void ExpSwapped(object? sender, EventArgs e) {
 		int s = (int?)((Control?)sender)?.Tag ?? 0;
 		// swap with invisible panel, so they don't trigger reevaluations mid-swap

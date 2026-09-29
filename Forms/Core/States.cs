@@ -123,11 +123,13 @@ internal class LogPlotSize : LogSet<PlotSizeState> { // triple textbox pinnable 
 	private readonly RichTextBox _w, _h; // Width x Height
 	override protected PlotSizeState GetState() => new(_w.Text, _h.Text, _ix.GetState(), _iy.GetState(), _oy.GetState()); // log three texts and which one is pinned
 	override protected void RestoreRedo(LogState<PlotSizeState> _, LogState<PlotSizeState> to) {
+		var wt = _w.Tag;
+		var ht = _h.Tag;
 		_w.Tag = _h.Tag = true;
 		SetText(_w, to.state.w);
 		SetText(_h, to.state.h);
 		P.SetRes();
-		_w.Tag = _h.Tag = false;
+		_w.Tag = wt;_h.Tag = ht;
 		_ix.SetSce(to.state.ix, true);
 		_iy.SetSce(to.state.iy, true);
 		_oy.SetSce(to.state.oy, true);

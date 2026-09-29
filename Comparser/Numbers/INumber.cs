@@ -448,14 +448,16 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 	/// </summary>
 	/// <param name="t">T input (often written as "s")</param>
 	/// <returns>zeta evaluated</returns>
-	private static T Zeta_Hasse(T t) {
+	public static T Zeta_Hasse(T t) {
 		// zeta(c) = (c-1)^(-1) * sum[n=0..i]: (n+1)^(-1) * sum[k=0..n]: (-1)^k * Combination(n,k) * (k + 1)^(1 - c)
 		T term = unit, nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
 		// WARNING: the int[] pascal triangle overflows at 34.
 		// To increase maxIterations any further, you'll need to use a higher precision for "var p"
-		const int maxIterations = 33; 
+		const int maxIterations = 33;
 		var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
-		for (int tri, n = p[1] = 1; (tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20; ns += term = nk / (n + 1)) {
+		for (int tri, n = p[1] = 1; 
+			(tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20; 
+			ns += term = nk / (n + 1)) {
 			while (tri > 1)
 				p[tri] += p[--tri]; // add the non-edge pascal triangle terms
 			int e, o;
@@ -472,7 +474,7 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 		return ns; // multiplied by Inc(c - 1) outside this function, as c - 1 is precomputed there
 	}
 	public static T Zeta_Euler(T t) { // using B2k Bernoulli numbers/factorials
-		int terms = 32, berns = B2F.Length;
+		int terms = 32, berns = 10;//B2F.Length;
 		var s = unit;
 		for (byte n = 2; n < terms; ++n)
 			s += n ^ -t;
@@ -498,15 +500,19 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 		var pole = IScalar<double>.ToDouble(+t1);
 		// exactly the pole - return infinity
 		return pole == 0 ? T.MakeR(IScalar<double>.infty)
-			// very near the pole - use Laurent that is excellent when this near, hopefully 5 terms are enough for the Laurent series with the distance from to pole up to e-4
-			: pole < 1e-8 ? T.Inv(t1) + Static.Gamma - t1 * (G1 - t1 * (G2 - t1 * (G3 - t1 * (G4 - t1 * G5))))
+			// very near the pole - use Laurent that is excellent when this near
+			// hopefully 5 terms are enough for the Laurent series with the distance from to pole up to e-4
+			: pole < 1e-8 ? T.Inv(t1) + Static.Gamma - t * (G1 - t * (G2 - t * (G3 - t * (G4 - t * (G5 - t * (G6 - t * (G7 - t * G8)))))))
 			// near the pole - use general Hasse that is decent everywhere
-			: pole < 4 ? Zeta_Hasse(t) * T.Inv(t1)
+			//: pole < 1e-4 ? Zeta_Hasse(t) * T.Inv(t1) // Hasse doesn't appear to be better than either Euler or Laurent at any region
 			// far from pole - use Euler that is excellent when far from it
 			: IScalar<double>.ToDouble(T.Re(t)) >= .5 ? Zeta_Euler(t)
 			// negative and far from the pole - reflect Euler (using the formula derived above)
 			: Zeta_Euler(1 - t) * (Math.Tau ^ t1) * Gamma_Stirling_Positive(1 - t) * T.Sin_2Q(t);
 	}
+	// Laurent Series for Zeta function - should be very precise infinitesimally close to the pole
+	//public static T Zeta_Laurent(T t) => T.Inv(t -= 1) + Static.Gamma - t * (G1 - t * (G2 - t * (G3 - t * (G4 - t * G5))));
+	public static T Zeta_Laurent(T t) => T.Inv(t -= 1) + Static.Gamma - t * (G1 - t * (G2 - t * (G3 - t * (G4 - t * (G5 - t*(G6 - t*(G7 - t*G8)))))));
 	#endregion
 
 	public static abstract void IndexAndAddToRgb(Color[] axis, T indices, T value);
@@ -519,3 +525,32 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 					axis.i[(int)s.i] += a.i;
 			}*/
 }
+
+/*private static T Zeta_Hasse(T t) {
+	try {
+		checked {
+			T term = unit, nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
+			const int maxIterations = 50;
+			var p = new ulong[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
+			p[1] = 1;
+			for (int tri, n = 1; (tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20; ns += term = nk / (n + 1)) {
+				while (tri > 1)
+					p[tri] += p[--tri]; // add the non-edge pascal triangle terms
+				int e, o;
+				if (n % 2 == 0)
+					(e, o) = (n, ++n);
+				else (o, e) = (n, ++n); // even and odd k iterators (so I don't have to (-1)^k)
+				++p[p[n] = 1]; // increment 2nd term in the pascal row, last term (one) in the pascal row is a new one
+				nk = unit; // zeroth k term is 1, precount that and loop k = n->1
+				do nk += p[e] * (e + 1 ^ c1); // even k terms, p[e] = Combinations(n,e)
+				while (1 <= (e -= 2)); // decrement even k iterators down to 1
+				do nk -= p[o] * (o + 1 ^ c1); // odd k terms, p[o] = Combinations(n,o)
+				while (1 <= (o -= 2)); // decrement odd k iterators down to 1
+			}
+			return ns; // multiplied by Inc(c - 1) outside this function, as c - 1 is precomputed there
+		}
+	} catch (Exception e) {
+		Console.WriteLine(e);
+	}
+	return T.zero;
+}*/

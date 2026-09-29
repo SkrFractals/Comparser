@@ -785,7 +785,7 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 	private static Real/*<T>*/ nan => Real/*<T>*/.nan;
 	private static Real/*<T>*/ unit => Real/*<T>*/.unit;
 	private static Real/*<T>*/ zero => Real/*<T>*/.zero;
-	private static Real/*<T>*/ one => Real/*<T>*/.one;
+	//private static Real/*<T>*/ one => Real/*<T>*/.one;
 	public class Reader(Comparser/*<T>*/ context, string text, CancellationToken cancel, int from = 0) {
 		public char nextChar => From < Text.Length ? Text[From] : ';';
 		public string remainingString => From < Text.Length ? Text[From..] : "";
@@ -1233,6 +1233,11 @@ public /*abstract*/ partial class Comparser/*<T>*/ : IComparser /*where T : unma
 		A(["Γ", "gamma", "Gamma"], new Cf(Gamma, OpCode.Gamma)); // gamma function = (xz1)!
 		A(["gamma"], new Cf(Gamma, OpCode.Gamma)); // gamma function = (xz1)!
 		A(["ζ", "zeta", "Zeta", "riemannzeta","RiemannZeta", "Riemannzeta"], new Cf(/*T*/Zeta, OpCode.Zeta)); // riemann zeta function
+		
+		// zeta implementations
+		A(["zetaeuler", "ZetaEuler"], new Cf(/*T*/Zeta_Euler, OpCode.Zeta)); // riemann zeta function - Euler
+		A(["zetahasse", "ZetaHasse"], new Cf(/*T*/Zeta_Hasse, OpCode.Zeta)); // riemann zeta function - Hasse
+		A(["zetalaurent", "ZetaLaurent"], new Cf(/*T*/Zeta_Laurent, OpCode.Zeta)); // riemann zeta function - Laurent
 		return;
 		void C(string[] name, ILeaf/*<T>*/ v) {
 			foreach (var n in name)if(!_caseInsensitive || n.Equals(n, StringComparison.CurrentCultureIgnoreCase))
