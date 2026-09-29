@@ -630,9 +630,11 @@ public partial class PlotPanel : UserControl, IPanel {
 	}
 	//private int bmpCount = 0;
 	private void OnFinUi(object? x, object? y, Comparser.Comparser.Plot.BitmapReady bmp, int outDiv, CancellationToken renderToken/*, string message = ""*/) {
-		if (bmp.D != null && !renderToken.IsCancellationRequested /*&& renderToken == _cancel.Token*/) {
+		if (_frame != bmp.Frame)
+			return;
+		if (bmp.Bmp != null && !renderToken.IsCancellationRequested /*&& renderToken == _cancel.Token*/) {
 			//bmp.Save(@"C:\Temp\debug"+ bmpCount++ +"." + bmp.Width + "." + outDiv + "." + message + "+.bmp");
-			_bmp = bmp.D;
+			_bmp = bmp.Bmp;
 			_renderAxes = (x, y);
 			plotBox.Invalidate();
 			plotBox.Update();
@@ -643,15 +645,15 @@ public partial class PlotPanel : UserControl, IPanel {
 			/*if(_exportBmps.Length < _length)
 				_exportBmps = new Bitmap[_length];
 			_exportBmps[_frame] = bmp.D;*/
-			bmp.F = 2;
-			_exportBmp = bmp.D;
+			bmp.Finished = 2;
+			_exportBmp = bmp.Bmp;
 			_finishedFrame = _frame;
-			if (_exportCancel != null && _encodedPng.Length > _frame && _encodedPng[_frame] < 3 && bmp.D != null) {
+			if (_exportCancel != null && _encodedPng.Length > _frame && _encodedPng[_frame] < 3 && bmp.Bmp != null) {
 				_encodedPng[_frame] = 1;
 				try {
-					_ = MakeTemp();
+					//_ = MakeTemp();
 					var m = _msPngs[_frame] ??= new();
-					bmp.D.Save(m, System.Drawing.Imaging.ImageFormat.Png);
+					bmp.Bmp.Save(m, System.Drawing.Imaging.ImageFormat.Png);
 					_msPngs[_frame]?.Flush();
 					_encodedPng[_frame] = 3;
 				} catch (Exception) {
@@ -947,13 +949,11 @@ public partial class PlotPanel : UserControl, IPanel {
 	private void StartExport(Action del) {
 		_exportCancel?.Cancel();
 		_exportCancelToken = (_exportCancel = new()).Token;
-		_encodedPng = new byte[_length];
-		for (var i = 0; i < _msPngs.Length; ++i) {
+		for (var i = 0; i < _msPngs.Length; _msPngs[i++] = null) 
 			_msPngs[i]?.Dispose();
-			_msPngs[i] = null;
-		}
+		_encodedPng = new byte[_length];
 		_msPngs = new MemoryStream[_length];
-		for (var i = 0; i < _msPngs.Length; ++i)
+		for (var i = 0; i < _length; ++i)
 			_encodedPng[i] = 0;
 		_ = MakeTemp();
 		//_encodedMp4 = 0;

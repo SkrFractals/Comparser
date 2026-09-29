@@ -96,7 +96,7 @@ public partial class PlotSettingsControl : UserControl {
             + "h = the screen space vertical size - the height of the image.\n"
             + "f = the animation frame index. Not sampled Time Axis, it is the value in the textbox between the previous and next frame buttons in the animation row.\n"
             + "l = the animation length, the same value as the leftmost textbox in the animation row.\n");
-        SetupControl(rgbBox, "This is the Evaluation expression.\nThe complicated math should be here, as this will also use memory to transfer previously evaluated pixels if you move the viewport.\nYou only have the evaluation input values available:\n" + zt);
+        SetupControl(codeBox, "This is the Evaluation expression.\nThe complicated math should be here, as this will also use memory to transfer previously evaluated pixels if you move the viewport.\nYou only have the evaluation input values available:\n" + zt);
     }
 	public void Block() { SetBlock(true); buildButton.Text = "CANCEL"; }
 	public void Unblock() { SetBlock(false); buildButton.Text = "OK"; }

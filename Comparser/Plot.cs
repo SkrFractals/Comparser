@@ -249,9 +249,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			InputY.Shift(dy);
 			OutputY.Shift(dy);
 		}
-		public class BitmapReady(Bitmap? bmp = null, int finished = 0) {
-			public Bitmap? D = bmp;
-			public int F = finished;
+		public class BitmapReady(int frame = -1, Bitmap? bmp = null, int finished = 0) {
+			public Bitmap? Bmp = bmp;
+			public int Finished = finished;
+			public int Frame = frame;
 		}
 		public class Renders {
 			private readonly List<(Expression? e, PlotEval? v, int c)> _outs = [];
@@ -276,17 +277,17 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 					if (_previewBitmap < _previews) {
 
 						RenderDiv = _previews - _previewBitmap;
-						bmp = new(_pBmp[_previewBitmap] = new(w >> RenderDiv, h >> RenderDiv));
+						bmp = new(frame, _pBmp[_previewBitmap] = new(w >> RenderDiv, h >> RenderDiv));
 						return memory = false;
 					}
 					var b = _bitmaps[frame];
 					RenderDiv = 0;
-					if (b?.F >= 2) {
+					if (b?.Finished >= 2) {
 						bmp = b;
 						return memory = true;
 					}
-					if (b?.D == null || b.D.Width != w || b.D.Height != h) {
-						bmp = _bitmaps[frame] = new(new(w, h));
+					if (b?.Bmp == null || b.Bmp.Width != w || b.Bmp.Height != h) {
+						bmp = _bitmaps[frame] = new(frame, new(w, h));
 						return memory = false;
 					}
                     bmp = b;
@@ -294,7 +295,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				}
 				if (length != _length) 
 					_bitmaps = new BitmapReady?[length];
-				_bitmaps[frame]?.F = 0;
+				_bitmaps[frame]?.Finished = 0;
 				memory = false;
 				_mode = mode; _w = w;_h = h;
 				_length = length;
@@ -303,7 +304,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				_pBmp = new Bitmap[_previews];
 				for (var i = 0; i < _previews; ++i)
 					_pBmp[i] = new(w >> (RenderDiv = _previews - i), h >> RenderDiv);
-				bmp = _previews > 0 ? new(_pBmp[0]!) : _bitmaps[frame] = new(new(w, h));
+				bmp = _previews > 0 ? new(frame, _pBmp[0]!) : _bitmaps[frame] = new(frame, new(w, h));
 				RenderDiv = _previews;
 				return !dirtied && !sameSize;
 				bool Match() {
@@ -443,7 +444,7 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			if (notReady || OutputR.Count == 0)
 				return false;
 			// Do we already have the full resolution image pre-rendered? If yes, just return it back without re-rendering
-			if (memory && bmp.F >= 1) {
+			if (memory && bmp.Finished >= 1) {
 				FinishedImage?.Invoke(
 					_renderIx != null ? new PlotAxis(_renderIx) : null,
 					new PlotAxis(Mode == PlotMode.Xy ? InputY : OutputY),
@@ -460,10 +461,10 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 			unsafe {
 				//Console.WriteLine("StartDraw: W"+bmp.d.Width + " T"+Static.Time.ElapsedMilliseconds);
 				var renderBitmap = bmp;
-				int bw = renderBitmap.D!.Width, bh = renderBitmap.D!.Height;
+				int bw = renderBitmap.Bmp!.Width, bh = renderBitmap.Bmp!.Height;
 				if (0 == linesX.Length || 0 == linesY.Length)
 					return false;
-				var lb = renderBitmap.D.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
+				var lb = renderBitmap.Bmp.LockBits(new(0, 0, bw, bh), ImageLockMode.WriteOnly, PixelFormat.Format24bppRgb);
 				var ptr = (byte*)(void*)lb.Scan0;
 				var t = InputT.Sample(Frame);
 				var ssss = ss * ss;
@@ -586,16 +587,16 @@ public /*abstract*/  partial class Comparser/*<T>*/{
 				void DrawTask(Action<float,float,int> del, PlotAxis? rY) {
 					Static.TaskManager(ref _taskArr, tasks, chunks, bh, renderToken, del);
 					
-					renderBitmap.D.UnlockBits(lb);
+					renderBitmap.Bmp.UnlockBits(lb);
 					var rBmp = renderBitmap;
 					if (renderToken.IsCancellationRequested) {
-						rBmp.D = null;
+						rBmp.Bmp = null;
 						_dirty = true;
 						_drawn = 0;
 						_r.Cancel();
 						//Console.WriteLine("FinishCancel " + Static.Time.ElapsedMilliseconds);
 					} else {
-						renderBitmap.F = 1; // mark is as finished, so that it is safe to just pick it from the memory and return it without drawing it again
+						renderBitmap.Finished = 1; // mark is as finished, so that it is safe to just pick it from the memory and return it without drawing it again
 						//Console.WriteLine("Finish W" + renderBitmap.d.Width + " T" + Static.Time.ElapsedMilliseconds);
 						++_drawn;
 						//if (OutputR[0].Values.X?.start != _renderIx?.start)throw new("inconsistent axis!");
