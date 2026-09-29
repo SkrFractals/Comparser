@@ -1,7 +1,11 @@
 # Comparser  
 Complex Computer Parser  
-
--currently in development, some parts might not work properly yet-
+  
+-currently in development, some parts might not work properly yet-  
+  
+(when you see a colored square at the titles, they are the dark-mode coloring of those kinds of syntax you will get when actually writing them)  
+  
+<img width="1090" height="1270" alt="image" src="https://github.com/user-attachments/assets/c6805212-2f13-4b4e-8893-f9e7e8d73e2b" />
   
 ## EXECUTION STAGES:  
 Comparser has two distinct stages:  
