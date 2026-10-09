@@ -450,14 +450,16 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 	/// <returns>zeta evaluated</returns>
 	public static T Zeta_Hasse(T t) {
 		// zeta(c) = (c-1)^(-1) * sum[n=0..i]: (n+1)^(-1) * sum[k=0..n]: (-1)^k * Combination(n,k) * (k + 1)^(1 - c)
-		T term = unit, nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
 		// WARNING: the int[] pascal triangle overflows at 34.
 		// To increase maxIterations any further, you'll need to use a higher precision for "var p"
 		const int maxIterations = 33;
 		var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
-		for (int tri, n = p[1] = 1; 
-			(tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20; 
-			ns += term = nk / (n + 1)) {
+		
+		T c1 = 1 - t;
+		ErrSum ns = new(1.5 - (2 ^ -t));
+		int tri, n = p[1] = 1;
+		while ((tri = n) < maxIterations) {
+			ErrSum nk = new(unit); // zeroth k term is 1, precount that and loop k = n->1
 			while (tri > 1)
 				p[tri] += p[--tri]; // add the non-edge pascal triangle terms
 			int e, o;
@@ -465,24 +467,48 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 				(e, o) = (n, ++n);
 			else (o, e) = (n, ++n); // even and odd k iterators (so I don't have to (-1)^k)
 			++p[p[n] = 1]; // increment 2nd term in the pascal row, last term (one) in the pascal row is a new one
-			nk = unit; // zeroth k term is 1, precount that and loop k = n->1
-			do nk += p[e] * (e + 1 ^ c1); // even k terms, p[e] = Combinations(n,e)
+			do nk.Add(p[e] * (e + 1 ^ c1)); // even k terms, p[e] = Combinations(n,e)
 			while (1 <= (e -= 2)); // decrement even k iterators down to 1
-			do nk -= p[o] * (o + 1 ^ c1); // odd k terms, p[o] = Combinations(n,o)
+			do nk.Add(-p[o] * (o + 1 ^ c1)); // odd k terms, p[o] = Combinations(n,o)
 			while (1 <= (o -= 2)); // decrement odd k iterators down to 1
+			ns.Add(nk.Sum / (n + 1));
 		}
-		return ns; // multiplied by Inc(c - 1) outside this function, as c - 1 is precomputed there
+		return ns.Sum;
+	}
+	struct ErrSum(T init) {
+		public T Sum = init, Err;
+		public void Add(T x) {
+			T y = x - Err, t = Sum + y;
+			Err = t - Sum - y;
+			Sum = t;
+		}
 	}
 	public static T Zeta_Euler(T t) { // using B2k Bernoulli numbers/factorials
-		int terms = 32, berns = 10;//B2F.Length;
+		int terms = 32, berns = B2F.Length << 1, k = 2;
+		ErrSum sum = new(unit);
+		for (byte n = 2; n < terms; ++n)
+			sum.Add(n ^ -t);
+		var s = terms ^ -t;
+		sum.Add(s * (.5 + terms / (t - 1)));
+		sum.Add(B2F[0] * (s *= t / terms));
+		for (terms *= terms; k < berns; k += 2) 
+			sum.Add(B2F[k >> 1] * (s *= (k - 1 + t) * (k + t) / terms));
+		return sum.Sum;
+		
+		//(t.R + 2*k - 1, t.I) * (t.R + 2 * k, t.I)
+		// ( t.R*t.R + 4*k*t.R - t.R + 4*k*k - 2*k - t.I*t.I, 2*t.R*t.I + 4*k*t.I - t.I)
+		// ( t.R*(t.R + 4*k - 1) + 4*k*k - 2*k - t.I*t.I, 2*t.R*t.I + 4*k*t.I - t.I)
+		
+		
+		/*int terms = 32, berns = B2F.Length;
 		var s = unit;
 		for (byte n = 2; n < terms; ++n)
 			s += n ^ -t;
 		var sum = s + (s = terms ^ -t) * (.5 + terms / (t - 1)) + B2F[0] * (s *= t / terms);
 		terms *= terms;
 		for (var k = 1; k < berns; ++k) 
-			sum += B2F[k] * (s *= (t + 2 * k - 1) * (t + 2 * k) / terms);
-		return sum;
+			sum += B2F[k] * (s *= (2 * k - 1 + t) * (2 * k + t) / terms);
+		return sum;*/
 	}
 	// Elegant Zeta reflection: ζ(1-s)τ^s = CosI(s)Γ(s)ζ(s)
 	// ζ(s) = (ζ(1-s)τ^s) / (CosI(s)Γ(s))
@@ -505,7 +531,7 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 			: pole < 1e-8 ? T.Inv(t1) + Static.Gamma - t * (G1 - t * (G2 - t * (G3 - t * (G4 - t * (G5 - t * (G6 - t * (G7 - t * G8)))))))
 			// near the pole - use general Hasse that is decent everywhere
 			//: pole < 1e-4 ? Zeta_Hasse(t) * T.Inv(t1) // Hasse doesn't appear to be better than either Euler or Laurent at any region
-			// far from pole - use Euler that is excellent when far from it
+			// far from pole - use Euler that is excellent when far from it (actually it seems to be excellent even very close)
 			: IScalar<double>.ToDouble(T.Re(t)) >= .5 ? Zeta_Euler(t)
 			// negative and far from the pole - reflect Euler (using the formula derived above)
 			: Zeta_Euler(1 - t) * (Math.Tau ^ t1) * Gamma_Stirling_Positive(1 - t) * T.Sin_2Q(t);
@@ -554,3 +580,40 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 	}
 	return T.zero;
 }*/
+
+/*T term = unit, nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
+for (int tri, n = p[1] = 1;
+(tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20;
+ns += term = nk / (n + 1)) {
+while (tri > 1)
+p[tri] += p[--tri]; // add the non-edge pascal triangle terms
+++p[p[n++] = 1]; // increment 2nd term in the pascal row, last term (one) in the pascal row is a new one
+nk = unit; // zeroth k term is 1, precount that and loop k = n->1
+int e;
+if (n % 2 != 0) { nk -= p[e = n] * (n + 1 ^ c1);
+} else e = n + 1;
+while (--e > 1) nk += p[e] * (e + 1 ^ c1) - p[--e] * (e + 1 ^ c1);
+}*/
+
+
+/* // this may be numerically terrible:
+T term = unit, nk, ns = 1.5 - (2 ^ -t), c1 = 1 - t; // 0th n term is 1, 1st term is (1-2^(1-c))/2 = 0.5-2^(-c), precount that, and loop n = n->2
+var p = new int[maxIterations + 2]; // pascal triangle rows, the first term is always zero, because it is unused
+for (int tri, n = p[1] = 1;
+	(tri = n) < maxIterations && IScalar<double>.ToDouble(+term) / Math.Max(1, IScalar<double>.ToDouble(+ns)) > 1e-20;
+	ns += term = nk / (n + 1)) {
+	while (tri > 1)
+		p[tri] += p[--tri]; // add the non-edge pascal triangle terms
+	int e, o;
+	if (n % 2 == 0)
+		(e, o) = (n, ++n);
+	else (o, e) = (n, ++n); // even and odd k iterators (so I don't have to (-1)^k)
+	++p[p[n] = 1]; // increment 2nd term in the pascal row, last term (one) in the pascal row is a new one
+	nk = unit; // zeroth k term is 1, precount that and loop k = n->1
+	do nk += p[e] * (e + 1 ^ c1); // even k terms, p[e] = Combinations(n,e)
+	while (1 <= (e -= 2)); // decrement even k iterators down to 1
+	do nk -= p[o] * (o + 1 ^ c1); // odd k terms, p[o] = Combinations(n,o)
+	while (1 <= (o -= 2)); // decrement odd k iterators down to 1
+}
+return ns; // multiplied by Inc(c - 1) outside this function, as c - 1 is precomputed there
+*/

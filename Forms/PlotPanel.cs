@@ -632,7 +632,7 @@ public partial class PlotPanel : UserControl, IPanel {
 	private void OnFinUi(object? x, object? y, Comparser.Comparser.Plot.BitmapReady bmp, int outDiv, CancellationToken renderToken/*, string message = ""*/) {
 		if (_frame != bmp.Frame)
 			return;
-		if (bmp.Bmp != null && !renderToken.IsCancellationRequested /*&& renderToken == _cancel.Token*/) {
+		if (bmp.Bmp != null && _frame == bmp.Frame && !renderToken.IsCancellationRequested /*&& renderToken == _cancel.Token*/) {
 			//bmp.Save(@"C:\Temp\debug"+ bmpCount++ +"." + bmp.Width + "." + outDiv + "." + message + "+.bmp");
 			_bmp = bmp.Bmp;
 			_renderAxes = (x, y);
