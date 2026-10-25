@@ -16,15 +16,23 @@ public interface INumber<T/*,double*/> where T : unmanaged, INumber<T/*,double*/
 	public string ToString(int d);
 	public static (double h, double s, double v) Log2Hsv(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOffLog(s), Math.Log(s) * .5); }
 	public static (double h, double s, double v) Lin2Hsv(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOff(s), Math.Sqrt(s)); }
-	public static (double h, double s, double v) Log2HsvC(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOffLog(s), Static.Cycle(Math.Log(s) * .5)); }
-	public static (double h, double s, double v) Lin2HsvC(T t) { var s = /*double.ToDouble*/(+t); return (ToHue(t), FallOff(s), Static.Cycle(Math.Sqrt(s))); }
+	public static (double h, double s, double v) Log2HsvC(T t) {
+		var s = /*double.ToDouble*/(+t);
+		var v = .5 + .5 * Static.Cycle(Math.Log(s) * .5);
+		return (ToHue(t), FallOffLog(s), s < 1 ? v * (.5 + .5 * s) : v);
+	}
+	public static (double h, double s, double v) Lin2HsvC(T t) { 
+		var s = /*double.ToDouble*/(+t);
+		var ss = Math.Sqrt(s);
+		return (ToHue(t), FallOff(s), ss < 1 ? ss : .5 + .5 * Static.Cycle(ss)); 
+	}
 	//public static (double h, double s, double v) Exp2Hsv(T t) => (ToHue(t), 1, FallOff(+t));
 	/*public static (double h, double s, double v) Log2Hsv(T t) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Log(s) * .5); }
 	public static (double h, double s, double v) Lin2Hsv(T t) { var s = +t; return (ToHue(t), 1 - Math.Exp(-s), Math.Sqrt(s) ); }
 	public static (double h, double s, double v) Exp2Hsv(T t) => (ToHue(t), 1, 1 - Math.Exp(-+t));*/
 	public static double ToHue(T t) => Static.Cycle(/*double.ToDouble*/(T.Arg(t)) / Math.Tau);
-	private static double FallOff(double s) =>  /*.999 - */.999 * Math.Exp(-s); //1 - Math.Exp(-s);// .999 - .999 * Math.Exp(-s);
-	private static double FallOffLog(double s) =>  .999 / (1+Math.Log(1+Math.Sqrt(s))); 
+	private static double FallOff(double s) => .1 + .899 * Math.Exp(-s);
+	private static double FallOffLog(double s) => .1 + .899 / (1 + Math.Log(1 + Math.Sqrt(s))); 
 
 	public static byte[] ToBytes(T str) {
 		var size = Marshal.SizeOf(str);
